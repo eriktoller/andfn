@@ -4,13 +4,12 @@ Notes
 This module contains some geometrical functions.
 """
 
-
 import numpy as np
 
 __all__ = []
 
 
-def map_z_line_to_chi(z, z0, z1):
+def map_z_line_to_chi(z, endpoints):
     """
     Function that maps the exterior of a line in the complex z-plane onto the exterior of the unit circle in the
     complex chi-plane.
@@ -19,10 +18,8 @@ def map_z_line_to_chi(z, z0, z1):
     ----------
     z : complex
         A complex point in the complex z-plane
-    z0 : complex
-        Startpoint of the line in the complex z-plane
-    z1 : complex
-        Endpoint of the line in the complex z-plane
+    endpoints : list
+        Endpoints of the line in the complex z-plane
 
     Returns
     -------
@@ -30,11 +27,11 @@ def map_z_line_to_chi(z, z0, z1):
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
-    big_z = (2 * z - z0 - z1) / (z1 - z0)
+    big_z = (2 * z - endpoints[0] - endpoints[1]) / (endpoints[1] - endpoints[0])
     return big_z + np.sqrt(big_z - 1) * np.sqrt(big_z + 1)
 
 
-def map_chi_to_z_line(chi, z0, z1):
+def map_chi_to_z_line(chi, endpoints):
     """
     Function that maps the exterior of the unit circle in the complex chi-plane onto the exterior of a line in the
     complex z-plane.
@@ -43,10 +40,8 @@ def map_chi_to_z_line(chi, z0, z1):
     ----------
     chi : complex
         A point in the complex chi-plane
-    z0 : complex
-        Startpoint of the line in the complex z-plane
-    z1 : complex
-        Endpoint of the line in the complex z-plane
+    endpoints : list
+        Endpoints of the line in the complex z-plane
 
     Returns
     -------
@@ -55,7 +50,7 @@ def map_chi_to_z_line(chi, z0, z1):
     """
     # Map via the Z-plane
     big_z = 1 / 2 * (chi + 1 / chi)
-    return 1 / 2 * (big_z * (z1 - z0) + z0 + z1)
+    return 1 / 2 * (big_z * (endpoints[1] - endpoints[0]) + endpoints[0] + endpoints[1])
 
 
 def map_z_circle_to_chi(z, r, center=0.0):
@@ -76,7 +71,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
     chi : complex
         The corresponding point in the complex chi-plane
     """
-    return (z-center)/r
+    return (z - center) / r
 
 
 def map_chi_to_z_circle(chi, r, center=0.0):
@@ -97,6 +92,30 @@ def map_chi_to_z_circle(chi, r, center=0.0):
     z : complex
         The corresponding point in the complex z-plane
     """
-    return chi*r + center
+    return chi * r + center
 
 
+def get_chi_from_theta(nint, start, stop):
+    """
+    Function that creates an array with chi values for a given number of points along the unit circle.
+
+    Parameters
+    ----------
+    nint : int
+        Number of instances to generate
+    start : float
+        Start point
+    stop : float
+        Stop point
+
+    Returns
+    -------
+    chi : ndarray
+        Array with chi values
+    """
+    dtheta = (stop - start) / nint
+    chi_temp = []
+    for i in range(nint):
+        theta = dtheta * i
+        chi_temp.append(np.exp(1j * theta))
+    return np.array(chi_temp)
