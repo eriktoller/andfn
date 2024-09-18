@@ -5,6 +5,7 @@ This module contains some general mathematical functions.
 """
 
 import numpy as np
+import geometry_functions as gf
 
 
 def asym_expansion(chi, coef, offset=0):
@@ -28,9 +29,53 @@ def asym_expansion(chi, coef, offset=0):
     """
     res = 0.0
     for n, c in enumerate(coef):
-        res += c * chi ** (-n - offset)
+        res += c * chi ** (-n + offset)
 
     return res
+
+
+def taylor_series(chi, coef, offset=0):
+    """
+    Function that calculates the Taylor series starting from 0 for a given point chi and an array of
+    coefficients.
+
+    Parameters
+    ----------
+    chi : complex
+        A point in the complex chi-plane
+    coef : array_like
+        An array of coefficients
+    offset : int
+        Offset to exponent
+
+    Return
+    ------
+    res : complex
+        The resulting value for the asymptotic expansion
+    """
+    res = 0.0
+    for n, c in enumerate(coef):
+        res += c * chi ** (n + offset)
+
+    return res
+
+def well_chi(chi, q):
+    """
+    Function that return the complex potential for a well as a function of chi.
+
+    Parameters
+    ----------
+    chi : complex
+        A point in the complex chi plane
+    q : float
+        The discharge eof the well.
+
+    Returns
+    -------
+    omega : complex
+        The complex discharge potential
+    """
+    return q/(2*np.pi)*np.log(chi)
 
 
 def cauchy_integral(n, m, thetas, omega_func, z_func):
