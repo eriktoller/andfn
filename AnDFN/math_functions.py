@@ -77,9 +77,9 @@ def well_chi(chi, q):
     return q/(2*np.pi)*np.log(chi)
 
 
-def cauchy_integral(n, m, thetas, omega_func, z_func):
+def cauchy_integral_real(n, m, thetas, omega_func, z_func):
     """
-    FUnction that calculates the Cauchy integral for a given array of thetas.
+    FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
 
     Parameters
     ----------
@@ -105,12 +105,96 @@ def cauchy_integral(n, m, thetas, omega_func, z_func):
     for ii in range(n):
         chi = np.exp(1j * thetas[ii])
         z = z_func(chi)
-        omega = omega_func(z)
+        phi = np.real(omega_func(z))
         for jj in range(m):
-            integral[ii, jj] = omega * np.exp(-1j * jj * thetas[ii])
+            integral[ii, jj] = phi * np.exp(-1j * jj * thetas[ii])
 
     for ii in range(m):
         coef[ii] = 2 * sum(integral[:, ii]) / n
+    coef[0] = coef[0] / 2
+
+    return coef
+
+def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
+    """
+    FUnction that calculates the Cauchy integral with the streamfunction for a given array of thetas.
+
+    Parameters
+    ----------
+    n : int
+        Number of integration points
+    m : int
+        Number of coefficients
+    thetas : array_like
+        Array with thetas along the unit circle
+    omega_func : function
+        The function for the complex potential
+    z_func : function
+        The function for the mapping of chi to z
+
+    Return
+    ------
+    coef : np.ndarray
+        Array of coefficients
+    """
+    integral = np.zeros((n, m), dtype=complex)
+    coef = np.zeros(m, dtype=complex)
+
+    for ii in range(n):
+        chi = np.exp(1j * thetas[ii])
+        z = z_func(chi)
+        psi = np.imag(omega_func(z))
+        for jj in range(m):
+            integral[ii, jj] = psi * np.exp(-1j * jj * thetas[ii])
+
+    for ii in range(m):
+        coef[ii] = 2 * sum(integral[:, ii]) / n
+    coef[0] = coef[0] / 2
+
+    return coef
+
+def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
+    """
+    FUnction that calculates the Cauchy integral with the streamfunction for a given array of thetas.
+
+    Parameters
+    ----------
+    n : int
+        Number of integration points
+    m : int
+        Number of coefficients
+    thetas : array_like
+        Array with thetas along the unit circle
+    omega_func : function
+        The function for the complex potential
+    z_func : function
+        The function for the mapping of chi to z
+
+    Return
+    ------
+    coef : np.ndarray
+        Array of coefficients
+    """
+    integral = np.zeros((n, m), dtype=complex)
+    coef = np.zeros(m, dtype=complex)
+
+    psi = np.zeros(n)
+    for ii in range(n):
+        chi = np.exp(1j * thetas[ii])
+        z = z_func(chi)
+        psi = np.imag(omega_func(z))
+    dpsi = np.diff(psi)
+    dpsi = np.hstack([0, np.add(dpsi, dpsi_corr)])
+
+    psi0 = psi[0]
+    for ii in range(n):
+        psi1 = psi0 + dpsi[ii]
+        for jj in range(m):
+            integral[ii, jj] = psi1 * np.exp(-1j * jj * thetas[ii])
+        psi0 = psi1
+
+    for ii in range(m):
+        coef[ii] = 2j * sum(integral[:, ii]) / n
     coef[0] = coef[0] / 2
 
     return coef

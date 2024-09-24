@@ -2,21 +2,34 @@
 Notes
 -----
 This module contains the fracture class.
+
+make sure to allow for passing an array of (x,y) coordinates to the fracture class
+
+add start stop for each element in the fracture class
 """
 
 
 class Fracture:
-    def __init__(self, label, elements=None):
+    def __init__(self, label, t, center, n, v, u, elements=None):
+        self.label = label
+        self.t = t
+        self.center = center
+        self.n = n
+        self.v = v
+        self.u = u
         if elements is None:
             elements = []
-        self.label = label
-        self.elements = elements
+        else:
+            self.elements = elements
 
     def __str__(self):
         return f'Fracture {self.label}'
 
     def add_element(self, new_element):
-        self.elements.append(new_element)
+        if new_element in self.elements:
+            print('Element already in fracture.')
+        else:
+            self.elements.append(new_element)
 
     def set_new_label(self, new_label):
         self.label = new_label
@@ -30,7 +43,7 @@ class Fracture:
         z : complex
             A point in the complex z plane.
         exclude : any
-            Id of element to exclude from the omega calculation.
+            Label of element to exclude from the omega calculation.
 
         Returns
         -------
@@ -46,3 +59,4 @@ class Fracture:
                 if e.label != exclude:
                     omega += e.calc_omega(z)
         return omega
+

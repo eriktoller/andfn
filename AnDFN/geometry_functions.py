@@ -16,14 +16,14 @@ def map_z_line_to_chi(z, endpoints):
 
     Parameters
     ----------
-    z : complex
+    z : complex or ndarray
         A complex point in the complex z-plane
     endpoints : list
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    chi : complex
+    chi : complex or ndarray
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
@@ -38,14 +38,14 @@ def map_chi_to_z_line(chi, endpoints):
 
     Parameters
     ----------
-    chi : complex
+    chi : complex or ndarray
         A point in the complex chi-plane
     endpoints : list
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    z : complex
+    z : complex or ndarray
         The corresponding point in the complex z-plane
     """
     # Map via the Z-plane
@@ -59,7 +59,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
     Parameters
     ----------
-    z : complex
+    z : complex or ndarray
         A point in the complex z-plane
     r : float
         Radius of the circle
@@ -68,7 +68,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
     Return
     ------
-    chi : complex
+    chi : complex or ndarray
         The corresponding point in the complex chi-plane
     """
     return (z - center) / r
@@ -80,7 +80,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
     
     Parameters
     ----------
-    chi : complex
+    chi : complex or ndarray
         A point in the complex chi-plane 
     r : float
         Radius of the circle 
@@ -89,7 +89,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
     
     Return
     ------
-    z : complex
+    z : complex or ndarray
         The corresponding point in the complex z-plane
     """
     return chi * r + center
