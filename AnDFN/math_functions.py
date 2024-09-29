@@ -52,7 +52,7 @@ def taylor_series(chi, coef, offset=0):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    res = 0.0
+    res = 0.0 + 0.0j
     for n, c in enumerate(coef):
         res += c * chi ** (n + offset)
 
@@ -175,6 +175,8 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
     coef : np.ndarray
         Array of coefficients
     """
+    # TODO: enable doing this with an array (remove unnecessary overhead from calling cal_omega for each point) do
+    #  this first when the program is tested and works
     integral = np.zeros((n, m), dtype=complex)
     coef = np.zeros(m, dtype=complex)
 

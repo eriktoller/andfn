@@ -34,6 +34,9 @@ class B:
         aa = var1 + var2
         print(self.func_b(var1))
 
+def well(chi, q):
+    return q / (2 * np.pi) * np.log(chi)
+
 if __name__ == '__main__':
 
 

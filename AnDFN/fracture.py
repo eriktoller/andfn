@@ -7,16 +7,20 @@ make sure to allow for passing an array of (x,y) coordinates to the fracture cla
 
 add start stop for each element in the fracture class
 """
+from AnDFN.intersection import Intersection
+from AnDFN.const_head import ConstantHeadLine
+from AnDFN.well import Well
 
 
 class Fracture:
-    def __init__(self, label, t, center, n, v, u, elements=None):
+    def __init__(self, label, t, radius, center, normal, x_vector, y_vector, elements=None):
         self.label = label
         self.t = t
+        self.radius = radius
         self.center = center
-        self.n = n
-        self.v = v
-        self.u = u
+        self.normal = normal
+        self.x_vector = x_vector
+        self.y_vector = y_vector
         if elements is None:
             elements = []
         else:
@@ -30,6 +34,12 @@ class Fracture:
             print('Element already in fracture.')
         else:
             self.elements.append(new_element)
+
+    def get_discharge_elements(self):
+        return [e for e in self.elements
+                if isinstance(e, Intersection)
+                or isinstance(e, ConstantHeadLine)
+                or isinstance(e, Well)]
 
     def set_new_label(self, new_label):
         self.label = new_label

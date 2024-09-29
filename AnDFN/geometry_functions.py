@@ -63,7 +63,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
         A point in the complex z-plane
     r : float
         Radius of the circle
-    center : float
+    center : complex or ndarray
         Center point of the circle in the complex z-plane
 
     Return
@@ -84,7 +84,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
         A point in the complex chi-plane 
     r : float
         Radius of the circle 
-    center : float
+    center : complex or ndarray
         Center point of the circle 
     
     Return

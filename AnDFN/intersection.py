@@ -25,6 +25,16 @@ class Intersection:
     def __str__(self):
         return f'Intersection: {self.label}'
 
+    def discharge_term(self, z, frac_is):
+        chi = gf.map_z_line_to_chi(z, self.endpoints)
+        sign = 1
+        if frac_is == self.fracs[1]:
+            sign = -1
+        return np.real(mf.well_chi(chi, sign)) / len(z)
+
+    def z_array(self, n):
+        return np.linspace(self.endpoints[0], self.endpoints[1], n)
+
     def calc_omega(self, z, frac_is):
         chi = gf.map_z_line_to_chi(z, self.endpoints)
         # Se if function is in the first or second fracture that the intersection is associated with

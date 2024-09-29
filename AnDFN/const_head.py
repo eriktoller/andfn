@@ -24,6 +24,13 @@ class ConstantHeadLine:
     def __str__(self):
         return f'Constant head line: {self.label}'
 
+    def discharge_term(self, z):
+        chi = gf.map_z_line_to_chi(z, self.endpoints)
+        return np.real(mf.well_chi(chi, 1)) / len(z)
+
+    def z_array(self, n):
+        return np.linspace(self.endpoints[0], self.endpoints[1], n)
+
     def calc_omega(self, z):
         # Map the z point to the chi plane
         chi = gf.map_z_line_to_chi(z, self.endpoints)

@@ -9,7 +9,7 @@ import numpy as np
 
 
 class Well:
-    def __init__(self, label, r, zw, q, frac_label):
+    def __init__(self, label, r, zw, q, frac):
         """
         Initializes the well class.
         Parameters
@@ -22,14 +22,27 @@ class Well:
             The complex location of the well.
         q : float
             The flow rate of the well.
-        frac_label : str or int
+        frac : Fracture
             The label of the fracture the well is associated with.
         """
         self.label = label
         self.r = r
         self.zw = zw
         self.q = q
-        self.frac_label = frac_label
+        self.frac = frac
+
+    def discharge_term(self, z):
+        """
+        Returns the discharge term for the well.
+        """
+        chi = gf.map_z_circle_to_chi(z, self.r, self.zw)
+        return np.real(mf.well_chi(chi, 1)) / len(z)
+
+    def z_array(self, n):
+        """
+        Returns an array of n points on the well.
+        """
+        return self.r * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) + self.zw
 
     def calc_omega(self, z):
         """
