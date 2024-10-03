@@ -3,18 +3,18 @@ Notes
 -----
 This module contains the intersection class.
 """
-import AnDFN.math_functions as mf
-import AnDFN.geometry_functions as gf
+from . import math_functions as mf
+from . import geometry_functions as gf
 import numpy as np
 
 
 class Intersection:
-    def __init__(self, label, endpoints, ncoef, nint, q, frac0, frac1):
+    def __init__(self, label, endpoints0, endpoints1, ncoef, nint, frac0, frac1):
         self.label = label
-        self.endpoints = endpoints
+        self.endpoints = [endpoints0, endpoints1]
         self.ncoef = ncoef
         self.nint = nint
-        self.q = q
+        self.q = 0
         self.fracs = [frac0, frac1]
 
         # Create the pre-calculation variables
@@ -32,8 +32,10 @@ class Intersection:
             sign = -1
         return np.real(mf.well_chi(chi, sign)) / len(z)
 
-    def z_array(self, n):
-        return np.linspace(self.endpoints[0], self.endpoints[1], n)
+    def z_array(self, n, frac_is):
+        if frac_is == self.fracs[0]:
+            return np.linspace(self.endpoints[0][0], self.endpoints[0][1], n)
+        return np.linspace(self.endpoints[1][0], self.endpoints[1][1], n)
 
     def calc_omega(self, z, frac_is):
         chi = gf.map_z_line_to_chi(z, self.endpoints)
@@ -48,11 +50,10 @@ class Intersection:
 
         s0 = mf.cauchy_integral_real(self.nint, self.ncoef, self.thetas,
                                 lambda z: self.fracs[0].calc_omega(z, exclude=self.label),
-                                lambda chi: gf.map_chi_to_z_line(chi, self.endpoints))
+                                lambda chi: gf.map_chi_to_z_line(chi, self.endpoints[0]))
         s1 = mf.cauchy_integral_real(self.nint, self.ncoef, self.thetas,
                                 lambda z: self.fracs[0].calc_omega(z, exclude=self.label),
-                                lambda chi: gf.map_chi_to_z_line(chi, self.endpoints))
+                                lambda chi: gf.map_chi_to_z_line(chi, self.endpoints[1]))
 
         s = np.real((self.fracs[0].t * s1 - self.fracs[1].t * s0) / (self.fracs[0].t + self.fracs[1].t))
         self.coef = s
-        return None

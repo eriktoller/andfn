@@ -3,13 +3,13 @@ Notes
 -----
 This module contains the well classes.
 """
-import AnDFN.math_functions as mf
-import AnDFN.geometry_functions as gf
+from . import math_functions as mf
+from . import geometry_functions as gf
 import numpy as np
 
 
 class Well:
-    def __init__(self, label, r, zw, q, frac):
+    def __init__(self, label, r, zw, head, frac):
         """
         Initializes the well class.
         Parameters
@@ -28,8 +28,11 @@ class Well:
         self.label = label
         self.r = r
         self.zw = zw
-        self.q = q
+        self.q = 0.0
+        self.head = head
         self.frac = frac
+
+        self.phi = frac.phi_from_head(head)
 
     def discharge_term(self, z):
         """

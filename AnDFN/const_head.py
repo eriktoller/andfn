@@ -3,23 +3,25 @@ Notes
 -----
 This module contains the constant head classes.
 """
-import AnDFN.math_functions as mf
-import AnDFN.geometry_functions as gf
+from . import math_functions as mf
+from . import geometry_functions as gf
 import numpy as np
 
 
 class ConstantHeadLine:
-    def __init__(self, label, endpoints, ncoef, nint, q, frac):
+    def __init__(self, label, endpoints, ncoef, nint, head, frac):
         self.label = label
         self.endpoints = endpoints
         self.ncoef = ncoef
         self.nint = nint
-        self.q = q
+        self.q = 0
+        self.head = head
         self.frac = frac
 
         # Create the pre-calculation variables
         self.thetas = np.linspace(start=0, stop=np.pi, num=nint)
         self.coef = np.zeros(ncoef, dtype=complex)
+        self.phi = frac.phi_from_head(head)
 
     def __str__(self):
         return f'Constant head line: {self.label}'
