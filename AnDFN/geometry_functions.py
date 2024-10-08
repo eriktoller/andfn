@@ -18,18 +18,18 @@ def map_z_line_to_chi(z, endpoints):
 
     Parameters
     ----------
-    z : complex or ndarray
+    z : complex | ndarray
         A complex point in the complex z-plane
     endpoints : list
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    chi : complex or ndarray
+    chi : complex | ndarray
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
-    big_z = (2 * z - endpoints[0] - endpoints[1]) / (endpoints[1] - endpoints[0])
+    big_z = np.vectorize(lambda z: (2 * z - endpoints[0] - endpoints[1]) / (endpoints[1] - endpoints[0]))(z)
     return big_z + np.sqrt(big_z - 1) * np.sqrt(big_z + 1)
 
 
@@ -40,14 +40,14 @@ def map_chi_to_z_line(chi, endpoints):
 
     Parameters
     ----------
-    chi : complex or ndarray
+    chi : complex | ndarray
         A point in the complex chi-plane
-    endpoints : list
+    endpoints : list | ndarray
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    z : complex or ndarray
+    z : complex | ndarray
         The corresponding point in the complex z-plane
     """
     # Map via the Z-plane
@@ -61,16 +61,16 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
     Parameters
     ----------
-    z : complex or ndarray
+    z : complex | ndarray
         A point in the complex z-plane
     r : float
         Radius of the circle
-    center : complex or ndarray
+    center : complex | ndarray
         Center point of the circle in the complex z-plane
 
     Return
     ------
-    chi : complex or ndarray
+    chi : complex | ndarray
         The corresponding point in the complex chi-plane
     """
     return (z - center) / r
@@ -82,7 +82,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
     
     Parameters
     ----------
-    chi : complex or ndarray
+    chi : complex | ndarray
         A point in the complex chi-plane 
     r : float
         Radius of the circle 
@@ -91,7 +91,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
     
     Return
     ------
-    z : complex or ndarray
+    z : complex | ndarray
         The corresponding point in the complex z-plane
     """
     return chi * r + center
@@ -128,7 +128,7 @@ def map_2d_to_3d(z, fracture):
     Function that maps a point in the complex z-plane to a point in the 3D plane
     Parameters
     ----------
-    z : complex
+    z : complex | ndarray
         A point in the complex z-plane
     fracture : Fracture
         The fracture object
@@ -138,7 +138,7 @@ def map_2d_to_3d(z, fracture):
     point : ndarray
         The corresponding point in the 3D plane
     """
-    if np.isscalar(z):
+    if np.isscalar(z) or z.size == 1:
         return np.real(z) * fracture.x_vector + np.imag(z) * fracture.y_vector + fracture.center
     return np.real(z)[:, np.newaxis] * fracture.x_vector + np.imag(z)[:, np.newaxis] * fracture.y_vector + fracture.center
 
@@ -254,13 +254,16 @@ def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0):
     return fractures
 
 
-def get_connected_fractures(fractures, fracture_surface=None):
+def get_connected_fractures(fractures, ncoef, nint, fracture_surface=None):
     connected_fractures = []
     fracture_list = fractures.copy()
-    fracture_list_it = [fracture_list[0]]
     if fracture_surface is not None:
         fracture_list_it = [fracture_surface]
         connected_fractures.append(fracture_surface)
+    else:
+        fracture_list_it = [fracture_list[0]]
+        connected_fractures.append(fracture_list[0])
+        fracture_list.remove(fracture_list[0])
     fracture_list_it_temp = []
     cnt = 1
     while fracture_list_it:
@@ -273,7 +276,7 @@ def get_connected_fractures(fractures, fracture_surface=None):
                     if fr2 not in connected_fractures:
                         connected_fractures.append(fr2)
                         fracture_list_it_temp.append(fr2)
-                        intersections = intersection.Intersection('i', endpoints0, endpoints1, 10, 10, fr, fr2)
+                        intersections = intersection.Intersection(f'{cnt}_{i}', endpoints0, endpoints1, ncoef, nint, fr, fr2)
                         fr.add_element(intersections)
                         fr2.add_element(intersections)
             print(

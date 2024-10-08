@@ -9,16 +9,16 @@ import numpy as np
 
 
 class Well:
-    def __init__(self, label, r, zw, head, frac):
+    def __init__(self, label, radius, center, head, frac):
         """
         Initializes the well class.
         Parameters
         ----------
         label : str or int
             The label of the well.
-        r : float
+        radius : float
             The radius of the well.
-        zw : complex
+        center : complex
             The complex location of the well.
         q : float
             The flow rate of the well.
@@ -26,43 +26,49 @@ class Well:
             The label of the fracture the well is associated with.
         """
         self.label = label
-        self.r = r
-        self.zw = zw
+        self.radius = radius
+        self.center = center
         self.q = 0.0
         self.head = head
         self.frac = frac
 
         self.phi = frac.phi_from_head(head)
+        self.error = 0
+
+    def __str__(self):
+        return f'Well: {self.label}'
 
     def discharge_term(self, z):
         """
         Returns the discharge term for the well.
         """
-        chi = gf.map_z_circle_to_chi(z, self.r, self.zw)
-        return np.real(mf.well_chi(chi, 1)) / len(z)
+        chi = gf.map_z_circle_to_chi(z, self.radius, self.center)
+        return np.sum(np.real(mf.well_chi(chi, 1)) / len(z))
 
     def z_array(self, n):
         """
         Returns an array of n points on the well.
         """
-        return self.r * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) + self.zw
+        return self.radius * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) + self.center
 
     def calc_omega(self, z):
         """
         Calculates the omega for the well.
         Parameters
         ----------
-        z : complex
+        z : complex | ndarray
             A point in the complex z plane.
 
         Returns
         -------
-        omega : complex
+        omega : complex | ndarray
             The complex potential for the well.
         """
-        chi = gf.map_z_circle_to_chi(z, self.r, self.zw)
-        if (chi * np.conj(chi)) < 1.0:
-            omega = np.nan + 1j * np.nan
+        chi = gf.map_z_circle_to_chi(z, self.radius, self.center)
+        if isinstance(chi, np.complex128):
+            if np.abs(chi) < 1.0:
+                chi = np.nan
         else:
-            omega = mf.well_chi(chi, self.q)
+            chi[np.abs(chi) < 1.0] = np.nan
+        omega = mf.well_chi(chi, self.q)
         return omega

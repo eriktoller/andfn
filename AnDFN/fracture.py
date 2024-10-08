@@ -12,6 +12,7 @@ import numpy as np
 from AnDFN.intersection import Intersection
 from AnDFN.const_head import ConstantHeadLine
 from AnDFN.well import Well
+import AnDFN.bounding
 
 
 class Fracture:
@@ -28,9 +29,11 @@ class Fracture:
         self.y_vector = np.cross(normal, self.x_vector)
         self.y_vector = self.y_vector / np.linalg.norm(self.y_vector)
         if elements is None:
-            self.elements = []
+            self.elements = [AnDFN.bounding.BoundingCircle(label, radius, 50, 100, self)]
+            #self.elements = []
         else:
             self.elements = elements
+            self.elements.append(AnDFN.bounding.BoundingCircle(label, radius, 50, 100, self))
         self.constant = 0.0
 
     def __str__(self):
@@ -68,12 +71,12 @@ class Fracture:
             The complex potential for the fracture.
         """
         omega = self.constant
-        if exclude is None:
-            for e in self.elements:
-                omega += e.calc_omega(z)
-        else:
-            for e in self.elements:
-                if e.label != exclude:
+
+        for e in self.elements:
+            if e != exclude:
+                if isinstance(e, Intersection):
+                    omega += e.calc_omega(z, self)
+                else:
                     omega += e.calc_omega(z)
         return omega
 
@@ -105,14 +108,13 @@ class Fracture:
         """
         # Create the arrays for the flow net
         radius_margin = self.radius * (1 + margin)
-        omega_fn = np.zeros(n_points, dtype=complex)
+        omega_fn = np.zeros((n_points,n_points), dtype=complex)
         x_array = np.linspace(-radius_margin, radius_margin, n_points)
         y_array = np.linspace(-radius_margin, radius_margin, n_points)
 
         # Calculate the omega for each point in the flow net
-        for row, x in enumerate(x_array):
-            for col, y in enumerate(y_array):
-                z = x + 1j * y
-                omega_fn[row, col] = self.calc_omega(z)
+        for i, x in enumerate(x_array):
+            z = x + 1j * y_array
+            omega_fn[:, i] = self.calc_omega(z)
 
         return omega_fn, x_array, y_array

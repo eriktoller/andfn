@@ -19,16 +19,17 @@ class ConstantHeadLine:
         self.frac = frac
 
         # Create the pre-calculation variables
-        self.thetas = np.linspace(start=0, stop=np.pi, num=nint)
+        self.thetas = np.linspace(start=np.pi / (2 * nint), stop=np.pi, num=nint, endpoint=False)
         self.coef = np.zeros(ncoef, dtype=complex)
         self.phi = frac.phi_from_head(head)
+        self.error = 1
 
     def __str__(self):
         return f'Constant head line: {self.label}'
 
     def discharge_term(self, z):
         chi = gf.map_z_line_to_chi(z, self.endpoints)
-        return np.real(mf.well_chi(chi, 1)) / len(z)
+        return np.sum(np.real(mf.well_chi(chi, 1))) / len(z)
 
     def z_array(self, n):
         return np.linspace(self.endpoints[0], self.endpoints[1], n)
@@ -42,8 +43,10 @@ class ConstantHeadLine:
 
     def solve(self):
         s = mf.cauchy_integral_real(self.nint, self.ncoef, self.thetas,
-                                lambda z: self.frac.calc_omega(z, exclude=self.label),
-                                lambda chi: gf.map_chi_to_z_line(chi, self.endpoints))
+                                    lambda z: self.frac.calc_omega(z, exclude=self),
+                                    lambda chi: gf.map_chi_to_z_line(chi, self.endpoints))
 
+        s = np.real(s)
+        s[0] = 0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+        self.error = np.max(np.abs(s + self.coef))
         self.coef = -s
-        return None

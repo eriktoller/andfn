@@ -15,6 +15,8 @@ from AnDFN.elements import Elements
 from AnDFN.fracture import Fracture
 from AnDFN.intersection import Intersection
 from AnDFN.well import Well
+import AnDFN.geometry_functions
+import AnDFN.math_functions
 #from AnDFN.geometry_functions import (map_z_line_to_chi, map_chi_to_z_line, map_chi_to_z_circle, map_z_circle_to_chi,
 #                                      get_chi_from_theta, get_connected_fractures, generate_fractures,
 #                                      fracture_intersection, line_circle_intersection)

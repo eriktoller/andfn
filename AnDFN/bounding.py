@@ -35,9 +35,10 @@ class BoundingCircle:
         self.frac = frac
 
         # Create the pre-calculation variables
-        self.thetas = np.linspace(start=0, stop=2 * np.pi, num=nint)
+        self.thetas = np.linspace(start=0, stop=2 * np.pi, num=nint, endpoint=False)
         self.coef = np.zeros(ncoef, dtype=complex)
-        self.dpsi_corr = np.zeros(self.nint - 1, dtype=complex)
+        self.dpsi_corr = np.zeros(self.nint - 1, dtype=float)
+        self.error = 1
 
     def calc_omega(self, z):
         """
@@ -53,10 +54,12 @@ class BoundingCircle:
             The complex potential for the bounding circle.
         """
         chi = gf.map_z_circle_to_chi(z, self.r)
-        if chi * np.conj(chi) > 1.0:
-            omega = np.nan + 1j * np.nan
+        if isinstance(chi, np.ndarray) and len(chi) > 1:
+            chi[np.abs(chi) > 1.0+1e-10] = np.nan + 1j * np.nan
         else:
-            omega = mf.taylor_series(chi, self.coef)
+            if np.abs(chi) > 1.0+1e-10:
+                chi = np.nan + 1j * np.nan
+        omega = mf.taylor_series(chi, self.coef)
         return omega
 
     def find_branch_cuts(self):
@@ -65,27 +68,40 @@ class BoundingCircle:
         """
         # Find the branch cuts
         z_pos = gf.map_chi_to_z_circle(np.exp(1j * self.thetas), self.r)
+        self.dpsi_corr = np.zeros(self.nint - 1, dtype=float)
 
         for ii in range(self.nint - 1):
             for e in self.frac.elements:
-                if e is Well:
+                if isinstance(e, Well):
                     # Find the branch cut for the well
-                    chi0 = gf.map_z_circle_to_chi(z_pos[ii], e.zw, e.r)
-                    chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e.zw, e.r)
-                    if np.imag(chi0) * np.imag(chi1) < 0:
+                    chi0 = gf.map_z_circle_to_chi(z_pos[ii], e.radius, e.center)
+                    chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e.radius, e.center)
+                    if np.sign(np.imag(chi0)) != np.sign(np.imag(chi1)) and np.real(chi0) < 0:
                         self.dpsi_corr[ii] -= e.q
-                elif e is ConstantHeadLine or e is Intersection:
+                elif isinstance(e, ConstantHeadLine):
                     # Find the branch cut for the constant head line
                     chi0 = gf.map_z_line_to_chi(z_pos[ii], e.endpoints)
                     chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints)
-                    if np.imag(chi0) * np.imag(chi1) < 0:
+                    if np.sign(np.imag(chi0)) != np.sign(np.imag(chi1)) and np.real(chi0) < 0:
                         self.dpsi_corr[ii] -= e.q
-        return None
+                elif isinstance(e, Intersection):
+                    # Find the branch cut for the intersection
+                    if e.fracs[0] == self.frac:
+                        chi0 = gf.map_z_line_to_chi(z_pos[ii], e.endpoints[0])
+                        chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints[0])
+                        if np.sign(np.imag(chi0)) != np.sign(np.imag(chi1)) and np.real(chi0) < 0:
+                            self.dpsi_corr[ii] -= e.q
+                    else:
+                        chi0 = gf.map_z_line_to_chi(z_pos[ii], e.endpoints[1])
+                        chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints[1])
+                        if np.sign(np.imag(chi0)) != np.sign(np.imag(chi1)) and np.real(chi0) < 0:
+                            self.dpsi_corr[ii] += e.q
 
     def solve(self):
-
+        self.find_branch_cuts()
         s = mf.cauchy_integral_domega(self.nint, self.ncoef, self.thetas, self.dpsi_corr,
-                                      lambda z: self.frac.calc_omega(z, exclude=self.label),
+                                      lambda z: self.frac.calc_omega(z, exclude=self),
                                       lambda chi: gf.map_chi_to_z_circle(chi, self.r))
+
+        self.error = np.max(np.abs(s + self.coef))
         self.coef = -s
-        return None

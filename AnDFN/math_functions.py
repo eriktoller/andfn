@@ -58,23 +58,24 @@ def taylor_series(chi, coef, offset=0):
 
     return res
 
+
 def well_chi(chi, q):
     """
     Function that return the complex potential for a well as a function of chi.
 
     Parameters
     ----------
-    chi : complex
+    chi : complex | ndarray
         A point in the complex chi plane
     q : float
         The discharge eof the well.
 
     Returns
     -------
-    omega : complex
+    omega : complex  | ndarray
         The complex discharge potential
     """
-    return q/(2*np.pi)*np.log(chi)
+    return q / (2 * np.pi) * np.log(chi)
 
 
 def cauchy_integral_real(n, m, thetas, omega_func, z_func):
@@ -87,7 +88,7 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
         Number of integration points
     m : int
         Number of coefficients
-    thetas : array_like
+    thetas : ndarray
         Array with thetas along the unit circle
     omega_func : function
         The function for the complex potential
@@ -96,7 +97,7 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
 
     Return
     ------
-    coef : np.ndarray
+    coef : ndarray
         Array of coefficients
     """
     integral = np.zeros((n, m), dtype=complex)
@@ -114,6 +115,7 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
     coef[0] = coef[0] / 2
 
     return coef
+
 
 def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
     """
@@ -134,7 +136,7 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
 
     Return
     ------
-    coef : np.ndarray
+    coef : ndarray
         Array of coefficients
     """
     integral = np.zeros((n, m), dtype=complex)
@@ -153,6 +155,7 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
 
     return coef
 
+
 def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
     """
     FUnction that calculates the Cauchy integral with the streamfunction for a given array of thetas.
@@ -163,7 +166,7 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
         Number of integration points
     m : int
         Number of coefficients
-    thetas : array_like
+    thetas : ndarray
         Array with thetas along the unit circle
     omega_func : function
         The function for the complex potential
@@ -172,7 +175,7 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
 
     Return
     ------
-    coef : np.ndarray
+    coef : ndarray
         Array of coefficients
     """
     # TODO: enable doing this with an array (remove unnecessary overhead from calling cal_omega for each point) do
@@ -181,12 +184,14 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
     coef = np.zeros(m, dtype=complex)
 
     psi = np.zeros(n)
+    z = np.zeros(n, dtype=complex)
     for ii in range(n):
         chi = np.exp(1j * thetas[ii])
-        z = z_func(chi)
-        psi = np.imag(omega_func(z))
+        z[ii] = z_func(chi)
+    psi = np.imag(omega_func(z))
     dpsi = np.diff(psi)
-    dpsi = np.hstack([0, np.add(dpsi, dpsi_corr)])
+    ddpsi = np.diff(psi)
+    dpsi = np.hstack([0, np.add(dpsi, -dpsi_corr)])
 
     psi0 = psi[0]
     for ii in range(n):
