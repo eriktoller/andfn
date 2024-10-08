@@ -16,6 +16,7 @@ AnDFN requires the following Python packages:
 - Numpy
 - Pyvista
 - Matplotlib
+- Numba (to be implemented)
 
 ## Citation
 The basic theory for this program is published in:
