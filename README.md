@@ -1,9 +1,21 @@
 # AnDFN, Analytical Discrete Fracture Network
 
 ## Introduction
-This program is an analytic element model for a discrete fracture network. The original development of this code was 
+AnDFN is a computer program for the modelling of groundwater flow in a discrete fracture network (DFN). The program is based on the Analytic Element Method (AEM) and is distributed as a Python package with various modules and scripts. The original development of this code was 
 funded by BeFo (Stiftelsen Bergteknisk Forskning).
 
+## Functionality
+AnDFN currently have the following functionality:
+- Generate random DFN
+- Compute the intersections of a DFN
+- Solve the AEM model for a DFN
+- Plot the flow net for the AEM model
+
+## Dependencies
+AnDFN requires the following Python packages:
+- Numpy
+- Pyvista
+- Matplotlib
 
 ## Citation
 The basic theory for this program is published in:
