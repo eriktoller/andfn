@@ -66,9 +66,13 @@ class Well:
         """
         chi = gf.map_z_circle_to_chi(z, self.radius, self.center)
         if isinstance(chi, np.complex128):
-            if np.abs(chi) < 1.0:
+            if np.abs(chi) < 1.0-1e-10:
                 chi = np.nan
         else:
-            chi[np.abs(chi) < 1.0] = np.nan
+            chi[np.abs(chi) < 1.0-1e-10] = np.nan
         omega = mf.well_chi(chi, self.q)
         return omega
+
+    @staticmethod
+    def check_boundary_condition(n=10):
+        return 0

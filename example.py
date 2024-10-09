@@ -23,7 +23,7 @@ if __name__ == '__main__':
     print(f'Program started at {start0}')
     print('\n---- CREATING DFN ----')
     dfn = AnDFN.DFN('DFN test', 20)
-    frac_surface = AnDFN.Fracture('0', 1, 1, np.array([5, 5, 10]), np.array([0, 0, 1]))
+    frac_surface = AnDFN.Fracture('0', 1, 10, np.array([5, 5, 10]), np.array([0, 0, 1]))
     dfn.generate_connected_DFN(num_fracs, radius_factor, center_factor, 20, 40, frac_surface)
     dfn.fractures[0].add_element(AnDFN.Well('well0', .01, np.array([0 + 0*1j]), 1, dfn.fractures[0]))
     dfn.fractures[-1].add_element(AnDFN.Well('well1', .01, np.array([0 + 0*1j]), 0, dfn.fractures[-1]))

@@ -18,7 +18,7 @@ class Intersection:
         self.fracs = [frac0, frac1]
 
         # Create the pre-calculation variables
-        self.thetas = np.linspace(start=np.pi/(2*nint), stop=np.pi, num=nint, endpoint=False)
+        self.thetas = np.linspace(start=np.pi/(2*nint), stop=np.pi + np.pi/(2*nint), num=nint, endpoint=False)
         self.coef = np.zeros(ncoef, dtype=complex)
         self.error = 1
 
@@ -35,8 +35,11 @@ class Intersection:
         return np.sum(np.real(mf.well_chi(chi, sign))) / len(z)
 
     def z_array(self, n, frac_is):
+        theta = np.linspace(0, np.pi, n, endpoint=False)
         if frac_is == self.fracs[0]:
+            #return gf.map_chi_to_z_line(np.exp(1j * theta), self.endpoints[0])
             return np.linspace(self.endpoints[0][0], self.endpoints[0][1], n)
+        #return gf.map_chi_to_z_line(np.exp(1j * theta), self.endpoints[1])
         return np.linspace(self.endpoints[1][0], self.endpoints[1][1], n)
 
     def calc_omega(self, z, frac_is):
@@ -61,5 +64,24 @@ class Intersection:
 
         s = np.real((self.fracs[0].t * s1 - self.fracs[1].t * s0) / (self.fracs[0].t + self.fracs[1].t))
         s[0] = 0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+
         self.error = np.max(np.abs(s - self.coef))
         self.coef = s
+
+
+    def check_boundary_condition(self, n=10):
+        """
+        Check if the intersection satisfies the boundary conditions.
+        """
+        chi = np.exp(1j * np.linspace(0, np.pi, n))
+        # Calculate the head in fracture 0
+        z0 = gf.map_chi_to_z_line(chi, self.endpoints[0])
+        omega0 = self.fracs[0].calc_omega(z0, exclude=None)
+        head0 = np.real(omega0)/self.fracs[0].t
+        # Calculate the head in fracture 1
+        z1 = gf.map_chi_to_z_line(chi, self.endpoints[1])
+        omega1 = self.fracs[1].calc_omega(z1, exclude=None)
+        head1 = np.real(omega1)/self.fracs[1].t
+
+        # Calculate the difference in head in the intersection
+        return np.mean(np.abs(head0 - head1)) / np.abs(np.mean(head0))

@@ -19,7 +19,7 @@ class ConstantHeadLine:
         self.frac = frac
 
         # Create the pre-calculation variables
-        self.thetas = np.linspace(start=np.pi / (2 * nint), stop=np.pi, num=nint, endpoint=False)
+        self.thetas = np.linspace(start=np.pi/(2*nint), stop=np.pi + np.pi/(2*nint), num=nint, endpoint=False)
         self.coef = np.zeros(ncoef, dtype=complex)
         self.phi = frac.phi_from_head(head)
         self.error = 1
@@ -50,3 +50,11 @@ class ConstantHeadLine:
         s[0] = 0  # Set the first coefficient to zero (constant embedded in discharge matrix)
         self.error = np.max(np.abs(s + self.coef))
         self.coef = -s
+
+    def check_boundary_condition(self, n=10):
+        chi = np.exp(1j * np.linspace(0, np.pi, n))
+        # Calculate the head in fracture 0
+        z0 = gf.map_chi_to_z_line(chi, self.endpoints)
+        omega0 = self.frac.calc_omega(z0, exclude=None)
+
+        return np.mean(np.abs(self.phi - np.real(omega0))) / np.abs(self.phi)

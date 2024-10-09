@@ -40,6 +40,9 @@ class BoundingCircle:
         self.dpsi_corr = np.zeros(self.nint - 1, dtype=float)
         self.error = 1
 
+    def __str__(self):
+        return f'Bounding circle: {self.label}'
+
     def calc_omega(self, z):
         """
         Calculates the omega for the bounding circle.
@@ -105,3 +108,20 @@ class BoundingCircle:
 
         self.error = np.max(np.abs(s + self.coef))
         self.coef = -s
+
+    def check_boundary_condition(self):
+        # Calculate the stream function on the boundary of the fracture
+        z0 = gf.map_chi_to_z_circle(np.exp(1j * self.thetas), self.r)
+        omega0 = self.frac.calc_omega(z0, exclude=None)
+        psi = np.imag(omega0)
+        dpsi = np.diff(psi)
+        dpsi = np.hstack([0, np.add(dpsi, -self.dpsi_corr)])
+
+        psi0 = psi[0]
+        psi2 = []
+        for ii in range(self.nint):
+            psi1 = psi0 + dpsi[ii]
+            psi2.append(psi1)
+            psi0 = psi1
+        psi = np.array(psi2)
+        return np.abs(np.max(psi) - np.min(psi)) / self.frac.get_total_discharge()

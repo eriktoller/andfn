@@ -190,7 +190,6 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
         z[ii] = z_func(chi)
     psi = np.imag(omega_func(z))
     dpsi = np.diff(psi)
-    ddpsi = np.diff(psi)
     dpsi = np.hstack([0, np.add(dpsi, -dpsi_corr)])
 
     psi0 = psi[0]

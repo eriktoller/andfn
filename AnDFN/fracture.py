@@ -29,11 +29,11 @@ class Fracture:
         self.y_vector = np.cross(normal, self.x_vector)
         self.y_vector = self.y_vector / np.linalg.norm(self.y_vector)
         if elements is None:
-            self.elements = [AnDFN.bounding.BoundingCircle(label, radius, 50, 100, self)]
+            self.elements = [AnDFN.bounding.BoundingCircle(label, radius, 10, 20, self)]
             #self.elements = []
         else:
             self.elements = elements
-            self.elements.append(AnDFN.bounding.BoundingCircle(label, radius, 50, 100, self))
+            self.elements.append(AnDFN.bounding.BoundingCircle(label, radius, 10, 20, self))
         self.constant = 0.0
 
     def __str__(self):
@@ -50,6 +50,10 @@ class Fracture:
                 if isinstance(e, Intersection)
                 or isinstance(e, ConstantHeadLine)
                 or isinstance(e, Well)]
+
+    def get_total_discharge(self):
+        elements = self.get_discharge_elements()
+        return sum([np.abs(e.q) for e in elements])/len(elements)
 
     def set_new_label(self, new_label):
         self.label = new_label

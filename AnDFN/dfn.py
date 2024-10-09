@@ -217,13 +217,13 @@ class DFN:
             if isinstance(e, Intersection):
                 z0 = e.z_array(self.discharge_int, e.fracs[0])
                 z1 = e.z_array(self.discharge_int, e.fracs[1])
-                omega0 = e.fracs[0].calc_omega(z0, exclude=e)
-                omega1 = e.fracs[1].calc_omega(z1, exclude=e)
-                matrix[row] = np.real(np.mean(omega0)) / e.fracs[0].t - np.real(np.mean(omega1)) / e.fracs[1].t
+                omega0 = e.fracs[0].calc_omega(z0, exclude=None)
+                omega1 = e.fracs[1].calc_omega(z1, exclude=None)
+                matrix[row] = np.mean(np.real(omega1)) / e.fracs[1].t - np.mean(np.real(omega0)) / e.fracs[0].t
             else:
                 z = e.z_array(self.discharge_int)
-                omega = e.frac.calc_omega(z, exclude=e)
-                matrix[row] = e.phi*e.frac.t - np.real(np.mean(omega))
+                omega = e.frac.calc_omega(z, exclude=None)
+                matrix[row] = e.phi - np.mean(np.real(omega))
             row += 1
         return matrix
 
@@ -267,7 +267,7 @@ class DFN:
         cnt = 0
         nit = 0
         error = 1
-        while error > 1e-6 and nit < 50:
+        while error > 1e-5 and nit < 50:
             cnt = 0
             nit += 1
             self.solve_discharge_matrix()

@@ -31,7 +31,10 @@ if __name__ == '__main__':
     const_head_3d1 = np.array([-0.28093481,  0.29687769, -0.342011  ])
     const_head_pnt0 = AnDFN.geometry_functions.map_3d_to_2d(const_head_3d0, frac0)
     const_head_pnt1 = AnDFN.geometry_functions.map_3d_to_2d(const_head_3d1, frac0)
-    const_head = AnDFN.const_head.ConstantHeadLine('const_head', np.array([-0.43885606715490133 - 0.08605437416676523j, -0.2994522312574155-0.3321571318269438j]), 10, 20, 2.0, frac0)
+    const_head = AnDFN.const_head.ConstantHeadLine('const_head',
+                                                   np.array([-0.43885606715490133 - 0.08605437416676523j,
+                                                             -0.2994522312574155-0.3321571318269438j]),
+                                                   5, 10, 2.0, frac0)
     frac3.add_element(well)
     frac0.add_element(const_head)
 
@@ -44,6 +47,16 @@ if __name__ == '__main__':
     dfn.build_head_matrix()
     dfn.solve()
 
+    print(f' error {dfn.elements[0]} = {dfn.elements[0].check_boundary_condition()}')
+    print(f' error {dfn.elements[1]} = {dfn.elements[1].check_boundary_condition()}')
+    print(f' error {dfn.elements[2]} = {dfn.elements[2].check_boundary_condition()}')
+    print(f' error {dfn.elements[3]} = {dfn.elements[3].check_boundary_condition()}')
+    print(f' error {dfn.elements[4]} = {dfn.elements[4].check_boundary_condition()}')
+    print(f' error {dfn.elements[5]} = {dfn.elements[5].check_boundary_condition()}')
+    print(f' error {dfn.elements[6]} = {dfn.elements[6].check_boundary_condition()}')
+    print(f' error {dfn.elements[7]} = {dfn.elements[7].check_boundary_condition()}')
+    print(f' error {dfn.elements[8]} = {dfn.elements[8].check_boundary_condition()}')
+    print(f' error {dfn.elements[9]} = {dfn.elements[9].check_boundary_condition()}')
 
     p1 = dfn.initiate_plotter()
     dfn.plot_fractures(p1)
