@@ -27,6 +27,15 @@ class ConstantHeadLine:
     def __str__(self):
         return f'Constant head line: {self.label}'
 
+    def increase_coef(self, n):
+        """
+        Increase the number of coefficients in the asymptotic expansion.
+        """
+        self.ncoef += n
+        self.coef = np.append(self.coef, np.zeros(n, dtype=complex))
+        self.nint += n*2
+        self.thetas = np.linspace(start=np.pi/(2*self.nint), stop=np.pi + np.pi/(2*self.nint), num=self.nint, endpoint=False)
+
     def discharge_term(self, z):
         chi = gf.map_z_line_to_chi(z, self.endpoints)
         return np.sum(np.real(mf.well_chi(chi, 1))) / len(z)

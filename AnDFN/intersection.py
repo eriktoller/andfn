@@ -25,6 +25,15 @@ class Intersection:
     def __str__(self):
         return f'Intersection: {self.label}'
 
+    def increase_coef(self, n):
+        """
+        Increase the number of coefficients in the asymptotic expansion.
+        """
+        self.ncoef += n
+        self.coef = np.append(self.coef, np.zeros(n, dtype=complex))
+        self.nint += n*2
+        self.thetas = np.linspace(start=np.pi/(2*self.nint), stop=np.pi + np.pi/(2*self.nint), num=self.nint, endpoint=False)
+
     def discharge_term(self, z, frac_is):
         if frac_is == self.fracs[0]:
             chi = gf.map_z_line_to_chi(z, self.endpoints[0])
@@ -52,6 +61,10 @@ class Intersection:
             chi = gf.map_z_line_to_chi(z, self.endpoints[1])
             omega = mf.asym_expansion(chi, -self.coef, offset=0) + mf.well_chi(chi, -self.q)
         return omega
+
+    def calc_w(self, z, frac_is):
+        pass
+        # TODO: Implement the calculation of the complex discharge vector for the intersection
 
     def solve(self):
 
@@ -82,6 +95,9 @@ class Intersection:
         z1 = gf.map_chi_to_z_line(chi, self.endpoints[1])
         omega1 = self.fracs[1].calc_omega(z1, exclude=None)
         head1 = np.real(omega1)/self.fracs[1].t
+        dhead = np.abs(head0 - head1)
 
         # Calculate the difference in head in the intersection
-        return np.mean(np.abs(head0 - head1)) / np.abs(np.mean(head0))
+        #return np.mean(np.abs(head0 - head1)) / np.abs(np.mean(head0))
+
+        return (np.max(dhead) - np.min(dhead)) / np.abs(np.mean(head0))

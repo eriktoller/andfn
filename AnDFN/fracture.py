@@ -16,7 +16,7 @@ import AnDFN.bounding
 
 
 class Fracture:
-    def __init__(self, label, t, radius, center, normal, elements=None):
+    def __init__(self, label, t, radius, center, normal, ncoef=10, nint=20, elements=None):
         self.label = label
         self.t = t
         self.radius = radius
@@ -28,12 +28,9 @@ class Fracture:
         self.x_vector = self.x_vector / np.linalg.norm(self.x_vector)
         self.y_vector = np.cross(normal, self.x_vector)
         self.y_vector = self.y_vector / np.linalg.norm(self.y_vector)
-        if elements is None:
-            self.elements = [AnDFN.bounding.BoundingCircle(label, radius, 10, 20, self)]
-            #self.elements = []
-        else:
-            self.elements = elements
-            self.elements.append(AnDFN.bounding.BoundingCircle(label, radius, 10, 20, self))
+        self.elements = [AnDFN.bounding.BoundingCircle(label, radius, ncoef, nint, self)]
+        if elements is not None:
+            self.elements.append(elements)
         self.constant = 0.0
 
     def __str__(self):
@@ -53,7 +50,30 @@ class Fracture:
 
     def get_total_discharge(self):
         elements = self.get_discharge_elements()
-        return sum([np.abs(e.q) for e in elements])/len(elements)
+        return sum([np.abs(e.q) for e in elements])
+
+    def check_discharge(self):
+        elements = self.get_discharge_elements()
+        q = 0.0
+        for e in elements:
+            if isinstance(e, Intersection):
+                if e.fracs[1] == self:
+                    q -= e.q
+                    continue
+            q += e.q
+        return np.abs(q)
+
+    def get_max_min_head(self):
+        elements = self.get_discharge_elements()
+        head = []
+        for e in elements:
+            if isinstance(e, Well):
+                head.append(e.head)
+            elif isinstance(e, ConstantHeadLine):
+                head.append(e.head)
+        if len(head) == 0:
+            return [None, None]
+        return [max(head), min(head)]
 
     def set_new_label(self, new_label):
         self.label = new_label
@@ -84,6 +104,32 @@ class Fracture:
                     omega += e.calc_omega(z)
         return omega
 
+    def calc_w(self, z, exclude=None):
+        """
+        Calculates the complex discharge vector for the fracture excluding element "exclude".
+
+        Parameters
+        ----------
+        z : complex
+            A point in the complex z plane.
+        exclude : any
+            Label of element to exclude from the omega calculation.
+
+        Returns
+        -------
+        w : complex
+            The complex discharge vector for the fracture.
+        """
+        w = 0
+
+        for e in self.elements:
+            if e != exclude:
+                if isinstance(e, Intersection):
+                    w += e.calc_w(z, self)
+                else:
+                    w += e.calc_w(z)
+        return w
+
     def phi_from_head(self, head):
         """
         Calculates the head from the phi for the fracture.
@@ -99,6 +145,22 @@ class Fracture:
             The phi for the fracture.
         """
         return head * self.t
+
+    def head_from_phi(self, phi):
+        """
+        Calculates the head from the phi for the fracture.
+
+        Parameters
+        ----------
+        phi : float
+            The phi for the fracture.
+
+        Returns
+        -------
+        head : float
+            The head for the fracture.
+        """
+        return phi / self.t
 
     def calc_flow_net(self, n_points, margin=0.1):
         """

@@ -242,13 +242,13 @@ def line_circle_intersection(z0, z1, radius):
     return x1 + 1j * y1, x2 + 1j * y2
 
 
-def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0):
+def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0, ncoef=10, nint=20):
     fractures = []
     radii = np.random.rand(n_fractures) * radius_factor
     centers = np.random.rand(n_fractures, 3) * center_factor
     normals = np.random.rand(n_fractures, 3)
     for i in range(n_fractures):
-        fractures.append(fracture.Fracture(f'{i + 1}', 1, radii[i], centers[i], normals[i]))
+        fractures.append(fracture.Fracture(f'{i + 1}', 1, radii[i], centers[i], normals[i], ncoef, nint))
         print(f'\r{i + 1} / {n_fractures}', end='')
     print('')
     return fractures
@@ -269,16 +269,19 @@ def get_connected_fractures(fractures, ncoef, nint, fracture_surface=None):
     while fracture_list_it:
         for i, fr in enumerate(fracture_list_it):
             for fr2 in fracture_list:
+                if fr == fr2:
+                    continue
                 if np.linalg.norm(fr.center - fr2.center) > fr.radius + fr2.radius:
                     continue
                 endpoints0, endpoints1 = fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
-                    if fr2 not in connected_fractures:
-                        connected_fractures.append(fr2)
-                        fracture_list_it_temp.append(fr2)
-                        intersections = intersection.Intersection(f'{cnt}_{i}', endpoints0, endpoints1, ncoef, nint, fr, fr2)
+                    if fr2 not in []:
+                        intersections = intersection.Intersection(f'{fr.label}_{fr2.label}', endpoints0, endpoints1, ncoef, nint, fr, fr2)
                         fr.add_element(intersections)
                         fr2.add_element(intersections)
+                        if fr2 not in connected_fractures:
+                            connected_fractures.append(fr2)
+                            fracture_list_it_temp.append(fr2)
             print(
                 f'\r{i + 1} / {len(fracture_list_it)}, iteration {cnt}, {len(fracture_list)} potential fractures left in DFN',
                 end='')
