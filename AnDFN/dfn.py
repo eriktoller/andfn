@@ -129,6 +129,7 @@ class DFN:
         self.discharge_matrix = None
         self.discharge_elements = None
         self.lup = None
+        self.discharge_error = 1
 
     def __str__(self):
         """
@@ -457,13 +458,18 @@ class DFN:
         else:
             discharges = np.linalg.solve(self.discharge_matrix, head_matrix)
 
+        error_list = []
         # Set the discharges for each element
         for i, e in enumerate(self.discharge_elements):
+            error_list.append(np.abs(discharges[i] - e.q))
             e.q = discharges[i]
 
         # Set the constants for each fracture
         for i, f in enumerate(self.fractures):
+            error_list.append(np.abs(discharges[len(self.discharge_elements) + i] - f.constant))
             f.constant = discharges[len(self.discharge_elements) + i]
+
+        self.discharge_error = max(error_list)
 
     def get_error(self):
         error_list = []
@@ -504,6 +510,7 @@ class DFN:
                 e.solve()
                 print(f'\rSolved elements: {i + 1} / {len(self.elements)}', end='')
             error = self.get_error()
+
             # I max error is reached, set all errors to a higher value (only once)
             if error < max_error:
                 cnt_error += 1

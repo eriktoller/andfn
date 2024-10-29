@@ -283,7 +283,7 @@ def get_connected_fractures(fractures, ncoef, nint, fracture_surface=None):
                             connected_fractures.append(fr2)
                             fracture_list_it_temp.append(fr2)
             print(
-                f'\r{i + 1} / {len(fracture_list_it)}, iteration {cnt}, {len(fracture_list)} potential fractures left in DFN',
+                f'\r{i + 1} / {len(fracture_list_it)}, iteration {cnt}, {len(fracture_list)} potential fractures left to analyze, {len(connected_fractures)} added to the DFN',
                 end='')
         fracture_list_it = fracture_list_it_temp
         fracture_list_it_temp = []

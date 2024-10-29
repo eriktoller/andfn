@@ -1,23 +1,38 @@
+"""Copyright (C), 2024, Erik A. L. Toller.
 
+Erik A. L. Toller, WSP Sverige AB
+erik dot toller at wsp dot com
 
+AnDFN is a computer program that calculated the flow in a discrete fracture network (DFN) using the Analytic Element
+Method (AEM).
+"""
 
-# --version number
+# version number
 __name__ = "AnDFN"
 __author__ = "Erik A.L. Toller"
-
-__all__ = ['bounding', 'const_head', 'dfn', 'elements', 'fracture', 'intersection', 'well']
+__version__ = "0.0"
 
 # Import all classes and functions
 from AnDFN.bounding import BoundingCircle
 from AnDFN.const_head import ConstantHeadLine
 from AnDFN.dfn import DFN
-from AnDFN.elements import Elements
 from AnDFN.fracture import Fracture
 from AnDFN.intersection import Intersection
 from AnDFN.well import Well
 import AnDFN.geometry_functions
 import AnDFN.math_functions
-#from AnDFN.geometry_functions import (map_z_line_to_chi, map_chi_to_z_line, map_chi_to_z_circle, map_z_circle_to_chi,
-#                                      get_chi_from_theta, get_connected_fractures, generate_fractures,
-#                                      fracture_intersection, line_circle_intersection)
-#from AnDFN.math_functions import asym_expansion, cauchy_integral_real, cauchy_integral_imag, cauchy_integral_domega, well_chi, taylor_series
+
+__all__ = [
+    'BoundingCircle',
+    'ConstantHeadLine',
+    'DFN',
+    'Fracture',
+    'Intersection',
+    'Well'
+]
+
+# data type for structured arrays
+import numpy as np
+
+elements_dtype = np.dtype([('label', (np.str_, 10)), ('array_field', np.ndarray)])
+dfn_dtype = np.dtype([('label', (np.str_, 10)), ('element', elements_dtype)])
