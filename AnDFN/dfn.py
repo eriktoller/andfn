@@ -540,7 +540,7 @@ class DFN:
     #                    Plotting functions                                                                            #
     ####################################################################################################################
 
-    def initiate_plotter(self, window_size=(800, 800), lighting='light kit', title=True, off_screen=False,
+    def initiate_plotter(self, window_size=(800, 800), grid=False, lighting='light kit', title=True, off_screen=False,
                          scale=1, axis=True):
         """
         Initiates the plotter for the DFN.
@@ -548,6 +548,8 @@ class DFN:
         ----------
         window_size : tuple
             The size of the plot window.
+        grid : bool
+            Whether to add a grid to the plot.
         lighting : str
             The type of lighting to use.
         title : bool or str
@@ -576,6 +578,8 @@ class DFN:
                 xlabel='X (E)',
                 ylabel='Y (N)',
                 zlabel='Z')
+        if grid:
+            _ = pl.show_grid()
         #_ = pl.add_bounding_box(line_width=5, color='black', outline=False, culling='back')
         if isinstance(title, str):
             _ = pl.add_text(title, font_size=10*scale, position='upper_left', color='k', shadow=True)
@@ -631,7 +635,7 @@ class DFN:
             if print_prog:
                 print(f'\rPlotting fractures: {i + 1} / {len(self.fractures)}', end='')
 
-    def plot_fractures_flow_net(self, pl, lvs, n_points, line_width=2, margin=0.01, opacity=1.0, only_flow=False):
+    def plot_fractures_flow_net(self, pl, lvs, n_points, line_width=2, margin=0.01, only_flow=False):
         """
         Plots the flow net for the fractures in the DFN.
         Parameters
@@ -653,6 +657,7 @@ class DFN:
         """
         if only_flow:
             fracs = self.get_flow_fractures()
+            self.plot_fractures(pl, fracs=fracs)
         else:
             fracs = self.fractures
 
@@ -661,11 +666,11 @@ class DFN:
         x_array_list = []
         y_array_list = []
         for i, f in enumerate(fracs):
+            print(f'\rPlotting flow net: {i + 1} / {len(fracs)}', end='')
             omega_fn, x_array, y_array = f.calc_flow_net(n_points, margin)
             omega_fn_list.append(omega_fn)
             x_array_list.append(x_array)
             y_array_list.append(y_array)
-            print(f'\rPlotting flow net: {i + 1} / {len(fracs)}', end='')
 
         # Get the levels for the flow net
         lvs_re, lvs_im = get_lvs(lvs, omega_fn_list)
@@ -675,9 +680,6 @@ class DFN:
             # plot the flow net using matplotlib
             contours_re = plt.contour(x_array_list[i], y_array_list[i], np.real(omega_fn_list[i]), levels=lvs_re)
             contours_im = plt.contour(x_array_list[i], y_array_list[i], np.imag(omega_fn_list[i]), levels=lvs_im)
-            # Plot the fractures
-            self.plot_fractures(pl, filled=True, color='#FFFFFF', opacity=opacity, show_edges=True, line_width=2.0,
-                                fracs=[f])
             # Extract the contour line and plot them in 3D, real and imaginary parts
             for contour in contours_re.allsegs:
                 for seg in contour:
@@ -689,6 +691,7 @@ class DFN:
                     if len(seg) == 0:
                         continue
                     plot_line_3d(seg, f, pl, 'blue', line_width=line_width)
+        print('')
 
     def plot_fractures_head(self, pl, lvs, n_points, line_width=2, margin=0.01, opacity=1.0, only_flow=False,
                             color_map='jet'):
@@ -778,6 +781,7 @@ class DFN:
             vertical=False,
             fmt='%10.1f',
         )
+        print('')
 
 
 
@@ -808,13 +812,53 @@ class DFN:
         print('')
 
     ####################################################################################################################
-    #                    Streamline tracing functions                                                                  #
+    #                    Streamline tracking functions                                                                 #
     ####################################################################################################################
+    def streamline_tracking(self, z0, elevation, frac):
+        """
+
+        Parameters
+        ----------
+        z0 : complex
+            Starting point for streamline tracking
+        elevation : float
+            Elevation of the starting point
+        frac: Fracture
+            The fracture where to start the streamline tracking
+
+        Returns
+        -------
+        streamlines: ndarray
+            Array with streamline
+        """
+        psi = []
+        # Start the tracking process
+    
+        # Move to the next fracture
+        streamline = np.array(psi)
+        return streamline
 
     @staticmethod
     def runge_kutta(z0, ds, tolerance, max_it, frac):
         """
         Runge-Kutta method for streamline tracing.
+        Parameters
+        ----------
+        z0 : complex
+            The initial point.
+        ds : float
+            The step size.
+        tolerance : float
+            The tolerance for the error.
+        max_it : int
+            The maximum number of iterations.
+        frac : Fracture
+            The fracture to trace the streamline on.
+
+        Returns
+        -------
+        z1 : complex
+            The point at the end of the streamline.
         """
         w0 = frac.calc_w(z0)
         z1 = z0 + np.conj(w0)/np.abs(w0) * ds

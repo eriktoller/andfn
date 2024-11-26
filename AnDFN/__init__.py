@@ -10,7 +10,7 @@ Method (AEM).
 # version number
 __name__ = "AnDFN"
 __author__ = "Erik A.L. Toller"
-__version__ = "0.0"
+__version__ = "0.1"
 
 # Import all classes and functions
 from AnDFN.bounding import BoundingCircle

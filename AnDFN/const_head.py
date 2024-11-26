@@ -50,6 +50,13 @@ class ConstantHeadLine:
         omega = mf.asym_expansion(chi, self.coef, offset=0) + mf.well_chi(chi, self.q)
         return omega
 
+    def calc_w(self, z):
+        # Map the z point to the chi plane
+        chi = gf.map_z_line_to_chi(z, self.endpoints)
+        # Calculate w
+        w = mf.asym_expansion(chi, self.coef[1:]) - self.q / chi
+        return w
+
     def solve(self):
         s = mf.cauchy_integral_real(self.nint, self.ncoef, self.thetas,
                                     lambda z: self.frac.calc_omega(z, exclude=self),

@@ -105,6 +105,31 @@ class Well:
             omega[np.abs(chi) < 1.0 - 1e-10] = self.head*self.frac.t + 0*1j
         return omega
 
+    def calc_w(self, z):
+        """
+        Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
+
+        Parameters
+        ----------
+        z : complex | ndarray
+            A point in the complex z plane.
+
+
+        Returns
+        -------
+        w : complex | ndarray
+            The complex discharge vector for the well.
+        """
+        chi = gf.map_z_circle_to_chi(z, self.radius, self.center)
+        if isinstance(chi, np.complex128):
+            if np.abs(chi) < 1.0 - 1e-10:
+                return np.nan + 1j * np.nan
+            w = -self.q / chi
+        else:
+            w = -self.q / chi
+            w[np.abs(chi) < 1.0 - 1e-10] = np.nan + 1j * np.nan
+        return w
+
     @staticmethod
     def check_boundary_condition(n=10):
         """

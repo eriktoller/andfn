@@ -291,3 +291,43 @@ def get_connected_fractures(fractures, ncoef, nint, fracture_surface=None):
         cnt += 1
     print(f'\r{len(connected_fractures)} connected fractures found out of {len(fractures)} and took {cnt} iterations')
     return connected_fractures
+
+
+def covert_trend_plunge_to_normal(trend, plunge):
+    """
+    Function that converts a trend and plunge to a normal vector
+    Parameters
+    ----------
+    trend : float
+        The trend of the fracture plane.
+    plunge : float
+        The plunge of the fracture plane.
+
+    Returns
+    -------
+    normal : ndarray
+        The normal vector of the fracture plane.
+    """
+    trend = np.deg2rad(90-trend)
+    plunge = np.deg2rad(90-plunge)
+    return np.array([np.sin(plunge) * np.cos(trend), np.sin(plunge) * np.sin(trend), np.cos(plunge)])
+
+
+def convert_strike_dip_to_normal(strike, dip):
+    """
+    Function that converts a strike and dip to a normal vector
+    Parameters
+    ----------
+    strike : float
+        The strike of the fracture plane.
+    dip : float
+        The dip of the fracture plane.
+
+    Returns
+    -------
+    normal : ndarray
+        The normal vector of the fracture plane.
+    """
+    strike = np.deg2rad(strike)
+    dip = np.deg2rad(-dip)
+    return np.array([-np.sin(dip) * np.sin(strike), np.sin(dip) * np.cos(strike), -np.cos(dip)])

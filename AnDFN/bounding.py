@@ -3,6 +3,8 @@ Notes
 -----
 This module contains the bounding classes.
 """
+from symtable import Class
+
 import AnDFN.math_functions as mf
 import AnDFN.geometry_functions as gf
 import numpy as np
@@ -12,7 +14,7 @@ from AnDFN.const_head import ConstantHeadLine
 
 
 class BoundingCircle:
-    def __init__(self, label, r, ncoef, nint, frac):
+    def __init__(self, label, radius, ncoef, nint, frac):
         """
         Initializes the bounding circle class.
         Parameters
@@ -29,7 +31,7 @@ class BoundingCircle:
             The fracture object that the bounding circle is associated with.
         """
         self.label = label
-        self.r = r
+        self.r = radius
         self.ncoef = ncoef
         self.nint = nint
         self.frac = frac
@@ -113,7 +115,7 @@ class BoundingCircle:
         else:
             if np.abs(chi) > 1.0+1e-10:
                 chi = np.nan + 1j * np.nan
-        w = mf.taylor_series(chi, self.coef[1:], offset=-1)
+        w = mf.taylor_series(chi, self.coef[1:])  # Don't need the offset since the array is only sent i part
         return w
 
     def find_branch_cuts(self):

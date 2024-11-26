@@ -25,6 +25,9 @@ class Intersection:
     def __str__(self):
         return f'Intersection: {self.label}'
 
+    def length(self):
+        return np.abs(self.endpoints[0][0] - self.endpoints[0][1])
+
     def increase_coef(self, n):
         """
         Increase the number of coefficients in the asymptotic expansion.
@@ -56,15 +59,21 @@ class Intersection:
         # Se if function is in the first or second fracture that the intersection is associated with
         if frac_is == self.fracs[0]:
             chi = gf.map_z_line_to_chi(z, self.endpoints[0])
-            omega = mf.asym_expansion(chi, self.coef, offset=0) + mf.well_chi(chi, self.q)
+            omega = mf.asym_expansion(chi, self.coef) + mf.well_chi(chi, self.q)
         else:
             chi = gf.map_z_line_to_chi(z, self.endpoints[1])
-            omega = mf.asym_expansion(chi, -self.coef, offset=0) + mf.well_chi(chi, -self.q)
+            omega = mf.asym_expansion(chi, -self.coef) + mf.well_chi(chi, -self.q)
         return omega
 
     def calc_w(self, z, frac_is):
-        pass
-        # TODO: Implement the calculation of the complex discharge vector for the intersection
+        # Se if function is in the first or second fracture that the intersection is associated with
+        if frac_is == self.fracs[0]:
+            chi = gf.map_z_line_to_chi(z, self.endpoints[0])
+            w = mf.asym_expansion(chi, self.coef[1:])  - self.q / chi
+        else:
+            chi = gf.map_z_line_to_chi(z, self.endpoints[1])
+            w = mf.asym_expansion(chi, -self.coef[1:]) + self.q / chi
+        return w
 
     def solve(self):
 
