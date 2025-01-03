@@ -43,18 +43,24 @@ class ConstantHeadLine:
     def z_array(self, n):
         return np.linspace(self.endpoints[0], self.endpoints[1], n)
 
+    def z_array_tracking(self, n, offset=1e-3):
+        chi = np.exp(1j * np.linspace(0, 2*np.pi, n, endpoint=False))*(1+offset)
+        return gf.map_chi_to_z_line(chi, self.endpoints)
+
+
     def calc_omega(self, z):
         # Map the z point to the chi plane
         chi = gf.map_z_line_to_chi(z, self.endpoints)
         # Calculate omega
-        omega = mf.asym_expansion(chi, self.coef, offset=0) + mf.well_chi(chi, self.q)
+        omega = mf.asym_expansion(chi, self.coef) + mf.well_chi(chi, self.q)
         return omega
 
     def calc_w(self, z):
         # Map the z point to the chi plane
         chi = gf.map_z_line_to_chi(z, self.endpoints)
         # Calculate w
-        w = mf.asym_expansion(chi, self.coef[1:]) - self.q / chi
+        w = -mf.asym_expansion_d1(chi, self.coef) - self.q / (2 * np.pi * chi)
+        w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self.endpoints[1] - self.endpoints[0])
         return w
 
     def solve(self):
@@ -74,3 +80,17 @@ class ConstantHeadLine:
         omega0 = self.frac.calc_omega(z0, exclude=None)
 
         return np.mean(np.abs(self.phi - np.real(omega0))) / np.abs(self.phi)
+
+    def check_chi_crossing(self, z0, z1, atol=1e-10):
+        z = gf.line_line_intersection(z0, z1, self.endpoints[0], self.endpoints[1])
+
+        if z is None:
+            return False
+
+        if (np.abs(z - z0) + np.abs(z - z1) > np.abs(z0 - z1)):
+            return False
+
+        if (np.abs(z - self.endpoints[0]) + np.abs(z - self.endpoints[1]) > np.abs(self.endpoints[0] - self.endpoints[1])):
+            return False
+
+        return z

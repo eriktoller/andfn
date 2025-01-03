@@ -34,5 +34,22 @@ __all__ = [
 # data type for structured arrays
 import numpy as np
 
-elements_dtype = np.dtype([('label', (np.str_, 10)), ('array_field', np.ndarray)])
-dfn_dtype = np.dtype([('label', (np.str_, 10)), ('element', elements_dtype)])
+dfn_dtype = np.dtype([
+        ('label', np.str_),
+        ('id', np.int_),
+        ('frac0', np.str_),
+        ('frac1', np.str_),
+        ('endpoints0', np.ndarray),
+        ('endpoints1', np.ndarray),
+        ('radius', np.float64),
+        ('center', np.complex128),
+        ('head', np.float64),
+        ('ncoef', np.int_),
+        ('nint', np.int_),
+        ('q', np.float64),
+        ('thetas', np.ndarray),
+        ('coef', np.ndarray),
+        ('old_coef', np.ndarray),
+        ('dpsi_corr', np.ndarray),
+        ('error', np.float64)
+])

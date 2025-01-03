@@ -124,10 +124,11 @@ class Well:
         if isinstance(chi, np.complex128):
             if np.abs(chi) < 1.0 - 1e-10:
                 return np.nan + 1j * np.nan
-            w = -self.q / chi
+            w = -self.q / (2 * np.pi * chi)
         else:
-            w = -self.q / chi
+            w = -self.q / (2 * np.pi * chi)
             w[np.abs(chi) < 1.0 - 1e-10] = np.nan + 1j * np.nan
+        w /= self.radius
         return w
 
     @staticmethod
@@ -136,3 +137,26 @@ class Well:
         Checks the boundary condition of the well. This is allways zero as the well is solved in teh discharge matrix.
         """
         return 0
+
+    def check_chi_crossing(self, z0, z1, atol=1e-10):
+        chi0 = gf.map_z_circle_to_chi(z0, self.radius, self.center)
+        chi1 = gf.map_z_circle_to_chi(z1, self.radius, self.center)
+
+        chi2, chi3 = gf.line_circle_intersection(chi0, chi1, 1.0)
+
+        if chi2 is None:
+            return False
+
+        if (np.abs(chi2 - chi0) + np.abs(chi2-chi1) > np.abs(chi1 - chi0)
+                and np.abs(chi3 - chi0) + np.abs(chi3-chi1) > np.abs(chi1 - chi0)):
+            return False
+
+
+        chi2 *= (1+atol)
+        chi3 *= (1+atol)
+
+        z2 = gf.map_chi_to_z_circle(chi2, self.radius, self.center)
+        z3 = gf.map_chi_to_z_circle(chi3, self.radius, self.center)
+        if np.abs(z2 - z0) < np.abs(z3 - z0):
+            return z2
+        return z3

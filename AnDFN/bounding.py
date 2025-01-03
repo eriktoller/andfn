@@ -31,7 +31,7 @@ class BoundingCircle:
             The fracture object that the bounding circle is associated with.
         """
         self.label = label
-        self.r = radius
+        self.radius = radius
         self.ncoef = ncoef
         self.nint = nint
         self.frac = frac
@@ -55,7 +55,7 @@ class BoundingCircle:
 
         bounding_struc_array = np.zeros(1, dtype=bounding_dtype)
         bounding_struc_array['label'][0] = self.label
-        bounding_struc_array['r'][0] = self.r
+        bounding_struc_array['r'][0] = self.radius
         bounding_struc_array['ncoef'][0] = self.ncoef
         bounding_struc_array['nint'][0] = self.nint
         bounding_struc_array['thetas'][0] = self.thetas
@@ -87,7 +87,7 @@ class BoundingCircle:
         omega : complex
             The complex potential for the bounding circle.
         """
-        chi = gf.map_z_circle_to_chi(z, self.r)
+        chi = gf.map_z_circle_to_chi(z, self.radius)
         if isinstance(chi, np.ndarray) and len(chi) > 1:
             chi[np.abs(chi) > 1.0+1e-10] = np.nan + 1j * np.nan
         else:
@@ -109,13 +109,14 @@ class BoundingCircle:
         w : complex
             The complex discharge vector for the bounding circle.
         """
-        chi = gf.map_z_circle_to_chi(z, self.r)
+        chi = gf.map_z_circle_to_chi(z, self.radius)
         if isinstance(chi, np.ndarray) and len(chi) > 1:
             chi[np.abs(chi) > 1.0+1e-10] = np.nan + 1j * np.nan
         else:
             if np.abs(chi) > 1.0+1e-10:
                 chi = np.nan + 1j * np.nan
-        w = mf.taylor_series(chi, self.coef[1:])  # Don't need the offset since the array is only sent i part
+        w = -mf.taylor_series_d1(chi, self.coef)
+        w /= self.radius
         return w
 
     def find_branch_cuts(self):
@@ -123,7 +124,7 @@ class BoundingCircle:
         Find the branch cuts for the fracture.
         """
         # Find the branch cuts
-        z_pos = gf.map_chi_to_z_circle(np.exp(1j * self.thetas), self.r)
+        z_pos = gf.map_chi_to_z_circle(np.exp(1j * self.thetas), self.radius)
         self.dpsi_corr = np.zeros(self.nint - 1, dtype=float)
 
         for ii in range(self.nint - 1):
@@ -162,7 +163,7 @@ class BoundingCircle:
         self.find_branch_cuts()
         s = mf.cauchy_integral_domega(self.nint, self.ncoef, self.thetas, self.dpsi_corr,
                                       lambda z: self.frac.calc_omega(z, exclude=self),
-                                      lambda chi: gf.map_chi_to_z_circle(chi, self.r))
+                                      lambda chi: gf.map_chi_to_z_circle(chi, self.radius))
 
         self.error = np.max(np.abs(s + self.coef))
         self.coef = -s
@@ -171,7 +172,7 @@ class BoundingCircle:
 
         # Calculate the stream function on the boundary of the fracture
         theta = np.linspace(0, 2 * np.pi, n, endpoint=True)
-        z0 = gf.map_chi_to_z_circle(np.exp(1j * theta), self.r)
+        z0 = gf.map_chi_to_z_circle(np.exp(1j * theta), self.radius)
         omega0 = self.frac.calc_omega(z0, exclude=None)
         psi = np.imag(omega0)
         dpsi = np.diff(psi)

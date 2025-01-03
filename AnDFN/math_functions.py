@@ -7,7 +7,7 @@ This module contains some general mathematical functions.
 import numpy as np
 
 
-def asym_expansion(chi, coef, offset=0):
+def asym_expansion(chi, coef):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
     coefficients.
@@ -18,8 +18,6 @@ def asym_expansion(chi, coef, offset=0):
         A point in the complex chi-plane
     coef : array_like
         An array of coefficients
-    offset : int
-        Offset to exponent
 
     Return
     ------
@@ -28,12 +26,36 @@ def asym_expansion(chi, coef, offset=0):
     """
     res = 0.0
     for n, c in enumerate(coef):
-        res += c * chi ** (-n + offset)
+        res += c * chi ** (-n)
 
     return res
 
 
-def taylor_series(chi, coef, offset=0):
+def asym_expansion_d1(chi, coef):
+    """
+    Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
+    coefficients.
+
+    Parameters
+    ----------
+    chi : complex
+        A point in the complex chi-plane
+    coef : array_like
+        An array of coefficients
+
+    Return
+    ------
+    res : complex
+        The resulting value for the asymptotic expansion
+    """
+    res = 0.0
+    for n, c in enumerate(coef):
+        res -= c * n * chi ** (-n - 1)
+
+    return res
+
+
+def taylor_series(chi, coef):
     """
     Function that calculates the Taylor series starting from 0 for a given point chi and an array of
     coefficients.
@@ -44,8 +66,6 @@ def taylor_series(chi, coef, offset=0):
         A point in the complex chi-plane
     coef : array_like
         An array of coefficients
-    offset : int
-        Offset to exponent
 
     Return
     ------
@@ -54,7 +74,31 @@ def taylor_series(chi, coef, offset=0):
     """
     res = 0.0 + 0.0j
     for n, c in enumerate(coef):
-        res += c * chi ** (n + offset)
+        res += c * chi ** n
+
+    return res
+
+
+def taylor_series_d1(chi, coef):
+    """
+    Function that calculates the Taylor series starting from 0 for a given point chi and an array of
+    coefficients.
+
+    Parameters
+    ----------
+    chi : complex
+        A point in the complex chi-plane
+    coef : array_like
+        An array of coefficients
+
+    Return
+    ------
+    res : complex
+        The resulting value for the asymptotic expansion
+    """
+    res = 0.0 + 0.0j
+    for n, c in enumerate(coef[1:], start=1):
+        res += c * n * chi ** (n-1)
 
     return res
 

@@ -69,10 +69,12 @@ class Intersection:
         # Se if function is in the first or second fracture that the intersection is associated with
         if frac_is == self.fracs[0]:
             chi = gf.map_z_line_to_chi(z, self.endpoints[0])
-            w = mf.asym_expansion(chi, self.coef[1:])  - self.q / chi
+            w = -mf.asym_expansion_d1(chi, self.coef)  - self.q / (2 * np.pi * chi)
+            w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self.endpoints[0][1] - self.endpoints[0][0])
         else:
             chi = gf.map_z_line_to_chi(z, self.endpoints[1])
-            w = mf.asym_expansion(chi, -self.coef[1:]) + self.q / chi
+            w = -mf.asym_expansion_d1(chi, -self.coef) + self.q / (2 * np.pi * chi)
+            w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self.endpoints[1][1] - self.endpoints[1][0])
         return w
 
     def solve(self):
@@ -110,3 +112,22 @@ class Intersection:
         #return np.mean(np.abs(head0 - head1)) / np.abs(np.mean(head0))
 
         return (np.max(dhead) - np.min(dhead)) / np.abs(np.mean(head0))
+
+    def check_chi_crossing(self, z0, z1, frac, atol=1e-10):
+        if frac == self.fracs[0]:
+            endpoints0 = self.endpoints[0]
+        else:
+            endpoints0 = self.endpoints[1]
+
+        z = gf.line_line_intersection(z0, z1, endpoints0[0], endpoints0[1])
+
+        if z is None:
+            return False
+
+        if (np.abs(z - z0) + np.abs(z - z1) > np.abs(z0 - z1)):
+            return False
+
+        if (np.abs(z - endpoints0[0]) + np.abs(z - endpoints0[1]) > np.abs(endpoints0[0] - endpoints0[1])):
+            return False
+
+        return z

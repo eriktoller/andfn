@@ -242,6 +242,20 @@ def line_circle_intersection(z0, z1, radius):
     return x1 + 1j * y1, x2 + 1j * y2
 
 
+def line_line_intersection(z0, z1, z2, z3):
+
+    determinant = ((np.conj(z1) - np.conj(z0))*(z3 - z2) - (z1 - z0)*(np.conj(z3) - np.conj(z2)))
+
+    if determinant == 0:
+        return None
+
+    z = (np.conj(z1)*z0 - z1*np.conj(z0))*(z3 - z2) - (z1 - z0)*((np.conj(z3))*z2 - z3*np.conj(z2))
+    z /= determinant
+
+    return z
+
+
+
 def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0, ncoef=10, nint=20):
     fractures = []
     radii = np.random.rand(n_fractures) * radius_factor

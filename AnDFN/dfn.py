@@ -8,7 +8,7 @@ import pyvista as pv
 import matplotlib.pyplot as plt
 import scipy as sp
 
-from . import geometry_functions as gf
+from AnDFN import geometry_functions as gf
 from .well import Well
 from .const_head import ConstantHeadLine
 from .intersection import Intersection
@@ -101,9 +101,12 @@ def plot_line_3d(seg, f, pl, color, line_width):
     line_width : float
         The line width of the line.
     """
-    x = seg[:, 0]
-    y = seg[:, 1]
-    contour_complex = x + 1j * y
+    if seg.dtype is not np.dtype('complex'):
+        x = seg[:, 0]
+        y = seg[:, 1]
+        contour_complex = x + 1j * y
+    else:
+        contour_complex = seg
     line_3d = gf.map_2d_to_3d(contour_complex, f)
     pl.add_mesh(pv.MultipleLines(line_3d), color=color, line_width=line_width)
 
@@ -221,13 +224,13 @@ class DFN:
         if isinstance(new_fracture, list):
             if len(new_fracture) == 1:
                 self.fractures.append(new_fracture[0])
-                print(f'Added {new_fracture[0]} fractures to the DFN.')
+                print(f'Added {new_fracture[0]} fracture to the DFN.')
             else:
                 self.fractures.extend(new_fracture)
                 print(f'Added {len(new_fracture)} fractures to the DFN.')
         else:
             self.fractures.append(new_fracture)
-            print(f'Added {new_fracture} fractures to the DFN.')
+            print(f'Added {new_fracture} fracture to the DFN.')
         # reset the discharge matrix and elements
         self.discharge_matrix = None
         self.elements = None
@@ -814,12 +817,34 @@ class DFN:
     ####################################################################################################################
     #                    Streamline tracking functions                                                                 #
     ####################################################################################################################
-    def streamline_tracking(self, z0, elevation, frac):
-        """
+    def plot_streamline_tracking(self, pl, z0, frac, line_width=2.0, elevation=0.0):
 
+        if isinstance(z0, complex):
+            z0 = np.array([z0])
+
+        streamlines = []
+        streamlines_frac = []
+        for i, z in enumerate(z0):
+            streamline, streamline_frac = self.streamline_tracking(z, frac, elevation)
+            streamlines.append(streamline)
+            streamlines_frac.append(streamline_frac)
+            print(f'\rTracing streamline: {i + 1} / {len(z0)}', end='')
+
+        # Concatenate streamlines list to ndarray
+        for i, s in enumerate(streamlines):
+            streamline_3d = []
+            for ii, ss in enumerate(s):
+                psi_3d = gf.map_2d_to_3d(np.array(ss), streamlines_frac[i][ii])
+                streamline_3d.append(psi_3d)
+            streamline_3d = np.concatenate(streamline_3d)
+            pl.add_mesh(pv.MultipleLines(streamline_3d), color='purple', line_width=line_width)
+
+    def streamline_tracking(self, z0, frac, elevation=0.0):
+        """
+        Function that tracks the streamlines in a fracture.
         Parameters
         ----------
-        z0 : complex
+        z0 : complex | ndarray
             Starting point for streamline tracking
         elevation : float
             Elevation of the starting point
@@ -831,15 +856,108 @@ class DFN:
         streamlines: ndarray
             Array with streamline
         """
-        psi = []
+        # Crete empty ndarray
+        streamline = []
+        streamline_frac = []
+
+
         # Start the tracking process
-    
-        # Move to the next fracture
-        streamline = np.array(psi)
-        return streamline
+        cond = True
+        while cond:
+            # Start the tracking process
+            psi = [z0]
+            discharge_elements = frac.get_discharge_elements()
+
+            # get the next points
+            z1 = self.runge_kutta(z0, frac)
+            z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
+            if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
+                z3 = z0
+                break
+            while z3 is False:
+                psi.append(z1)
+                z0 = z1
+                z1 = self.runge_kutta(z0, frac)
+                if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
+                    z3 = z0
+                    break
+                z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
+                if len(psi) > 9010:
+                    z3 = z1
+                    break
+            psi.append(z3)
+
+
+
+            streamline.append(psi)
+            streamline_frac.append(frac)
+
+            if isinstance(element, Intersection):
+                z3d = gf.map_2d_to_3d(z3, frac)
+                if frac == element.fracs[0]:
+                    frac = element.fracs[1]
+                else:
+                    frac = element.fracs[0]
+                z0 = self.get_exit_intersection(z3d, element, frac)
+                if np.isnan(np.real(z0)):
+                    print('hoho')
+            else:
+                cond = False
+
+        return streamline, streamline_frac
+
+    def check_streamline_exit(self, z0, z1, discharge_elements, frac):
+        """
+        Function that checks if the streamline has exited the DFN
+        """
+        for e in discharge_elements:
+            if isinstance(e, Intersection):
+                z2 = e.check_chi_crossing(z0, z1, frac)
+            else:
+                z2 = e.check_chi_crossing(z0, z1)
+            if np.isnan(np.real(z2)):
+                return
+            if z2 is not False:
+                return z2, e
+        return False, False
 
     @staticmethod
-    def runge_kutta(z0, ds, tolerance, max_it, frac):
+    def get_exit_intersection(z3d, element, frac, dchi=1e-3):
+
+        if frac == element.fracs[0]:
+            endpoints0 = element.endpoints[0]
+        else:
+            endpoints0 = element.endpoints[1]
+        z = gf.map_3d_to_2d(z3d, frac)
+        chi0 = gf.map_z_line_to_chi(z, endpoints0)
+        chi1 = np.conj(chi0)
+        z0 = gf.map_chi_to_z_line(chi0*(1+dchi), endpoints0)
+        z1 = gf.map_chi_to_z_line(chi1*(1+dchi), endpoints0)
+        w0 = frac.calc_w(z0)
+        w1 = frac.calc_w(z1)
+
+        # Magnitude
+        abs_w0 = np.abs(w0)
+        abs_w1 = np.abs(w1)
+
+        # check angles between w0, w1 and z-z0, z-z1, using the dot product
+        diff0 = np.arccos(np.real(np.vdot(w0 , (z0 - z))) / (abs_w0 * np.abs(z0 - z)))
+        diff1 = np.arccos(np.real(np.vdot(w1 , (z1 - z))) / (abs_w1 * np.abs(z1 - z)))
+
+
+        if diff0 > np.pi / 2:
+            return z1
+
+        if diff1 > np.pi / 2:
+            return z0
+
+        if abs_w0 > abs_w1:
+            return z0
+
+        return z1
+
+    @staticmethod
+    def runge_kutta(z0, frac,  ds=1e-2, tolerance=1e-6, max_it=10):
         """
         Runge-Kutta method for streamline tracing.
         Parameters
@@ -861,12 +979,16 @@ class DFN:
             The point at the end of the streamline.
         """
         w0 = frac.calc_w(z0)
+        if np.isnan(np.real(w0)):
+            return np.nan + np.nan*1j
         z1 = z0 + np.conj(w0)/np.abs(w0) * ds
         dz = np.abs(z1 - z0)
         it = 0
         while dz > tolerance and it < max_it:
             w1 = frac.calc_w(z1)
-            z2 = z0 + (np.conj(w0) + np.conj(w1))/(np.abs(w0) + np.abs(w1)) * ds
+            if np.isnan(np.real(w1)):
+                break
+            z2 = z0 + np.conj(w0 + w1)/np.abs(w0 + w1) * ds
             dz = np.abs(z2 - z1)
             z1 = z2
             it += 1

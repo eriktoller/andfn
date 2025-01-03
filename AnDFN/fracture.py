@@ -22,9 +22,9 @@ class Fracture:
         self.radius = radius
         self.center = center
         self.normal = normal / np.linalg.norm(normal)
-        self.x_vector = np.cross(normal, normal + np.random.rand(3))
+        self.x_vector = np.cross(normal, normal + np.array([1, 0, 0]))
         if np.linalg.norm(self.x_vector) == 0:
-            self.x_vector = np.cross(normal, normal + np.random.rand(3))
+            self.x_vector = np.cross(normal, normal + np.array([1, 1, 1]))
         self.x_vector = self.x_vector / np.linalg.norm(self.x_vector)
         self.y_vector = np.cross(normal, self.x_vector)
         self.y_vector = self.y_vector / np.linalg.norm(self.y_vector)
@@ -120,7 +120,7 @@ class Fracture:
         w : complex
             The complex discharge vector for the fracture.
         """
-        w = 0
+        w = 0.0 + 0.0j
 
         for e in self.elements:
             if e != exclude:
