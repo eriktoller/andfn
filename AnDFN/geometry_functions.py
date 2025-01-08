@@ -18,18 +18,18 @@ def map_z_line_to_chi(z, endpoints):
 
     Parameters
     ----------
-    z : complex | ndarray
+    z : complex | np.ndarray
         A complex point in the complex z-plane
-    endpoints : list
+    endpoints : np.ndarray
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    chi : complex | ndarray
+    chi : complex | np.ndarray
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
-    big_z = np.vectorize(lambda z: (2 * z - endpoints[0] - endpoints[1]) / (endpoints[1] - endpoints[0]))(z)
+    big_z = np.vectorize(lambda zz: (2 * zz - endpoints[0] - endpoints[1]) / (endpoints[1] - endpoints[0]))(z)
     return big_z + np.sqrt(big_z - 1) * np.sqrt(big_z + 1)
 
 
@@ -40,14 +40,14 @@ def map_chi_to_z_line(chi, endpoints):
 
     Parameters
     ----------
-    chi : complex | ndarray
+    chi : complex | np.ndarray
         A point in the complex chi-plane
-    endpoints : list | ndarray
+    endpoints : list | np.ndarray
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    z : complex | ndarray
+    z : complex | np.ndarray
         The corresponding point in the complex z-plane
     """
     # Map via the Z-plane
@@ -61,16 +61,16 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
     Parameters
     ----------
-    z : complex | ndarray
+    z : complex | np.ndarray
         A point in the complex z-plane
     r : float
         Radius of the circle
-    center : complex | ndarray
+    center : complex | np.ndarray
         Center point of the circle in the complex z-plane
 
     Return
     ------
-    chi : complex | ndarray
+    chi : complex | np.ndarray
         The corresponding point in the complex chi-plane
     """
     return (z - center) / r
@@ -82,16 +82,16 @@ def map_chi_to_z_circle(chi, r, center=0.0):
     
     Parameters
     ----------
-    chi : complex | ndarray
+    chi : complex | np.ndarray
         A point in the complex chi-plane 
     r : float
         Radius of the circle 
-    center : complex or ndarray
+    center : complex or np.ndarray
         Center point of the circle 
     
     Return
     ------
-    z : complex | ndarray
+    z : complex | np.ndarray
         The corresponding point in the complex z-plane
     """
     return chi * r + center
@@ -112,7 +112,7 @@ def get_chi_from_theta(nint, start, stop):
 
     Returns
     -------
-    chi : ndarray
+    chi : np.ndarray
         Array with chi values
     """
     dtheta = (stop - start) / nint
@@ -123,34 +123,34 @@ def get_chi_from_theta(nint, start, stop):
     return np.array(chi_temp)
 
 
-def map_2d_to_3d(z, fracture):
+def map_2d_to_3d(z, fractures):
     """
     Function that maps a point in the complex z-plane to a point in the 3D plane
     Parameters
     ----------
-    z : complex | ndarray
+    z : complex | np.ndarray
         A point in the complex z-plane
-    fracture : Fracture
+    fractures : Fracture
         The fracture object
 
     Returns
     -------
-    point : ndarray
+    point : np.ndarray
         The corresponding point in the 3D plane
     """
-    if np.isscalar(z) or z.size == 1:
-        return np.real(z) * fracture.x_vector + np.imag(z) * fracture.y_vector + fracture.center
-    return np.real(z)[:, np.newaxis] * fracture.x_vector + np.imag(z)[:, np.newaxis] * fracture.y_vector + fracture.center
+    if np.isscalar(z): # or z.size == 1:
+        return np.real(z) * fractures.x_vector + np.imag(z) * fractures.y_vector + fractures.center
+    return np.real(z)[:, np.newaxis] * fractures.x_vector + np.imag(z)[:, np.newaxis] * fractures.y_vector + fractures.center
 
 
-def map_3d_to_2d(point, fracture):
+def map_3d_to_2d(point, fractures):
     """
     Function that maps a point in the 3D plane to a point in the complex z-plane
     Parameters
     ----------
-    point : ndarray
+    point : np.ndarray
         A point in the 3D plane
-    fracture : Fracture
+    fractures : Fracture
         The fracture object
 
     Returns
@@ -158,8 +158,8 @@ def map_3d_to_2d(point, fracture):
     z : complex
         The corresponding point in the complex z-plane
     """
-    x = np.dot((point - fracture.center), fracture.x_vector)
-    y = np.dot((point - fracture.center), fracture.y_vector)
+    x = np.dot((point - fractures.center), fractures.x_vector)
+    y = np.dot((point - fractures.center), fractures.y_vector)
     return x + 1j * y
 
 def fracture_intersection(frac0, frac1):
@@ -319,7 +319,7 @@ def covert_trend_plunge_to_normal(trend, plunge):
 
     Returns
     -------
-    normal : ndarray
+    normal : np.ndarray
         The normal vector of the fracture plane.
     """
     trend = np.deg2rad(90-trend)
@@ -339,7 +339,7 @@ def convert_strike_dip_to_normal(strike, dip):
 
     Returns
     -------
-    normal : ndarray
+    normal : np.ndarray
         The normal vector of the fracture plane.
     """
     strike = np.deg2rad(strike)

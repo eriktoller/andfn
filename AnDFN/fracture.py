@@ -13,11 +13,13 @@ from AnDFN.intersection import Intersection
 from AnDFN.const_head import ConstantHeadLine
 from AnDFN.well import Well
 import AnDFN.bounding
+from .element import fracture_dtype, fracture_index_dtype
 
 
 class Fracture:
-    def __init__(self, label, t, radius, center, normal, ncoef=10, nint=20, elements=None):
+    def __init__(self, label, t, radius, center, normal, ncoef=5, nint=10, elements=None, **kwargs):
         self.label = label
+        self.id_ = 0
         self.t = t
         self.radius = radius
         self.center = center
@@ -28,13 +30,43 @@ class Fracture:
         self.x_vector = self.x_vector / np.linalg.norm(self.x_vector)
         self.y_vector = np.cross(normal, self.x_vector)
         self.y_vector = self.y_vector / np.linalg.norm(self.y_vector)
-        self.elements = [AnDFN.bounding.BoundingCircle(label, radius, ncoef, nint, self)]
-        if elements is not None:
+        if elements is False:
+            self.elements = []
+        elif elements is not None:
             self.elements.append(elements)
+        else:
+            self.elements = [AnDFN.bounding.BoundingCircle(label, radius, self, ncoef, nint)]
         self.constant = 0.0
+
+        # Set the kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def __str__(self):
         return f'Fracture {self.label}'
+
+    def set_id(self, id_):
+        self.id_ = id_
+
+    def consolidate(self):
+        fracture_struc_array = np.empty(1, dtype=fracture_dtype)
+
+        fracture_struc_array['id_'][0] = self.id_
+        fracture_struc_array['t'][0] = self.t
+        fracture_struc_array['radius'][0] = self.radius
+        fracture_struc_array['center'][0] = self.center
+        fracture_struc_array['normal'][0] = self.normal
+        fracture_struc_array['x_vector'][0] = self.x_vector
+        fracture_struc_array['y_vector'][0] = self.y_vector
+        fracture_struc_array['elements'][0] = np.array([e.id_ for e in self.elements])
+        fracture_struc_array['constant'][0] = self.constant
+
+        fracture_index_array = np.array([(
+            self.label,
+            self.id_
+        )], dtype=fracture_index_dtype)
+
+        return fracture_struc_array, fracture_index_array
 
     def add_element(self, new_element):
         if new_element in self.elements:
@@ -57,7 +89,7 @@ class Fracture:
         q = 0.0
         for e in elements:
             if isinstance(e, Intersection):
-                if e.fracs[1] == self:
+                if e.frac1 == self:
                     q -= e.q
                     continue
             q += e.q
@@ -84,14 +116,14 @@ class Fracture:
 
         Parameters
         ----------
-        z : complex
+        z : complex | np.ndarray
             A point in the complex z plane.
         exclude : any
             Label of element to exclude from the omega calculation.
 
         Returns
         -------
-        omega : complex
+        omega : complex | np.ndarray
             The complex potential for the fracture.
         """
         omega = self.constant

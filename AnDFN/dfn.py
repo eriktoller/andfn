@@ -7,14 +7,20 @@ import numpy as np
 import pyvista as pv
 import matplotlib.pyplot as plt
 import scipy as sp
+import h5py
 
 from AnDFN import geometry_functions as gf
+from .fracture import Fracture
+from .hpc.hpc_solve import HPCSolve
 from .well import Well
 from .const_head import ConstantHeadLine
 from .intersection import Intersection
+from .bounding import BoundingCircle
+from .element import element_dtype, fracture_dtype, element_index_dtype, fracture_index_dtype
 
 
-def gererate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b, nint_b, frac_surface=None):
+
+def generate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b, nint_b, frac_surface=None):
     """
     Generates connected fractures and intersections.
     Parameters
@@ -111,7 +117,7 @@ def plot_line_3d(seg, f, pl, color, line_width):
     pl.add_mesh(pv.MultipleLines(line_3d), color=color, line_width=line_width)
 
 
-class DFN:
+class DFN(HPCSolve):
     def __init__(self, label, discharge_int=50):
         """
         Initializes the DFN class.
@@ -123,6 +129,7 @@ class DFN:
             The number of points to use for the discharge integral.
 
         """
+        super().__init__()
         self.label = label
         self.discharge_int = discharge_int
         self.fractures = []
@@ -131,8 +138,15 @@ class DFN:
         # Initialize the discharge matrix
         self.discharge_matrix = None
         self.discharge_elements = None
+        self.discharge_elements_index = None
         self.lup = None
         self.discharge_error = 1
+
+        # Initialize the structure array
+        self.elements_struc_array = None
+        self.elements_index_array = None
+        self.fractures_struc_array = None
+        self.fractures_index_array = None
 
     def __str__(self):
         """
@@ -155,8 +169,163 @@ class DFN:
         filename : str
             The name of the file to save the DFN to.
         """
+        # Remove the .h5 if it is in the filename
+        if filename[-3:] == '.h5':
+            filename = filename[:-3]
+
+        # Check if the elements and fractures have been consolidated
+        if self.elements_struc_array is None or self.fractures_struc_array is None:
+            self.consolidate_dfn()
+
+        # Save the elements
+        with h5py.File(f'{filename}.h5', 'w') as hf:
+            grp = [hf.create_group('elements/properties'), hf.create_group('fractures/properties'),
+                   hf.create_group('elements/index'), hf.create_group('fractures/index')]
+            for j, array in enumerate([self.elements_struc_array, self.fractures_struc_array]):
+                for name in array.dtype.names:
+                    # create group
+                    grp0 = grp[j].create_group(name)
+                    # add data
+                    for i, e in enumerate(array[name]):
+                        grp0.create_dataset(f'{i}', data=e)
+
+            for j, array in enumerate([self.elements_index_array, self.fractures_index_array], start=2):
+                for name in array.dtype.names:
+                    # check if the data is a string
+                    if self.elements_index_array[name].dtype == 'U100':
+                        grp[j].create_dataset(name, data=array[name].astype('S'))
+                        continue
+                    grp[j].create_dataset(name, data=array[name])
 
 
+        print(f'Saved DFN to {filename}.h5')
+
+    def load_dfn(self, filename):
+        """
+        Loads the DFN from a h5 file.
+        Parameters
+        ----------
+        filename : str
+            The name of the file to load the DFN from.
+        """
+
+        if filename[-3:] == '.h5':
+            filename = filename[:-3]
+
+        with h5py.File(f'{filename}.h5', 'r') as hf:
+            # Load the fractures
+            fracs = []
+            for i in range(len(hf['fractures/index/label'])):
+                fracs.append(
+                    Fracture(
+                    label=hf['fractures/index/label'][i].decode(),
+                    id_=hf['fractures/index/id_'][i],
+                    t=hf[f'fractures/properties/t/{i}'][()],
+                    radius=hf[f'fractures/properties/radius/{i}'][()],
+                    center=hf[f'fractures/properties/center/{i}'][()],
+                    normal=hf[f'fractures/properties/normal/{i}'][()],
+                    x_vector=hf[f'fractures/properties/x_vector/{i}'][()],
+                    y_vector=hf[f'fractures/properties/y_vector/{i}'][()],
+                    elements=False,
+                    constant=hf[f'fractures/properties/constant/{i}'][()]
+                ))
+
+            # Load the elements
+            elements = []
+            for i in range(len(hf['elements/index/label'])):
+                match hf['elements/index/type_'][i]:
+                    case 0:  # Intersection
+                        elements.append(
+                            Intersection(
+                                label=hf['elements/index/label'][i].decode(),
+                                id_=hf['elements/index/id_'][i],
+                                endpoints0=hf[f'elements/properties/endpoints0/{i}'][()],
+                                endpoints1=hf[f'elements/properties/endpoints1/{i}'][()],
+                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                                nint=hf[f'elements/properties/nint/{i}'][()],
+                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                                frac1=fracs[hf[f'elements/properties/frac1/{i}'][()]],
+                                thetas=hf[f'elements/properties/thetas/{i}'][()],
+                                coef=hf[f'elements/properties/coef/{i}'][()],
+                                error=hf[f'elements/properties/error/{i}'][()]
+                            )
+                        )
+                    case 1:  # Bounding circle
+                        elements.append(
+                            BoundingCircle(
+                                label=hf['elements/index/label'][i].decode(),
+                                id_=hf['elements/index/id_'][i],
+                                radius=hf[f'elements/properties/radius/{i}'][()],
+                                center=hf[f'elements/properties/center/{i}'][()],
+                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                                thetas=hf[f'elements/properties/thetas/{i}'][()],
+                                coef=hf[f'elements/properties/coef/{i}'][()],
+                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                                nint=hf[f'elements/properties/nint/{i}'][()],
+                                dpsi_corr=hf[f'elements/properties/dpsi_corr/{i}'][()],
+                                error=hf[f'elements/properties/error/{i}'][()]
+                            )
+                        )
+                    case 2:  # Well
+                        elements.append(
+                            Well(
+                                label=hf['elements/index/label'][i].decode(),
+                                id_=hf['elements/index/id_'][i],
+                                radius=hf[f'elements/properties/radius/{i}'][()],
+                                center=hf[f'elements/properties/center/{i}'][()],
+                                head=hf[f'elements/properties/head/{i}'][()],
+                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                                q=hf[f'elements/properties/q/{i}'][()],
+                                phi=hf[f'elements/properties/phi/{i}'][()],
+                                error=hf[f'elements/properties/error/{i}'][()]
+                            )
+                        )
+                    case 3:  # Constant head line
+                        elements.append(
+                            ConstantHeadLine(
+                                label=hf['elements/index/label'][i].decode(),
+                                id_=hf['elements/index/id_'][i],
+                                head=hf[f'elements/properties/head/{i}'][()],
+                                endpoints0=hf[f'elements/properties/endpoints0/{i}'][()],
+                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                                nint=hf[f'elements/properties/nint/{i}'][()],
+                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                                phi=hf[f'elements/properties/phi/{i}'][()],
+                                thetas=hf[f'elements/properties/thetas/{i}'][()],
+                                coef=hf[f'elements/properties/coef/{i}'][()],
+                                error=hf[f'elements/properties/error/{i}'][()]
+                            )
+                        )
+
+            # Add the fractures and elements to the DFN
+            for e in elements:
+                e.frac0.add_element(e)
+                if isinstance(e, Intersection):
+                    e.frac1.add_element(e)
+            self.add_fracture(fracs)
+
+
+    def consolidate_dfn(self):
+
+        # Consolidate elements
+        elements_struc_array = np.empty(self.number_of_elements(), dtype=element_dtype)
+        elements_index_array = np.empty(self.number_of_elements(), dtype=element_index_dtype)
+
+        for i, e in enumerate(self.elements):
+            elements_struc_array[i], elements_index_array[i] = e.consolidate()
+
+        # Consolidate fractures
+        fractures_struc_array = np.empty(self.number_of_fractures(), dtype=fracture_dtype)
+        fractures_index_array = np.empty(self.number_of_fractures(), dtype=fracture_index_dtype)
+
+        for i, f in enumerate(self.fractures):
+            fractures_struc_array[i], fractures_index_array[i] = f.consolidate()
+
+        # Save to self
+        self.elements_struc_array = elements_struc_array
+        self.elements_index_array = elements_index_array
+        self.fractures_struc_array = fractures_struc_array
+        self.fractures_index_array = fractures_index_array
 
 
     ####################################################################################################################
@@ -189,6 +358,9 @@ class DFN:
         self.elements = elements
         print(f'Added {len(self.elements)} elements to the DFN.')
 
+        for e in self.elements:
+            e.set_id(self.elements.index(e))
+
     def get_discharge_elements(self):
         """
         Gets the discharge elements from the fractures and add store them in the DFN.
@@ -201,6 +373,8 @@ class DFN:
                                    if isinstance(e, Intersection)
                                    or isinstance(e, ConstantHeadLine)
                                    or isinstance(e, Well)]
+
+        self.discharge_elements_index = [e.id_ for e in self.discharge_elements]
 
     def get_dfn_discharge(self):
         # sum all discharges, except the intersections
@@ -236,6 +410,9 @@ class DFN:
         self.elements = None
         self.discharge_elements = None
         self.lup = None
+
+        for f in self.fractures:
+            f.set_id(self.fractures.index(f))
 
     def delete_fracture(self, fracture):
         """
@@ -274,7 +451,7 @@ class DFN:
             The fracture to use as the surface fracture.
         """
         # Generate the connected fractures
-        frac_list = gererate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b,
+        frac_list = generate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b,
                                                  nint_b, frac_surface)
         # Add the fractures to the DFN
         self.add_fracture(frac_list)
@@ -300,7 +477,7 @@ class DFN:
                     continue
                 endpoints0, endpoints1 = gf.fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
-                    i0 = Intersection(f'{fr.label}_{fr2.label}', endpoints0, endpoints1, ncoef, nint, fr, fr2)
+                    i0 = Intersection(f'{fr.label}_{fr2.label}', endpoints0, endpoints1, fr, fr2, ncoef, nint)
                     fr.add_element(i0)
                     fr2.add_element(i0)
 
@@ -314,7 +491,7 @@ class DFN:
                         continue
                     endpoints0, endpoints1 = gf.fracture_intersection(fr, fr2)
                     if endpoints0 is not None:
-                        i0 = Intersection(f'{fr.label}_{fr2.label}', endpoints0, endpoints1, ncoef, nint, fr, fr2)
+                        i0 = Intersection(f'{fr.label}_{fr2.label}', endpoints0, endpoints1, fr, fr2, ncoef, nint)
                         fr.add_element(i0)
                         fr2.add_element(i0)
 
@@ -331,13 +508,6 @@ class DFN:
     #                      Solve functions                                                                             #
     ####################################################################################################################
 
-    def consolidate(self):
-        for e in self.elements:
-            # some function to consolidate the elements into numpy arrays for the numba solver
-            e.consolidate()
-            pass
-        return None
-
     def build_discharge_matrix(self):
         """
         Builds the discharge matrix for the DFN and adds it to the DFN.
@@ -350,42 +520,42 @@ class DFN:
         row = 0
         for e in self.discharge_elements:
             if isinstance(e, Intersection):
-                z0 = e.z_array(self.discharge_int, e.fracs[0])
-                z1 = e.z_array(self.discharge_int, e.fracs[1])
-                for ee in e.fracs[0].get_discharge_elements():
+                z0 = e.z_array(self.discharge_int, e.frac0)
+                z1 = e.z_array(self.discharge_int, e.frac1)
+                for ee in e.frac0.get_discharge_elements():
                     if ee == e:
                         continue
                     # add the discharge term to the matrix for each element in the first fracture
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
-                        matrix[row, pos] = ee.discharge_term(z0, e.fracs[0])
+                        matrix[row, pos] = ee.discharge_term(z0, e.frac0)
                     else:
                         matrix[row, pos] = ee.discharge_term(z0)
-                for ee in e.fracs[1].get_discharge_elements():
+                for ee in e.frac1.get_discharge_elements():
                     if ee == e:
                         continue
                     # add the discharge term to the matrix for each element in the second fracture
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
-                        matrix[row, pos] = -ee.discharge_term(z1, e.fracs[1])
+                        matrix[row, pos] = -ee.discharge_term(z1, e.frac1)
                     else:
                         matrix[row, pos] = -ee.discharge_term(z1)
-                pos_f0 = self.fractures.index(e.fracs[0])
+                pos_f0 = self.fractures.index(e.frac0)
                 matrix[row, len(self.discharge_elements) + pos_f0] = 1
-                pos_f1 = self.fractures.index(e.fracs[1])
+                pos_f1 = self.fractures.index(e.frac1)
                 matrix[row, len(self.discharge_elements) + pos_f1] = -1
             else:
                 z = e.z_array(self.discharge_int)
-                for ee in e.frac.get_discharge_elements():
+                for ee in e.frac0.get_discharge_elements():
                     if ee == e:
                         continue
                     # add the discharge term to the matrix for each element in the fracture
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
-                        matrix[row, pos] = ee.discharge_term(z, e.frac)
+                        matrix[row, pos] = ee.discharge_term(z, e.frac0)
                     else:
                         matrix[row, pos] = ee.discharge_term(z)
-                pos_f = self.fractures.index(e.frac)
+                pos_f = self.fractures.index(e.frac0)
                 matrix[row, len(self.discharge_elements) + pos_f] = 1
             row += 1
 
@@ -397,7 +567,7 @@ class DFN:
                     # add the discharge term to the matrix for each element in the fracture
                     pos = self.discharge_elements.index(e)
                     if isinstance(e, Intersection):
-                        if e.fracs[0] == f:
+                        if e.frac0 == f:
                             matrix[row, pos] = 1
                         else:
                             matrix[row, pos] = -1
@@ -427,14 +597,14 @@ class DFN:
         row = 0
         for e in self.discharge_elements:
             if isinstance(e, Intersection):
-                z0 = e.z_array(self.discharge_int, e.fracs[0])
-                z1 = e.z_array(self.discharge_int, e.fracs[1])
-                omega0 = e.fracs[0].calc_omega(z0, exclude=None)
-                omega1 = e.fracs[1].calc_omega(z1, exclude=None)
-                matrix[row] = np.mean(np.real(omega1)) / e.fracs[1].t - np.mean(np.real(omega0)) / e.fracs[0].t
+                z0 = e.z_array(self.discharge_int, e.frac0)
+                z1 = e.z_array(self.discharge_int, e.frac1)
+                omega0 = e.frac0.calc_omega(z0, exclude=None)
+                omega1 = e.frac1.calc_omega(z1, exclude=None)
+                matrix[row] = np.mean(np.real(omega1)) / e.frac1.t - np.mean(np.real(omega0)) / e.frac0.t
             else:
                 z = e.z_array(self.discharge_int)
-                omega = e.frac.calc_omega(z, exclude=None)
+                omega = e.frac0.calc_omega(z, exclude=None)
                 matrix[row] = e.phi - np.mean(np.real(omega))
             row += 1
         return matrix
@@ -485,6 +655,9 @@ class DFN:
         """
         Solves the DFN and saves the coefficients to the elements.
         """
+        # check if elements have been stored in the DFN
+        if self.elements is None:
+            self.get_elements()
         # Check if the discharge matrix has been built
         if self.discharge_matrix is None:
             self.build_discharge_matrix()
@@ -523,7 +696,7 @@ class DFN:
                     ee.error = max_error * 1.0001
                     if ee.check_boundary_condition(n=n_boundary_check) > tolerance:
                         cnt_bc += 1
-                        ee.increase_coef(ee.ncoef)
+                        ee.set_new_ncoef(ee.ncoef*2)
                         ee.check_boundary_condition(n=n_boundary_check)
             if nit < 10:
                 print(
@@ -556,9 +729,9 @@ class DFN:
         lighting : str
             The type of lighting to use.
         title : bool or str
-            Whether to add a title to the plot. Boolian or string.
+            Whether to add a title to the plot.
         off_screen : bool
-            Whether to plot off screen.
+            Whether to plot off-screen.
         scale : float
             The scale of the plot.
         axis : bool
@@ -619,8 +792,8 @@ class DFN:
             Whether to show the edges of the fractures.
         line_width : float
             The line width of the lines.
-        only_flow : bool
-            Whether to plot only the fractures with flow.
+        fracs : list
+            The list of fractures to plot. If None, all fractures are plotted.
 
         Returns
         -------
@@ -653,8 +826,6 @@ class DFN:
             The line width of the flow net.
         margin : float
             The margin around the fracture to use for the flow net.
-        opacity : float
-            The opacity of the fractures in the flownet.
         only_flow : bool
             Whether to plot only the fractures with flow.
         """
@@ -716,6 +887,8 @@ class DFN:
             The opacity of the fractures in the flownet.
         only_flow : bool
             Whether to plot only the fractures with flow.
+        color_map : str
+            The color map to use for the flow net.
         """
         if only_flow:
             fracs = self.get_flow_fractures()
@@ -724,25 +897,25 @@ class DFN:
 
         # Calculate the flow net for each fracture
         head_fn_list = []
-        maxmin_head_list = []
+        max_min_head_list = []
         x_array_list = []
         y_array_list = []
         for i, f in enumerate(fracs):
             omega_fn, x_array, y_array = f.calc_flow_net(n_points, margin)
             head_fn_list.append(f.head_from_phi(np.real(omega_fn)))
-            maxmin_head = f.get_max_min_head()
-            if maxmin_head[0] is not None:
-                maxmin_head_list.append(maxmin_head)
+            max_min_head = f.get_max_min_head()
+            if max_min_head[0] is not None:
+                max_min_head_list.append(max_min_head)
             x_array_list.append(x_array)
             y_array_list.append(y_array)
             print(f'\rPlotting hydraulic head: {i + 1} / {len(fracs)}', end='')
 
         # Get the levels for the flow net
         head_max, head_min = np.nanmax(head_fn_list), np.nanmin(head_fn_list)
-        if head_max < np.max(maxmin_head_list):
-            head_max = np.max(maxmin_head_list)
-        if head_min > np.min(maxmin_head_list):
-            head_min = np.min(maxmin_head_list)
+        if head_max < np.max(max_min_head_list):
+            head_max = np.max(max_min_head_list)
+        if head_min > np.min(max_min_head_list):
+            head_min = np.min(max_min_head_list)
         # Create the levels for the equipotential contours
         lvs_re = np.linspace(head_min, head_max, lvs)
 
@@ -802,14 +975,14 @@ class DFN:
         # Plot the elements
         for i, e in enumerate(self.elements):
             if isinstance(e, Intersection):
-                line = gf.map_2d_to_3d(e.endpoints[0], e.fracs[0])
+                line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
                 pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=3)
             if isinstance(e, ConstantHeadLine):
-                line = gf.map_2d_to_3d(e.endpoints, e.frac)
+                line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
                 pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=3)
             if isinstance(e, Well):
-                point = gf.map_2d_to_3d(e.center, e.frac)
-                pl.add_mesh(pv.Polygon(point, e.radius, normal=e.frac.normal, n_sides=50),
+                point = gf.map_2d_to_3d(e.center, e.frac0)
+                pl.add_mesh(pv.Polygon(point, e.radius, normal=e.frac0.normal, n_sides=50),
                             color='#000000', line_width=3)
             print(f'\rPlotting elements: {i + 1} / {len(self.elements)}', end='')
         print('')
@@ -818,13 +991,27 @@ class DFN:
     #                    Streamline tracking functions                                                                 #
     ####################################################################################################################
     def plot_streamline_tracking(self, pl, z0, frac, line_width=2.0, elevation=0.0):
-
+        """
+        Plots the streamline tracking for a given fracture.
+        Parameters
+        ----------
+        pl : pyvista.Plotter
+            The plotter object.
+        z0 : complex | np.ndarray
+            The starting point for the streamline tracking.
+        frac : Fracture
+            The fracture where to start the streamline tracking.
+        line_width : float
+            The line width of the streamlines.
+        elevation : float
+            The elevation of the starting point.
+        """
         if isinstance(z0, complex):
             z0 = np.array([z0])
 
         streamlines = []
         streamlines_frac = []
-        for i, z in enumerate(z0):
+        for i, z in enumerate(z0): # type: int, complex
             streamline, streamline_frac = self.streamline_tracking(z, frac, elevation)
             streamlines.append(streamline)
             streamlines_frac.append(streamline_frac)
@@ -844,7 +1031,7 @@ class DFN:
         Function that tracks the streamlines in a fracture.
         Parameters
         ----------
-        z0 : complex | ndarray
+        z0 : complex
             Starting point for streamline tracking
         elevation : float
             Elevation of the starting point
@@ -853,7 +1040,7 @@ class DFN:
 
         Returns
         -------
-        streamlines: ndarray
+        streamlines: np.ndarray
             Array with streamline
         """
         # Crete empty ndarray
@@ -872,7 +1059,6 @@ class DFN:
             z1 = self.runge_kutta(z0, frac)
             z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
             if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
-                z3 = z0
                 break
             while z3 is False:
                 psi.append(z1)
@@ -894,10 +1080,10 @@ class DFN:
 
             if isinstance(element, Intersection):
                 z3d = gf.map_2d_to_3d(z3, frac)
-                if frac == element.fracs[0]:
-                    frac = element.fracs[1]
+                if frac == element.frac0:
+                    frac = element.frac1
                 else:
-                    frac = element.fracs[0]
+                    frac = element.frac0
                 z0 = self.get_exit_intersection(z3d, element, frac)
                 if np.isnan(np.real(z0)):
                     print('hoho')
@@ -906,7 +1092,8 @@ class DFN:
 
         return streamline, streamline_frac
 
-    def check_streamline_exit(self, z0, z1, discharge_elements, frac):
+    @staticmethod
+    def check_streamline_exit(z0, z1, discharge_elements, frac):
         """
         Function that checks if the streamline has exited the DFN
         """
@@ -916,7 +1103,7 @@ class DFN:
             else:
                 z2 = e.check_chi_crossing(z0, z1)
             if np.isnan(np.real(z2)):
-                return
+                return z1, False
             if z2 is not False:
                 return z2, e
         return False, False
@@ -924,15 +1111,15 @@ class DFN:
     @staticmethod
     def get_exit_intersection(z3d, element, frac, dchi=1e-3):
 
-        if frac == element.fracs[0]:
-            endpoints0 = element.endpoints[0]
+        if frac == element.frac0:
+            endpoints = element.endpoints0
         else:
-            endpoints0 = element.endpoints[1]
+            endpoints = element.endpoints1
         z = gf.map_3d_to_2d(z3d, frac)
-        chi0 = gf.map_z_line_to_chi(z, endpoints0)
+        chi0 = gf.map_z_line_to_chi(z, endpoints)
         chi1 = np.conj(chi0)
-        z0 = gf.map_chi_to_z_line(chi0*(1+dchi), endpoints0)
-        z1 = gf.map_chi_to_z_line(chi1*(1+dchi), endpoints0)
+        z0 = gf.map_chi_to_z_line(chi0*(1+dchi), endpoints)
+        z1 = gf.map_chi_to_z_line(chi1*(1+dchi), endpoints)
         w0 = frac.calc_w(z0)
         w1 = frac.calc_w(z1)
 

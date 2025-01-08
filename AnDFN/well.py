@@ -6,10 +6,11 @@ This module contains the well classes.
 from . import math_functions as mf
 from . import geometry_functions as gf
 import numpy as np
+from .element import Element
 
 
-class Well:
-    def __init__(self, label, radius, center, head, frac):
+class Well(Element):
+    def __init__(self, label, radius, center, head, frac0, **kwargs):
         """
         Initializes the well class.
         Parameters
@@ -27,25 +28,19 @@ class Well:
         q : float
             The flow rate of the well.
         """
-        self.label = label
+        super().__init__(label=label, id_=0, type_=2)
         self.radius = radius
         self.center = center
         self.head = head
-        self.frac = frac
+        self.frac0 = frac0
 
-        self.phi = frac.phi_from_head(head)
+        self.phi = frac0.phi_from_head(head)
         self.q = 0.0
-        self.error = 0.0
 
-    def __str__(self):
-        """
-        Returns the string representation of the well.
-        Returns
-        -------
-        str
-            The string representation of the well.
-        """
-        return f'Well: {self.label}'
+
+        # Set the kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def discharge_term(self, z):
         """
@@ -99,10 +94,10 @@ class Well:
         if isinstance(chi, np.complex128):
             omega = mf.well_chi(chi, self.q)
             if np.abs(chi) < 1.0 - 1e-10:
-                omega = self.head*self.frac.t + 0*1j
+                omega = self.head*self.frac0.t + 0*1j
         else:
             omega = mf.well_chi(chi, self.q)
-            omega[np.abs(chi) < 1.0 - 1e-10] = self.head*self.frac.t + 0*1j
+            omega[np.abs(chi) < 1.0 - 1e-10] = self.head*self.frac0.t + 0*1j
         return omega
 
     def calc_w(self, z):
@@ -136,7 +131,7 @@ class Well:
         """
         Checks the boundary condition of the well. This is allways zero as the well is solved in teh discharge matrix.
         """
-        return 0
+        return 0.0
 
     def check_chi_crossing(self, z0, z1, atol=1e-10):
         chi0 = gf.map_z_circle_to_chi(z0, self.radius, self.center)

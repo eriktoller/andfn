@@ -6,7 +6,6 @@ This module contains some general mathematical functions.
 
 import numpy as np
 
-
 def asym_expansion(chi, coef):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
@@ -109,14 +108,14 @@ def well_chi(chi, q):
 
     Parameters
     ----------
-    chi : complex | ndarray
+    chi : complex | np.ndarray
         A point in the complex chi plane
     q : float
         The discharge eof the well.
 
     Returns
     -------
-    omega : complex  | ndarray
+    omega : complex  | np.ndarray
         The complex discharge potential
     """
     return q / (2 * np.pi) * np.log(chi)
@@ -132,7 +131,7 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
         Number of integration points
     m : int
         Number of coefficients
-    thetas : ndarray
+    thetas : np.ndarray
         Array with thetas along the unit circle
     omega_func : function
         The function for the complex potential
@@ -141,7 +140,7 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
 
     Return
     ------
-    coef : ndarray
+    coef : np.ndarray
         Array of coefficients
     """
     integral = np.zeros((n, m), dtype=complex)
@@ -163,7 +162,7 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
 
 def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
     """
-    FUnction that calculates the Cauchy integral with the streamfunction for a given array of thetas.
+    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
 
     Parameters
     ----------
@@ -171,7 +170,7 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
         Number of integration points
     m : int
         Number of coefficients
-    thetas : array_like
+    thetas : np.ndarray
         Array with thetas along the unit circle
     omega_func : function
         The function for the complex potential
@@ -180,7 +179,7 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
 
     Return
     ------
-    coef : ndarray
+    coef : np.ndarray
         Array of coefficients
     """
     integral = np.zeros((n, m), dtype=complex)
@@ -202,7 +201,7 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
 
 def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
     """
-    FUnction that calculates the Cauchy integral with the streamfunction for a given array of thetas.
+    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
 
     Parameters
     ----------
@@ -210,8 +209,10 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
         Number of integration points
     m : int
         Number of coefficients
-    thetas : ndarray
+    thetas : np.ndarray
         Array with thetas along the unit circle
+    dpsi_corr : np.ndarray
+        Correction for the stream function
     omega_func : function
         The function for the complex potential
     z_func : function
@@ -219,15 +220,12 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
 
     Return
     ------
-    coef : ndarray
+    coef : np.ndarray
         Array of coefficients
     """
-    # TODO: enable doing this with an array (remove unnecessary overhead from calling cal_omega for each point) do
-    #  this first when the program is tested and works
     integral = np.zeros((n, m), dtype=complex)
     coef = np.zeros(m, dtype=complex)
 
-    psi = np.zeros(n)
     z = np.zeros(n, dtype=complex)
     for ii in range(n):
         chi = np.exp(1j * thetas[ii])
