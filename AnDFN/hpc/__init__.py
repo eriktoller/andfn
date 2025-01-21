@@ -1,0 +1,3 @@
+
+NO_PYTHON = True
+FASTMATH = True
