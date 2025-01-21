@@ -9,10 +9,10 @@ add start stop for each element in the fracture class
 """
 import numpy as np
 
-from AnDFN.intersection import Intersection
-from AnDFN.const_head import ConstantHeadLine
-from AnDFN.well import Well
-import AnDFN.bounding
+from andfn.intersection import Intersection
+from andfn.const_head import ConstantHeadLine
+from andfn.well import Well
+import andfn.bounding
 from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
 
 
@@ -35,7 +35,7 @@ class Fracture:
         elif elements is not None:
             self.elements.append(elements)
         else:
-            self.elements = [AnDFN.bounding.BoundingCircle(label, radius, self, ncoef, nint)]
+            self.elements = [andfn.bounding.BoundingCircle(label, radius, self, ncoef, nint)]
         self.constant = 0.0
 
         # Set the kwargs
