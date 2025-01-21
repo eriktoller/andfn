@@ -5,6 +5,9 @@ This module contains some general mathematical functions.
 """
 
 import numpy as np
+import numba as nb
+
+VECTOR = True
 
 def asym_expansion(chi, coef):
     """
@@ -15,7 +18,7 @@ def asym_expansion(chi, coef):
     ----------
     chi : complex
         A point in the complex chi-plane
-    coef : array_like
+    coef : np.ndarray
         An array of coefficients
 
     Return
@@ -39,7 +42,7 @@ def asym_expansion_d1(chi, coef):
     ----------
     chi : complex
         A point in the complex chi-plane
-    coef : array_like
+    coef : np.ndarray
         An array of coefficients
 
     Return
@@ -63,7 +66,7 @@ def taylor_series(chi, coef):
     ----------
     chi : complex
         A point in the complex chi-plane
-    coef : array_like
+    coef : np.ndarray
         An array of coefficients
 
     Return
@@ -101,21 +104,20 @@ def taylor_series_d1(chi, coef):
 
     return res
 
-
 def well_chi(chi, q):
     """
     Function that return the complex potential for a well as a function of chi.
 
     Parameters
     ----------
-    chi : complex | np.ndarray
+    chi : np.ndarray
         A point in the complex chi plane
     q : float
         The discharge eof the well.
 
     Returns
     -------
-    omega : complex  | np.ndarray
+    omega : np.ndarray
         The complex discharge potential
     """
     return q / (2 * np.pi) * np.log(chi)
@@ -144,14 +146,23 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
         Array of coefficients
     """
     integral = np.zeros((n, m), dtype=complex)
+    integral2 = np.zeros((n, m), dtype=complex)
     coef = np.zeros(m, dtype=complex)
 
-    for ii in range(n):
-        chi = np.exp(1j * thetas[ii])
+    if VECTOR:
+        chi = np.exp(1j * thetas)
         z = z_func(chi)
         phi = np.real(omega_func(z))
-        for jj in range(m):
-            integral[ii, jj] = phi * np.exp(-1j * jj * thetas[ii])
+        integral[:, :m] = phi[:, np.newaxis] * np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
+    else:
+        for ii in range(n):
+            chi = np.exp(1j * thetas[ii])
+            z = z_func(chi)
+            phi = np.real(omega_func(z))
+            for jj in range(m):
+                integral[ii, jj] = phi * np.exp(-1j * jj * thetas[ii])
+
+
 
     for ii in range(m):
         coef[ii] = 2 * sum(integral[:, ii]) / n
@@ -185,12 +196,19 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
     integral = np.zeros((n, m), dtype=complex)
     coef = np.zeros(m, dtype=complex)
 
-    for ii in range(n):
-        chi = np.exp(1j * thetas[ii])
+    if VECTOR:
+        chi = np.exp(1j * thetas)
         z = z_func(chi)
         psi = np.imag(omega_func(z))
         for jj in range(m):
-            integral[ii, jj] = psi * np.exp(-1j * jj * thetas[ii])
+            integral[:, jj] = psi * np.exp(-1j * jj * thetas)
+    else:
+        for ii in range(n):
+            chi = np.exp(1j * thetas[ii])
+            z = z_func(chi)
+            psi = np.imag(omega_func(z))
+            for jj in range(m):
+                integral[ii, jj] = psi * np.exp(-1j * jj * thetas[ii])
 
     for ii in range(m):
         coef[ii] = 2 * sum(integral[:, ii]) / n

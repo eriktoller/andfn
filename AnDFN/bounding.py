@@ -120,7 +120,6 @@ class BoundingCircle(Element):
                         chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints0)
                         ln0 = np.imag(np.log(chi0))
                         ln1 = np.imag(np.log(chi1))
-                        # TODO: Check if the following condition is correct
                         if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
                             self.dpsi_corr[ii] -= e.q
                     else:

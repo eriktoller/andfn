@@ -13,7 +13,7 @@ from AnDFN.intersection import Intersection
 from AnDFN.const_head import ConstantHeadLine
 from AnDFN.well import Well
 import AnDFN.bounding
-from .element import fracture_dtype, fracture_index_dtype
+from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
 
 
 class Fracture:
@@ -67,6 +67,54 @@ class Fracture:
         )], dtype=fracture_index_dtype)
 
         return fracture_struc_array, fracture_index_array
+
+    def consolidate_hpc(self):
+        fracture_struc_array = np.empty(1, dtype=fracture_dtype_hpc)
+
+        fracture_struc_array['id_'][0] = self.id_
+        fracture_struc_array['t'][0] = self.t
+        fracture_struc_array['radius'][0] = self.radius
+        fracture_struc_array['center'][0] = self.center
+        fracture_struc_array['normal'][0] = self.normal
+        fracture_struc_array['x_vector'][0] = self.x_vector
+        fracture_struc_array['y_vector'][0] = self.y_vector
+        elements = np.array([e.id_ for e in self.elements])
+        fracture_struc_array['elements'][0][:elements.size] = elements
+        fracture_struc_array['nelements'][0] = elements.size
+        fracture_struc_array['constant'][0] = self.constant
+
+        fracture_index_array = np.array([(
+            self.label,
+            self.id_
+        )], dtype=fracture_index_dtype)
+
+        return fracture_struc_array, fracture_index_array
+
+    def unconsolidate(self, fracture_struc_array, fracture_index_array):
+        self.id_ = fracture_struc_array['id_']
+        self.t = fracture_struc_array['t']
+        self.radius = fracture_struc_array['radius']
+        self.center = fracture_struc_array['center']
+        self.normal = fracture_struc_array['normal']
+        self.x_vector = fracture_struc_array['x_vector']
+        self.y_vector = fracture_struc_array['y_vector']
+        self.elements = [e for e in self.elements if e.id_ in fracture_struc_array['elements'][:fracture_struc_array['nelements']]]
+        self.constant = fracture_struc_array['constant']
+
+        self.label = fracture_index_array['label']
+
+    def unconsolidate_hpc(self, fracture_struc_array, fracture_index_array):
+        self.id_ = fracture_struc_array['id_']
+        self.t = fracture_struc_array['t']
+        self.radius = fracture_struc_array['radius']
+        self.center = fracture_struc_array['center']
+        self.normal = fracture_struc_array['normal']
+        self.x_vector = fracture_struc_array['x_vector']
+        self.y_vector = fracture_struc_array['y_vector']
+        self.elements = [e for e in self.elements if e.id_ in fracture_struc_array['elements']]
+        self.constant = fracture_struc_array['constant']
+
+        self.label = fracture_index_array['label']
 
     def add_element(self, new_element):
         if new_element in self.elements:

@@ -3,6 +3,8 @@ Notes
 -----
 This module contains the DFN class.
 """
+from datetime import datetime
+
 import numpy as np
 import pyvista as pv
 import matplotlib.pyplot as plt
@@ -11,13 +13,13 @@ import h5py
 
 from AnDFN import geometry_functions as gf
 from .fracture import Fracture
-from .hpc.hpc_solve import HPCSolve
+from .hpc.hpc_solve import solve as hpc_solve
 from .well import Well
 from .const_head import ConstantHeadLine
 from .intersection import Intersection
 from .bounding import BoundingCircle
-from .element import element_dtype, fracture_dtype, element_index_dtype, fracture_index_dtype
-
+from .element import element_dtype, fracture_dtype, element_index_dtype, fracture_index_dtype, element_dtype_hpc, \
+    fracture_dtype_hpc
 
 
 def generate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b, nint_b, frac_surface=None):
@@ -117,7 +119,7 @@ def plot_line_3d(seg, f, pl, color, line_width):
     pl.add_mesh(pv.MultipleLines(line_3d), color=color, line_width=line_width)
 
 
-class DFN(HPCSolve):
+class DFN:
     def __init__(self, label, discharge_int=50):
         """
         Initializes the DFN class.
@@ -147,6 +149,8 @@ class DFN(HPCSolve):
         self.elements_index_array = None
         self.fractures_struc_array = None
         self.fractures_index_array = None
+        self.elements_struc_array_hpc = None
+        self.fractures_struc_array_hpc = None
 
     def __str__(self):
         """
@@ -305,27 +309,67 @@ class DFN(HPCSolve):
             self.add_fracture(fracs)
 
 
-    def consolidate_dfn(self):
+    def consolidate_dfn(self, hpc=False):
+
+        # Check if the elements have been stored in the DFN
+        if self.elements is None:
+            self.get_elements()
 
         # Consolidate elements
-        elements_struc_array = np.empty(self.number_of_elements(), dtype=element_dtype)
+        if hpc:
+            e_dtype = element_dtype_hpc
+            f_dtype = fracture_dtype_hpc
+        else:
+            e_dtype = element_dtype
+            f_dtype = fracture_dtype
+        elements_struc_array = np.empty(self.number_of_elements(), dtype=e_dtype)
         elements_index_array = np.empty(self.number_of_elements(), dtype=element_index_dtype)
 
-        for i, e in enumerate(self.elements):
-            elements_struc_array[i], elements_index_array[i] = e.consolidate()
+        if hpc:
+            for i, e in enumerate(self.elements):
+                elements_struc_array[i], elements_index_array[i] = e.consolidate_hpc()
+        else:
+            for i, e in enumerate(self.elements):
+                elements_struc_array[i], elements_index_array[i] = e.consolidate()
 
         # Consolidate fractures
-        fractures_struc_array = np.empty(self.number_of_fractures(), dtype=fracture_dtype)
+        fractures_struc_array = np.empty(self.number_of_fractures(), dtype=f_dtype)
         fractures_index_array = np.empty(self.number_of_fractures(), dtype=fracture_index_dtype)
 
-        for i, f in enumerate(self.fractures):
-            fractures_struc_array[i], fractures_index_array[i] = f.consolidate()
+        if hpc:
+            for i, f in enumerate(self.fractures):
+                fractures_struc_array[i], fractures_index_array[i] = f.consolidate_hpc()
+        else:
+            for i, f in enumerate(self.fractures):
+                fractures_struc_array[i], fractures_index_array[i] = f.consolidate()
 
         # Save to self
-        self.elements_struc_array = elements_struc_array
+        if hpc:
+            self.elements_struc_array_hpc = elements_struc_array
+            self.fractures_struc_array_hpc = fractures_struc_array
+        else:
+            self.elements_struc_array = elements_struc_array
+            self.fractures_struc_array = fractures_struc_array
         self.elements_index_array = elements_index_array
-        self.fractures_struc_array = fractures_struc_array
         self.fractures_index_array = fractures_index_array
+
+    def unconsolidate_dfn(self, hpc=False):
+        """
+        Unconsolidates the DFN.
+        """
+
+        # Unconsolidate fractures
+        if hpc:
+            for i, f in enumerate(self.fractures):
+                f.unconsolidate_hpc(self.fractures_struc_array_hpc[i], self.fractures_index_array[i])
+            for i, e in enumerate(self.elements):
+                e.unconsolidate_hpc(self.elements_struc_array_hpc[i], self.elements_index_array[i], self.fractures)
+        else:
+            for i, f in enumerate(self.fractures):
+                f.unconsolidate(self.fractures_struc_array[i], self.fractures_index_array[i])
+            for i, e in enumerate(self.elements):
+                e.unconsolidate(self.elements_struc_array[i], self.elements_index_array[i], self.fractures)
+
 
 
     ####################################################################################################################
@@ -504,6 +548,24 @@ class DFN(HPCSolve):
             center += f.center
         return center / len(self.fractures)
 
+    def set_constant_head_boundary(self, center, normal, radius, head, label='Constant Head Boundary', ncoef=5, nint=10):
+        """
+        Adds a constant head boundary to the DFN.
+        Parameters
+        ----------
+        center : np.ndarray
+            The center of the constant head boundary.
+        normal : np.ndarray
+            The normal of the constant head boundary.
+        radius : float
+            The radius of the constant head boundary.
+        head : float
+            The head of the constant head boundary.
+        label : str
+            The label of the constant head boundary.
+        """
+        gf.set_head_boundary(self.fractures, ncoef, nint, head, center, radius, normal, label)
+
     ####################################################################################################################
     #                      Solve functions                                                                             #
     ####################################################################################################################
@@ -528,22 +590,22 @@ class DFN(HPCSolve):
                     # add the discharge term to the matrix for each element in the first fracture
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
-                        matrix[row, pos] = ee.discharge_term(z0, e.frac0)
+                        matrix[row, pos] = e.frac0.head_from_phi(ee.discharge_term(z0, e.frac0))
                     else:
-                        matrix[row, pos] = ee.discharge_term(z0)
+                        matrix[row, pos] = e.frac0.head_from_phi(ee.discharge_term(z0))
                 for ee in e.frac1.get_discharge_elements():
                     if ee == e:
                         continue
                     # add the discharge term to the matrix for each element in the second fracture
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
-                        matrix[row, pos] = -ee.discharge_term(z1, e.frac1)
+                        matrix[row, pos] = e.frac1.head_from_phi(-ee.discharge_term(z1, e.frac1))
                     else:
-                        matrix[row, pos] = -ee.discharge_term(z1)
+                        matrix[row, pos] = e.frac1.head_from_phi(-ee.discharge_term(z1))
                 pos_f0 = self.fractures.index(e.frac0)
-                matrix[row, len(self.discharge_elements) + pos_f0] = 1
+                matrix[row, len(self.discharge_elements) + pos_f0] = e.frac0.head_from_phi(1)
                 pos_f1 = self.fractures.index(e.frac1)
-                matrix[row, len(self.discharge_elements) + pos_f1] = -1
+                matrix[row, len(self.discharge_elements) + pos_f1] = e.frac1.head_from_phi(-1)
             else:
                 z = e.z_array(self.discharge_int)
                 for ee in e.frac0.get_discharge_elements():
@@ -601,7 +663,7 @@ class DFN(HPCSolve):
                 z1 = e.z_array(self.discharge_int, e.frac1)
                 omega0 = e.frac0.calc_omega(z0, exclude=None)
                 omega1 = e.frac1.calc_omega(z1, exclude=None)
-                matrix[row] = np.mean(np.real(omega1)) / e.frac1.t - np.mean(np.real(omega0)) / e.frac0.t
+                matrix[row] = e.frac1.head_from_phi(np.mean(np.real(omega1))) - e.frac0.head_from_phi(np.mean(np.real(omega0)))
             else:
                 z = e.z_array(self.discharge_int)
                 omega = e.frac0.calc_omega(z, exclude=None)
@@ -648,10 +710,12 @@ class DFN(HPCSolve):
         error_list = []
         for e in self.elements:
             error_list.append(e.error)
-        return max(error_list)
+        max_error = max(error_list)
+        element = self.elements[error_list.index(max_error)]
+        return max_error, element
 
     def solve(self, max_error=1e-5, max_iterations=50, boundary_check=False, tolerance=1e-2, n_boundary_check=100,
-              max_iteration_boundary=5, lu_decomp=False):
+              max_iteration_boundary=5, coef_increase=1.5, increase_check=True, lu_decomp=False):
         """
         Solves the DFN and saves the coefficients to the elements.
         """
@@ -664,11 +728,12 @@ class DFN(HPCSolve):
         if lu_decomp:
             self.lu_decomposition()
 
+        start = datetime.now()
 
         cnt_error = 0
         cnt_bc = 0
-        nit = 0
-        nit_boundary = 0
+        nit = nit_boundary = 0
+        error = 1e3
         while cnt_error < 2 and nit < max_iterations:
             cnt = 0
             nit += 1
@@ -685,19 +750,24 @@ class DFN(HPCSolve):
                     continue
                 e.solve()
                 print(f'\rSolved elements: {i + 1} / {len(self.elements)}', end='')
-            error = self.get_error()
+            error_old = error
+            error, element = self.get_error()
 
             # I max error is reached, set all errors to a higher value (only once)
             if error < max_error:
                 cnt_error += 1
-            if cnt_error == 1 and boundary_check and nit_boundary < max_iteration_boundary:
+            if boundary_check and nit_boundary < max_iteration_boundary and nit > 3:
+                """
+                Checks if the elements meet the boundary condition tolerance and increases the number of coefficients 
+                if they do not.
+                """
                 cnt_bc = 0
                 for ee in self.elements:
                     ee.error = max_error * 1.0001
                     if ee.check_boundary_condition(n=n_boundary_check) > tolerance:
                         cnt_bc += 1
-                        ee.set_new_ncoef(ee.ncoef*2)
-                        ee.check_boundary_condition(n=n_boundary_check)
+                        ee.set_new_ncoef(int(ee.ncoef*coef_increase))
+                        ee.solve()
             if nit < 10:
                 print(
                     f', Iteration: 0{nit}, Max error: {error:.4e}, Elements in solve loop: {len(self.elements) - cnt}', end='')
@@ -708,9 +778,34 @@ class DFN(HPCSolve):
                 cnt_error = 0
                 cnt_bc = 0
                 nit_boundary += 1
+            if increase_check and error > error_old and nit > 3 and error > max_error:
+                """
+                Checks if the error is increasing and increases the number of coefficients for the element with the 
+                maximum error.
+                """
+                print(f', Error increased for element {element}.', end='')
+                element.set_new_ncoef(int(element.ncoef*coef_increase))
+                element.solve()
+                cnt_error = 0
             print('')
         if boundary_check and cnt_bc == 0:
             print('All element meet the boundary condition tolerance.')
+
+        print(f'Solved DFN in {datetime.now() - start}.')
+
+    def hpc_solve(self, max_error=1e-5, max_iterations=50):
+        """
+        Solves the DFN on a HPC.
+        """
+        self.get_elements()
+        self.consolidate_dfn(hpc=True)
+        self.build_discharge_matrix()
+        start = datetime.now()
+        print('Compiling HPC code...', end='')
+        self.elements_struc_array = hpc_solve(self.fractures_struc_array_hpc, self.elements_struc_array_hpc,
+                                                    self.discharge_matrix, self.discharge_int, max_error, max_iterations)
+        print(f'Solved DFN on HPC in {datetime.now() - start}.')
+        self.unconsolidate_dfn(hpc=True)
 
     ####################################################################################################################
     #                    Plotting functions                                                                            #
@@ -867,8 +962,8 @@ class DFN(HPCSolve):
                     plot_line_3d(seg, f, pl, 'blue', line_width=line_width)
         print('')
 
-    def plot_fractures_head(self, pl, lvs, n_points, line_width=2, margin=0.01, opacity=1.0, only_flow=False,
-                            color_map='jet'):
+    def plot_fractures_head(self, pl, lvs=20, n_points=100, line_width=2, margin=1e-3, opacity=1.0, only_flow=False,
+                            color_map='jet', limits=None):
         """
         Plots the flow net for the fractures in the DFN.
         Parameters
@@ -889,6 +984,8 @@ class DFN(HPCSolve):
             Whether to plot only the fractures with flow.
         color_map : str
             The color map to use for the flow net.
+        limits : tuple
+            Custom limits for the flow net, overwrites the calculated limits.
         """
         if only_flow:
             fracs = self.get_flow_fractures()
@@ -916,6 +1013,8 @@ class DFN(HPCSolve):
             head_max = np.max(max_min_head_list)
         if head_min > np.min(max_min_head_list):
             head_min = np.min(max_min_head_list)
+        if limits is not None:
+            head_min, head_max = limits
         # Create the levels for the equipotential contours
         lvs_re = np.linspace(head_min, head_max, lvs)
 
@@ -990,7 +1089,7 @@ class DFN(HPCSolve):
     ####################################################################################################################
     #                    Streamline tracking functions                                                                 #
     ####################################################################################################################
-    def plot_streamline_tracking(self, pl, z0, frac, line_width=2.0, elevation=0.0):
+    def plot_streamline_tracking(self, pl, z0, frac, ds=1e-2, max_length=1000, line_width=2.0, elevation=0.0):
         """
         Plots the streamline tracking for a given fracture.
         Parameters
@@ -1001,21 +1100,31 @@ class DFN(HPCSolve):
             The starting point for the streamline tracking.
         frac : Fracture
             The fracture where to start the streamline tracking.
+        ds : float
+            The step size for the streamline tracking.
+        max_length : int
+            The maximum length of the streamline.
         line_width : float
             The line width of the streamlines.
-        elevation : float
+        elevation : float | np.ndarray
             The elevation of the starting point.
         """
         if isinstance(z0, complex):
             z0 = np.array([z0])
 
+        if isinstance(elevation, float):
+            elevation = np.array([elevation])
+
         streamlines = []
         streamlines_frac = []
+        velocities = []
         for i, z in enumerate(z0): # type: int, complex
-            streamline, streamline_frac = self.streamline_tracking(z, frac, elevation)
-            streamlines.append(streamline)
-            streamlines_frac.append(streamline_frac)
-            print(f'\rTracing streamline: {i + 1} / {len(z0)}', end='')
+            for j, e in enumerate(elevation):
+                streamline, streamline_frac, velocity = self.streamline_tracking(z, frac, e, ds, max_length)
+                streamlines.append(streamline)
+                streamlines_frac.append(streamline_frac)
+                velocities.append(velocity)
+                print(f'\rTracing streamline: {i + 1} / {len(z0)}', end='')
 
         # Concatenate streamlines list to ndarray
         for i, s in enumerate(streamlines):
@@ -1026,7 +1135,9 @@ class DFN(HPCSolve):
             streamline_3d = np.concatenate(streamline_3d)
             pl.add_mesh(pv.MultipleLines(streamline_3d), color='purple', line_width=line_width)
 
-    def streamline_tracking(self, z0, frac, elevation=0.0):
+        return streamlines, streamlines_frac, velocities
+
+    def streamline_tracking(self, z0, frac, elevation, ds, max_length):
         """
         Function that tracks the streamlines in a fracture.
         Parameters
@@ -1037,6 +1148,10 @@ class DFN(HPCSolve):
             Elevation of the starting point
         frac: Fracture
             The fracture where to start the streamline tracking
+        ds : float
+            Step size for the streamline tracking
+        max_length : int
+            Maximum length of the streamline
 
         Returns
         -------
@@ -1046,51 +1161,59 @@ class DFN(HPCSolve):
         # Crete empty ndarray
         streamline = []
         streamline_frac = []
+        velocity = []
 
 
         # Start the tracking process
         cond = True
+        z_start = z0  # set the start of the streamline on the element, while the computations for this point is made
+        # just outside the boundary of the element
         while cond:
+            # get the current number of points
+            length = sum([len(s) for s in streamline])
             # Start the tracking process
-            psi = [z0]
+            psi = [z_start]
+            w = [np.abs(frac.calc_w(z0))]
             discharge_elements = frac.get_discharge_elements()
 
             # get the next points
-            z1 = self.runge_kutta(z0, frac)
+            z1 = self.runge_kutta(z0, frac, ds)
             z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
             if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
                 break
             while z3 is False:
                 psi.append(z1)
+                w.append(np.abs(frac.calc_w(z1)))
                 z0 = z1
-                z1 = self.runge_kutta(z0, frac)
+                z1 = self.runge_kutta(z0, frac, ds)
                 if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
                     z3 = z0
                     break
                 z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
-                if len(psi) > 9010:
+                if len(psi) > max_length - length:
                     z3 = z1
                     break
             psi.append(z3)
+            w.append(np.abs(frac.calc_w(z3)))
 
 
 
             streamline.append(psi)
             streamline_frac.append(frac)
+            velocity.append(w)
 
             if isinstance(element, Intersection):
                 z3d = gf.map_2d_to_3d(z3, frac)
+                frac_old = frac
                 if frac == element.frac0:
                     frac = element.frac1
                 else:
                     frac = element.frac0
-                z0 = self.get_exit_intersection(z3d, element, frac)
-                if np.isnan(np.real(z0)):
-                    print('hoho')
+                z0, z_start, elevation = self.get_exit_intersection(z3d, element, frac, frac_old, elevation)
             else:
                 cond = False
 
-        return streamline, streamline_frac
+        return streamline, streamline_frac, velocity
 
     @staticmethod
     def check_streamline_exit(z0, z1, discharge_elements, frac):
@@ -1109,7 +1232,7 @@ class DFN(HPCSolve):
         return False, False
 
     @staticmethod
-    def get_exit_intersection(z3d, element, frac, dchi=1e-3):
+    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-12):
 
         if frac == element.frac0:
             endpoints = element.endpoints0
@@ -1122,29 +1245,49 @@ class DFN(HPCSolve):
         z1 = gf.map_chi_to_z_line(chi1*(1+dchi), endpoints)
         w0 = frac.calc_w(z0)
         w1 = frac.calc_w(z1)
+        z01 = z0 + np.conj(w0) / np.abs(w0) * dchi
+        z11 = z1 + np.conj(w1) / np.abs(w1) * dchi
+        chi01 = gf.map_z_line_to_chi(z01, endpoints)
+        chi11 = gf.map_z_line_to_chi(z11, endpoints)
 
         # Magnitude
         abs_w0 = np.abs(w0)
         abs_w1 = np.abs(w1)
 
         # check angles between w0, w1 and z-z0, z-z1, using the dot product
-        diff0 = np.arccos(np.real(np.vdot(w0 , (z0 - z))) / (abs_w0 * np.abs(z0 - z)))
-        diff1 = np.arccos(np.real(np.vdot(w1 , (z1 - z))) / (abs_w1 * np.abs(z1 - z)))
+        diff0 = np.arccos(np.real(np.vdot(np.conj(w0) , (z0 - z))) / (abs_w0 * np.abs(z0 - z)))
+        diff1 = np.arccos(np.real(np.vdot(np.conj(w1) , (z1 - z))) / (abs_w1 * np.abs(z1 - z)))
 
 
         if diff0 > np.pi / 2:
-            return z1
+            return z1, z, elevation
 
         if diff1 > np.pi / 2:
-            return z0
+            return z0, z, elevation
 
-        if abs_w0 > abs_w1:
-            return z0
+        divide = abs_w0 / (abs_w0 + abs_w1)
+        pointz0 = gf.map_2d_to_3d(z0, frac)
+        pointz1 = gf.map_2d_to_3d(z1, frac)
+        # map on direction of normal
+        nz0 = np.dot((pointz0 - z3d), frac_old.normal)
+        if nz0 < 0:
+            up = z1
+            down = z0
+        else:
+            up = z0
+            down = z1
+            divide = 1 - divide
 
-        return z1
+        # Check if elevation is below the divide
+        if elevation < divide:
+            elevation /= divide  # new elevation
+            return down, z, elevation
+
+        elevation = (elevation - divide) / (1 - divide)
+        return up, z, elevation
 
     @staticmethod
-    def runge_kutta(z0, frac,  ds=1e-2, tolerance=1e-6, max_it=10):
+    def runge_kutta(z0, frac,  ds, tolerance=1e-6, max_it=10):
         """
         Runge-Kutta method for streamline tracing.
         Parameters

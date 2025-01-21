@@ -45,6 +45,11 @@ class Intersection(Element):
             return np.linspace(self.endpoints0[0], self.endpoints0[1], n)
         return np.linspace(self.endpoints1[0], self.endpoints1[1], n)
 
+    def omega_along_element(self, n, frac_is):
+        z = self.z_array(n, frac_is)
+        omega = frac_is.calc_omega(z)
+        return omega
+
     def calc_omega(self, z, frac_is):
 
         # Se if function is in the first or second fracture that the intersection is associated with
@@ -115,7 +120,7 @@ class Intersection(Element):
         if z is None:
             return False
 
-        if np.abs(z - z0) + np.abs(z - z1) > np.abs(z0 - z1):
+        if np.abs(z - z0) + np.abs(z - z1) - np.abs(z0 - z1) > 1e-16:
             return False
 
         if np.abs(z - endpoints[0]) + np.abs(z - endpoints[1]) > np.abs(endpoints[0] - endpoints[1]):

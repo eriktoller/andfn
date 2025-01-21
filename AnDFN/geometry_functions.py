@@ -5,8 +5,13 @@ This module contains some geometrical functions.
 """
 
 import numpy as np
+import numba as nb
+
+import AnDFN
 from . import fracture
 from . import intersection
+from . import const_head
+from .hpc import NO_PYTHON
 
 __all__ = []
 
@@ -25,7 +30,7 @@ def map_z_line_to_chi(z, endpoints):
 
     Returns
     -------
-    chi : complex | np.ndarray
+    chi : complex | np.complex128
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
@@ -54,7 +59,7 @@ def map_chi_to_z_line(chi, endpoints):
     big_z = 1 / 2 * (chi + 1 / chi)
     return 1 / 2 * (big_z * (endpoints[1] - endpoints[0]) + endpoints[0] + endpoints[1])
 
-
+#@nb.jit(nopython=NO_PYTHON)
 def map_z_circle_to_chi(z, r, center=0.0):
     """
     Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.
@@ -70,7 +75,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
     Return
     ------
-    chi : complex | np.ndarray
+    chi : np.ndarray
         The corresponding point in the complex chi-plane
     """
     return (z - center) / r
@@ -165,6 +170,8 @@ def map_3d_to_2d(point, fractures):
 def fracture_intersection(frac0, frac1):
     # vector parallel to the intersection line
     n = np.cross(frac0.normal, frac1.normal)
+    if n.sum() == 0:  # Check if the normals are parallel
+        return None, None
     n = n / np.linalg.norm(n)
 
     # Calculate a point on the line of intersection
@@ -268,7 +275,7 @@ def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0, ncoef
     return fractures
 
 
-def get_connected_fractures(fractures, ncoef, nint, fracture_surface=None):
+def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
     connected_fractures = []
     fracture_list = fractures.copy()
     if fracture_surface is not None:
@@ -290,7 +297,7 @@ def get_connected_fractures(fractures, ncoef, nint, fracture_surface=None):
                 endpoints0, endpoints1 = fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
                     if fr2 not in []:
-                        intersections = intersection.Intersection(f'{fr.label}_{fr2.label}', endpoints0, endpoints1, ncoef, nint, fr, fr2)
+                        intersections = intersection.Intersection(f'{fr.label}_{fr2.label}', endpoints0, endpoints1, fr, fr2, ncoef, nint)
                         fr.add_element(intersections)
                         fr2.add_element(intersections)
                         if fr2 not in connected_fractures:
@@ -307,7 +314,21 @@ def get_connected_fractures(fractures, ncoef, nint, fracture_surface=None):
     return connected_fractures
 
 
-def covert_trend_plunge_to_normal(trend, plunge):
+def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, label):
+    fracture_surface = AnDFN.Fracture(label, 1, radius, center, normal, ncoef, nint)
+    fr = fracture_surface
+    for fr2 in fractures:
+        if fr == fr2:
+            continue
+        if np.linalg.norm(fr.center - fr2.center) > fr.radius + fr2.radius:
+            continue
+        endpoints0, endpoints1 = fracture_intersection(fr, fr2)
+        if endpoints0 is not None:
+            c_head = const_head.ConstantHeadLine(f'{label}_{fr2.label}', endpoints1, head, fr2, ncoef, nint)
+            fr2.add_element(c_head)
+
+
+def convert_trend_plunge_to_normal(trend, plunge):
     """
     Function that converts a trend and plunge to a normal vector
     Parameters
@@ -322,9 +343,9 @@ def covert_trend_plunge_to_normal(trend, plunge):
     normal : np.ndarray
         The normal vector of the fracture plane.
     """
-    trend = np.deg2rad(90-trend)
-    plunge = np.deg2rad(90-plunge)
-    return np.array([np.sin(plunge) * np.cos(trend), np.sin(plunge) * np.sin(trend), np.cos(plunge)])
+    trend_rad = np.deg2rad(trend+90)
+    plunge_rad = np.deg2rad(90-plunge)
+    return np.array([-np.sin(plunge_rad)*np.cos(trend_rad), np.sin(plunge_rad)*np.sin(trend_rad), -np.cos(plunge_rad)])
 
 
 def convert_strike_dip_to_normal(strike, dip):
@@ -342,6 +363,28 @@ def convert_strike_dip_to_normal(strike, dip):
     normal : np.ndarray
         The normal vector of the fracture plane.
     """
-    strike = np.deg2rad(strike)
-    dip = np.deg2rad(-dip)
-    return np.array([-np.sin(dip) * np.sin(strike), np.sin(dip) * np.cos(strike), -np.cos(dip)])
+    if strike > 90:
+        strike = 360 - (180 -strike)-90+90
+    strike_rad = np.deg2rad(strike-90)
+    dip_rad = np.deg2rad(dip)
+    return np.array([-np.sin(dip_rad)*np.sin(strike_rad), np.cos(strike_rad)*np.sin(dip_rad), -np.cos(dip_rad)])
+
+
+def convert_normal_to_strike_dip(normal):
+    """
+    Function that converts a normal vector to a strike and dip
+    Parameters
+    ----------
+    normal : np.ndarray
+        The normal vector of the fracture plane.
+
+    Returns
+    -------
+    strike : float
+        The strike of the fracture plane.
+    dip : float
+        The dip of the fracture plane.
+    """
+    strike = -np.arctan2(normal[0], normal[1])
+    dip = -np.arcsin(normal[2])
+    return np.rad2deg(strike), np.rad2deg(dip)

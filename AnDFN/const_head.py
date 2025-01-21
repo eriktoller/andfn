@@ -24,7 +24,6 @@ class ConstantHeadLine(Element):
         self.thetas = np.linspace(start=np.pi/(2*nint), stop=np.pi + np.pi/(2*nint), num=nint, endpoint=False)
         self.coef = np.zeros(ncoef, dtype=complex)
         self.phi = frac0.phi_from_head(head)
-        self.z_array0 = self.z_array(nint)
 
         # Set the kwargs
         for key, value in kwargs.items():
@@ -34,8 +33,16 @@ class ConstantHeadLine(Element):
         chi = gf.map_z_line_to_chi(z, self.endpoints0)
         return np.sum(np.real(mf.well_chi(chi, 1))) / len(z)
 
+    def length(self):
+        return np.abs(self.endpoints0[0] - self.endpoints0[1])
+
     def z_array(self, n):
         return np.linspace(self.endpoints0[0], self.endpoints0[1], n)
+
+    def omega_along_element(self, n, frac_is):
+        z = self.z_array(n)
+        omega = frac_is.calc_omega(z)
+        return omega
 
     def z_array_tracking(self, n, offset=1e-3):
         chi = np.exp(1j * np.linspace(0, 2*np.pi, n, endpoint=False))*(1+offset)
@@ -64,6 +71,7 @@ class ConstantHeadLine(Element):
 
         s = np.real(s)
         s[0] = 0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+
         self.error = np.max(np.abs(s + self.coef))
         self.coef = -s
 
