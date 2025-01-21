@@ -3,7 +3,7 @@ import numpy as np
 import numba as nb
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
-from AnDFN.hpc import NO_PYTHON, hpc_fracture, FASTMATH
+from andfn.hpc import NO_PYTHON, hpc_fracture, FASTMATH
 
 
 @nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
