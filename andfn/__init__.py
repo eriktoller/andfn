@@ -8,19 +8,19 @@ Method (AEM).
 """
 
 # version number
-__name__ = "AnDFN"
+__name__ = "andfn"
 __author__ = "Erik A.L. Toller"
 __version__ = "0.1"
 
 # Import all classes and functions
-from AnDFN.bounding import BoundingCircle
-from AnDFN.const_head import ConstantHeadLine
-from AnDFN.dfn import DFN
-from AnDFN.fracture import Fracture
-from AnDFN.intersection import Intersection
-from AnDFN.well import Well
-import AnDFN.geometry_functions
-import AnDFN.math_functions
+from andfn.bounding import BoundingCircle
+from andfn.const_head import ConstantHeadLine
+from andfn.dfn import DFN
+from andfn.fracture import Fracture
+from andfn.intersection import Intersection
+from andfn.well import Well
+import andfn.geometry_functions
+import andfn.math_functions
 
 __all__ = [
     'BoundingCircle',
