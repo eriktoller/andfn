@@ -5,12 +5,12 @@ This module contains the bounding classes.
 """
 
 
-import AnDFN.math_functions as mf
-import AnDFN.geometry_functions as gf
+import andfn.math_functions as mf
+import andfn.geometry_functions as gf
 import numpy as np
-from AnDFN.well import Well
-from AnDFN.intersection import Intersection
-from AnDFN.const_head import ConstantHeadLine
+from andfn.well import Well
+from andfn.intersection import Intersection
+from andfn.const_head import ConstantHeadLine
 from .element import Element
 
 
