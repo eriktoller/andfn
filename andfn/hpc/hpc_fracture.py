@@ -6,8 +6,8 @@ This module contains the HPC fracture functions.
 
 import numpy as np
 import numba as nb
-from AnDFN.hpc import hpc_intersection, hpc_const_head_line, hpc_well, hpc_bounding_circle, NO_PYTHON, FASTMATH
-from AnDFN.element import element_dtype, element_index_dtype, fracture_dtype, fracture_index_dtype
+from andfn.hpc import hpc_intersection, hpc_const_head_line, hpc_well, hpc_bounding_circle, NO_PYTHON, FASTMATH
+from andfn.element import element_dtype, element_index_dtype, fracture_dtype, fracture_index_dtype
 
 
 @nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
