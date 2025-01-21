@@ -7,7 +7,7 @@ This module contains some geometrical functions.
 import numpy as np
 import numba as nb
 
-import AnDFN
+import andfn
 from . import fracture
 from . import intersection
 from . import const_head
@@ -315,7 +315,7 @@ def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
 
 
 def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, label):
-    fracture_surface = AnDFN.Fracture(label, 1, radius, center, normal, ncoef, nint)
+    fracture_surface = andfn.Fracture(label, 1, radius, center, normal, ncoef, nint)
     fr = fracture_surface
     for fr2 in fractures:
         if fr == fr2:
