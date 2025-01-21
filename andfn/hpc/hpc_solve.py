@@ -7,8 +7,8 @@ from datetime import datetime
 
 import numpy as np
 import numba as nb
-from AnDFN.hpc import hpc_math_functions as mf
-from AnDFN.hpc import hpc_intersection, hpc_fracture, hpc_const_head_line, hpc_well, hpc_bounding_circle, NO_PYTHON, FASTMATH
+from andfn.hpc import hpc_math_functions as mf
+from andfn.hpc import hpc_intersection, hpc_fracture, hpc_const_head_line, hpc_well, hpc_bounding_circle, NO_PYTHON, FASTMATH
 
 
 @nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH, parallel=True)
