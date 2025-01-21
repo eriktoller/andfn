@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import scipy as sp
 import h5py
 
-from AnDFN import geometry_functions as gf
+from andfn import geometry_functions as gf
 from .fracture import Fracture
 from .hpc.hpc_solve import solve as hpc_solve
 from .well import Well
