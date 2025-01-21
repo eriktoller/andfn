@@ -140,7 +140,7 @@ def initiate_elements_array_hpc():
 
 class Element:
     """
-    The parent class for all elements in the AnDFN model.
+    The parent class for all elements in the andfn model.
     """
     def __init__(self, label, id_, type_):
         self.label = label
