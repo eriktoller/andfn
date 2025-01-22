@@ -3,6 +3,32 @@
 ## Introduction
 AnDFN is a computer program for the modelling of groundwater flow in a discrete fracture network (DFN). The program is based on the Analytic Element Method (AEM) and is distributed as a Python package with various modules and scripts. The original development of this code was funded by BeFo (Stiftelsen Bergteknisk Forskning).
 
+## Instalation
+AnDFN can be installed from PyPi.
+
+Installation:
+```
+pip install andfn
+```
+
+Update:
+```
+pip install andfn --upgrade
+```
+
+Uninstall
+```
+pip uninstall andfn
+```
+
+### Dependencies
+AnDFN requires the following Python packages:
+- Numpy
+- Pyvista
+- Matplotlib
+- Numba
+- h5py (for load and save)
+
 ## Functionality
 AnDFN currently have the following functionality:
 - Generate random DFN
