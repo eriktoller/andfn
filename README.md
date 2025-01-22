@@ -38,14 +38,6 @@ AnDFN currently have the following functionality:
 - Import DFNs
 - Load and save DFNs
 
-## Dependencies
-AnDFN requires the following Python packages:
-- Numpy
-- Pyvista
-- Matplotlib
-- Numba
-- h5py (for load and save)
-
 ## Citation
 The basic theory for this program is published in:
 
