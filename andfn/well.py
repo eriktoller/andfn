@@ -134,6 +134,22 @@ class Well(Element):
         return 0.0
 
     def check_chi_crossing(self, z0, z1, atol=1e-10):
+        """
+        Checks if the line between two points, z0 and z1, crosses the well.
+        Parameters
+        ----------
+        z0 : complex
+            The first point.
+        z1 : complex
+            The second point.
+        atol : float
+            The absolute tolerance for the check
+
+        Returns
+        -------
+        z : complex | bool
+            The point where the line crosses the well or False if it does not cross.
+        """
         chi0 = gf.map_z_circle_to_chi(z0, self.radius, self.center)
         chi1 = gf.map_z_circle_to_chi(z1, self.radius, self.center)
 
@@ -142,8 +158,9 @@ class Well(Element):
         if chi2 is None:
             return False
 
-        if (np.abs(chi2 - chi0) + np.abs(chi2-chi1) > np.abs(chi1 - chi0)
-                and np.abs(chi3 - chi0) + np.abs(chi3-chi1) > np.abs(chi1 - chi0)):
+        diff0 = np.abs(np.abs(chi2 - chi0) + np.abs(chi2-chi1) - np.abs(chi1 - chi0))
+        diff1 = np.abs(np.abs(chi3 - chi0) + np.abs(chi3-chi1) - np.abs(chi1 - chi0))
+        if diff0 > atol and diff1 > atol:
             return False
 
 

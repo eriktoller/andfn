@@ -48,6 +48,18 @@ class BoundingCircle(Element):
             setattr(self, key, value)
 
     def get_chi(self, z):
+        """
+        Get the chi for the bounding circle.
+        Parameters
+        ----------
+        z : complex | np.ndarray
+            A point in the complex z plane.
+
+        Returns
+        -------
+        chi : complex | np.ndarray
+            The complex chi for the bounding circle.
+        """
         chi = gf.map_z_circle_to_chi(z, self.radius)
         if isinstance(chi, np.ndarray) and len(chi) > 1:
             chi[np.abs(chi) > 1.0 + 1e-10] = np.nan + 1j * np.nan
@@ -131,7 +143,10 @@ class BoundingCircle(Element):
                             self.dpsi_corr[ii] += e.q
 
     def solve(self):
-        self.find_branch_cuts()
+        """
+        Solve the coefficients of the bounding circle.
+        """
+        self.find_branch_cuts()  # Find the branch cuts
         s = mf.cauchy_integral_domega(self.nint, self.ncoef, self.thetas, self.dpsi_corr,
                                       lambda z: self.frac0.calc_omega(z, exclude=self),
                                       lambda chi: gf.map_chi_to_z_circle(chi, self.radius))
@@ -140,6 +155,18 @@ class BoundingCircle(Element):
         self.coef = -s
 
     def check_boundary_condition(self, n=10):
+        """
+        Check if the bounding circle satisfies the boundary conditions.
+        Parameters
+        ----------
+        n : int
+            The number of points to check the boundary condition at.
+
+        Returns
+        -------
+        float
+            The error in the boundary condition.
+        """
 
         # Calculate the stream function on the boundary of the fracture
         theta = np.linspace(0, 2 * np.pi, n, endpoint=True)
@@ -149,8 +176,9 @@ class BoundingCircle(Element):
         dpsi = np.diff(psi)
         q = np.sum(np.abs(self.dpsi_corr))
         mean_dpsi = np.abs(np.max(dpsi) - np.min(dpsi))
-        if mean_dpsi > q/2:
-            mean_dpsi = np.abs(np.abs(np.max(dpsi) - np.min(dpsi)) - q)
-        if q < 1e-10:
-            return np.abs(np.max(psi) - np.min(psi))
-        return mean_dpsi / q
+        #if mean_dpsi > q/2:
+        #    mean_dpsi = np.abs(np.abs(np.max(dpsi) - np.min(dpsi)) - q)
+        #if q < 1e-10:
+        #    return np.abs(np.max(psi) - np.min(psi))
+        #return mean_dpsi / q
+        return mean_dpsi / np.max(dpsi)

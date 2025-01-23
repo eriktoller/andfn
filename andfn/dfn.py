@@ -15,6 +15,7 @@ from andfn import geometry_functions as gf
 from .fracture import Fracture
 from .hpc.hpc_solve import solve as hpc_solve
 from .well import Well
+from .impermeable_object import ImpermeableCircle
 from .const_head import ConstantHeadLine
 from .intersection import Intersection
 from .bounding import BoundingCircle
@@ -120,7 +121,7 @@ def plot_line_3d(seg, f, pl, color, line_width):
 
 
 class DFN:
-    def __init__(self, label, discharge_int=50):
+    def __init__(self, label, discharge_int=50, **kwargs):
         """
         Initializes the DFN class.
         Parameters
@@ -131,7 +132,6 @@ class DFN:
             The number of points to use for the discharge integral.
 
         """
-        super().__init__()
         self.label = label
         self.discharge_int = discharge_int
         self.fractures = []
@@ -151,6 +151,10 @@ class DFN:
         self.fractures_index_array = None
         self.elements_struc_array_hpc = None
         self.fractures_struc_array_hpc = None
+
+        # Set the kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def __str__(self):
         """
@@ -500,7 +504,7 @@ class DFN:
         # Add the fractures to the DFN
         self.add_fracture(frac_list)
 
-    def get_fracture_intersections(self, ncoef, nint, new_frac=None):
+    def get_fracture_intersections(self, ncoef=5, nint=10, new_frac=None):
         """
         Finds the intersections between the fractures in the DFN and adds them to the DFN.
         Parameters
@@ -1079,9 +1083,9 @@ class DFN:
             if isinstance(e, ConstantHeadLine):
                 line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
                 pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=3)
-            if isinstance(e, Well):
+            if isinstance(e, (Well, ImpermeableCircle)):
                 point = gf.map_2d_to_3d(e.center, e.frac0)
-                pl.add_mesh(pv.Polygon(point, e.radius, normal=e.frac0.normal, n_sides=50),
+                pl.add_mesh(pv.Polygon(point, e.radius, normal=e.frac0.normal, n_sides=50, fill=False),
                             color='#000000', line_width=3)
             print(f'\rPlotting elements: {i + 1} / {len(self.elements)}', end='')
         print('')
@@ -1118,24 +1122,30 @@ class DFN:
         streamlines = []
         streamlines_frac = []
         velocities = []
+        elements = []
         for i, z in enumerate(z0): # type: int, complex
             for j, e in enumerate(elevation):
-                streamline, streamline_frac, velocity = self.streamline_tracking(z, frac, e, ds, max_length)
+                streamline, streamline_frac, velocity, element = self.streamline_tracking(z, frac, e, ds, max_length)
                 streamlines.append(streamline)
                 streamlines_frac.append(streamline_frac)
                 velocities.append(velocity)
+                elements.append(element)
                 print(f'\rTracing streamline: {i + 1} / {len(z0)}', end='')
 
         # Concatenate streamlines list to ndarray
         for i, s in enumerate(streamlines):
             streamline_3d = []
+            if len(s) == 0:
+                continue
+            if elements[i] is False:
+                continue
             for ii, ss in enumerate(s):
                 psi_3d = gf.map_2d_to_3d(np.array(ss), streamlines_frac[i][ii])
                 streamline_3d.append(psi_3d)
             streamline_3d = np.concatenate(streamline_3d)
             pl.add_mesh(pv.MultipleLines(streamline_3d), color='purple', line_width=line_width)
 
-        return streamlines, streamlines_frac, velocities
+        return streamlines, streamlines_frac, velocities, elements
 
     def streamline_tracking(self, z0, frac, elevation, ds, max_length):
         """
@@ -1166,6 +1176,7 @@ class DFN:
 
         # Start the tracking process
         cond = True
+        element = False
         z_start = z0  # set the start of the streamline on the element, while the computations for this point is made
         # just outside the boundary of the element
         while cond:
@@ -1178,9 +1189,9 @@ class DFN:
 
             # get the next points
             z1 = self.runge_kutta(z0, frac, ds)
-            z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
             if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
                 break
+            z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
             while z3 is False:
                 psi.append(z1)
                 w.append(np.abs(frac.calc_w(z1)))
@@ -1213,7 +1224,7 @@ class DFN:
             else:
                 cond = False
 
-        return streamline, streamline_frac, velocity
+        return streamline, streamline_frac, velocity, element
 
     @staticmethod
     def check_streamline_exit(z0, z1, discharge_elements, frac):
@@ -1232,7 +1243,7 @@ class DFN:
         return False, False
 
     @staticmethod
-    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-12):
+    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-4):
 
         if frac == element.frac0:
             endpoints = element.endpoints0
@@ -1257,14 +1268,16 @@ class DFN:
         # check angles between w0, w1 and z-z0, z-z1, using the dot product
         diff0 = np.arccos(np.real(np.vdot(np.conj(w0) , (z0 - z))) / (abs_w0 * np.abs(z0 - z)))
         diff1 = np.arccos(np.real(np.vdot(np.conj(w1) , (z1 - z))) / (abs_w1 * np.abs(z1 - z)))
-
+        """
+        if diff0 > np.pi / 2 and diff1 > np.pi / 2:
+            return z1, z, elevation
 
         if diff0 > np.pi / 2:
             return z1, z, elevation
 
         if diff1 > np.pi / 2:
             return z0, z, elevation
-
+        """
         divide = abs_w0 / (abs_w0 + abs_w1)
         pointz0 = gf.map_2d_to_3d(z0, frac)
         pointz1 = gf.map_2d_to_3d(z1, frac)
@@ -1324,3 +1337,31 @@ class DFN:
             it += 1
 
         return z1
+
+    @staticmethod
+    def get_travel_time_and_length(streamline, velocity):
+        """
+        Returns the travel time for a streamline.
+        Parameters
+        ----------
+        streamline : list | ndarray
+            The streamline.
+        velocity : ndarray
+            The velocity along the streamline.
+        Returns
+        -------
+        time : float
+            The travel time for the streamline.
+        length : float
+            The length of the streamline.
+        """
+        if len(streamline) > 1:
+            streamline = np.concat(streamline)
+            velocity = np.concatenate(velocity)
+        if isinstance(streamline, list):
+            streamline = np.array(streamline)
+        if isinstance(velocity, list):
+            velocity = np.array(velocity)
+        time = np.sum(np.abs(streamline[1:] - streamline[:-1]) / velocity[:-1])
+        length = np.sum(np.abs(streamline[1:] - streamline[:-1]))
+        return time, length

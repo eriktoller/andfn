@@ -325,7 +325,6 @@ def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, labe
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
             c_head = const_head.ConstantHeadLine(f'{label}_{fr2.label}', endpoints1, head, fr2, ncoef, nint)
-            fr2.add_element(c_head)
 
 
 def convert_trend_plunge_to_normal(trend, plunge):

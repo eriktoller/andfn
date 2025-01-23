@@ -2,10 +2,6 @@
 Notes
 -----
 This module contains the fracture class.
-
-make sure to allow for passing an array of (x,y) coordinates to the fracture class
-
-add start stop for each element in the fracture class
 """
 import numpy as np
 
@@ -18,6 +14,29 @@ from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
 
 class Fracture:
     def __init__(self, label, t, radius, center, normal, ncoef=5, nint=10, elements=None, **kwargs):
+        """
+        Initializes the fracture class.
+        Parameters
+        ----------
+        label : str
+            The label of the fracture.
+        t : float
+            The transmissivity of the fracture.
+        radius : float
+            The radius of the fracture.
+        center : np.ndarray
+            The center of the fracture.
+        normal : np.ndarray
+            The normal vector of the fracture.
+        ncoef : int
+            The number of coefficients for the bounding circle that bounds the fracture.
+        nint : int
+            The number of integration points for the bounding circle that bounds the fracture.
+        elements : list
+            A list of elements that the fracture is associated with.
+        kwargs : dict
+            Additional keyword arguments.
+        """
         self.label = label
         self.id_ = 0
         self.t = t
@@ -43,12 +62,35 @@ class Fracture:
             setattr(self, key, value)
 
     def __str__(self):
+        """
+        Returns the string representation of the fracture.
+        Returns
+        -------
+        str
+            The string representation of the fracture.
+        """
         return f'Fracture {self.label}'
 
     def set_id(self, id_):
+        """
+        Sets the id for the fracture.
+        Parameters
+        ----------
+        id_ : int
+            The id for the fracture.
+        """
         self.id_ = id_
 
     def consolidate(self):
+        """
+        Consolidates the fracture into a structured array.
+        Returns
+        -------
+        fracture_struc_array : np.ndarray
+            The structured array for the fracture.
+        fracture_index_array : np.ndarray
+            The structured array for the fracture index.
+        """
         fracture_struc_array = np.empty(1, dtype=fracture_dtype)
 
         fracture_struc_array['id_'][0] = self.id_
@@ -69,6 +111,15 @@ class Fracture:
         return fracture_struc_array, fracture_index_array
 
     def consolidate_hpc(self):
+        """
+        Consolidates the fracture into a structured array for HPC.
+        Returns
+        -------
+        fracture_struc_array : np.ndarray
+            The structured array for the fracture.
+        fracture_index_array : np.ndarray
+            The structured array for the fracture index.
+        """
         fracture_struc_array = np.empty(1, dtype=fracture_dtype_hpc)
 
         fracture_struc_array['id_'][0] = self.id_
@@ -91,6 +142,14 @@ class Fracture:
         return fracture_struc_array, fracture_index_array
 
     def unconsolidate(self, fracture_struc_array, fracture_index_array):
+        """
+        Unconsolidates the fracture from the structured array.
+        Parameters
+        ----------
+        fracture_struc_array : np.ndarray
+            The structured array for the fracture.
+        fracture_index_array : np.ndarray
+        """
         self.id_ = fracture_struc_array['id_']
         self.t = fracture_struc_array['t']
         self.radius = fracture_struc_array['radius']
@@ -104,6 +163,15 @@ class Fracture:
         self.label = fracture_index_array['label']
 
     def unconsolidate_hpc(self, fracture_struc_array, fracture_index_array):
+        """
+        Unconsolidates the fracture from the structured array for HPC.
+        Parameters
+        ----------
+        fracture_struc_array : np.ndarray
+            The structured array for the fracture.
+        fracture_index_array : np.ndarray
+            The structured array for the fracture index.
+        """
         self.id_ = fracture_struc_array['id_']
         self.t = fracture_struc_array['t']
         self.radius = fracture_struc_array['radius']
@@ -117,22 +185,50 @@ class Fracture:
         self.label = fracture_index_array['label']
 
     def add_element(self, new_element):
+        """
+        Adds a new element to the fracture.
+        Parameters
+        ----------
+        new_element : Element
+            The element to add to the fracture.
+        """
         if new_element in self.elements:
             print('Element already in fracture.')
         else:
             self.elements.append(new_element)
 
     def get_discharge_elements(self):
+        """
+        Returns the elements in the fracture that have a discharge.
+        Returns
+        -------
+        list
+            A list of elements in the fracture that have a discharge.
+        """
         return [e for e in self.elements
                 if isinstance(e, Intersection)
                 or isinstance(e, ConstantHeadLine)
                 or isinstance(e, Well)]
 
     def get_total_discharge(self):
+        """
+        Returns the total discharge from absolute values in the fracture.
+        Returns
+        -------
+        float
+            The total discharge in the fracture.
+        """
         elements = self.get_discharge_elements()
         return sum([np.abs(e.q) for e in elements])
 
     def check_discharge(self):
+        """
+        Checks so the discharge in the fracture adds up to zero.
+        Returns
+        -------
+        float
+            The total discharge in the fracture.
+        """
         elements = self.get_discharge_elements()
         q = 0.0
         for e in elements:
@@ -144,6 +240,13 @@ class Fracture:
         return np.abs(q)
 
     def get_max_min_head(self):
+        """
+        Returns the maximum and minimum head from the constant head elements for the fracture.
+        Returns
+        -------
+        head : list
+            A list containing the maximum and minimum head for the fracture.
+        """
         elements = self.get_discharge_elements()
         head = []
         for e in elements:
@@ -156,6 +259,13 @@ class Fracture:
         return [max(head), min(head)]
 
     def set_new_label(self, new_label):
+        """
+        Sets a new label for the fracture.
+        Parameters
+        ----------
+        new_label : str
+            The new label for the fracture.
+        """
         self.label = new_label
 
     def calc_omega(self, z, exclude=None):

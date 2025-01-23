@@ -7,8 +7,6 @@ This module contains some general mathematical functions.
 import numpy as np
 import numba as nb
 
-VECTOR = True
-
 def asym_expansion(chi, coef):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
@@ -16,14 +14,14 @@ def asym_expansion(chi, coef):
 
     Parameters
     ----------
-    chi : complex
+    chi : complex | np.ndarray
         A point in the complex chi-plane
     coef : np.ndarray
         An array of coefficients
 
     Return
     ------
-    res : complex
+    res : complex | np.ndarray
         The resulting value for the asymptotic expansion
     """
     res = 0.0
@@ -40,14 +38,14 @@ def asym_expansion_d1(chi, coef):
 
     Parameters
     ----------
-    chi : complex
+    chi : complex | np.ndarray
         A point in the complex chi-plane
     coef : np.ndarray
         An array of coefficients
 
     Return
     ------
-    res : complex
+    res : complex | np.ndarray
         The resulting value for the asymptotic expansion
     """
     res = 0.0
@@ -149,19 +147,10 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
     integral2 = np.zeros((n, m), dtype=complex)
     coef = np.zeros(m, dtype=complex)
 
-    if VECTOR:
-        chi = np.exp(1j * thetas)
-        z = z_func(chi)
-        phi = np.real(omega_func(z))
-        integral[:, :m] = phi[:, np.newaxis] * np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
-    else:
-        for ii in range(n):
-            chi = np.exp(1j * thetas[ii])
-            z = z_func(chi)
-            phi = np.real(omega_func(z))
-            for jj in range(m):
-                integral[ii, jj] = phi * np.exp(-1j * jj * thetas[ii])
-
+    chi = np.exp(1j * thetas)
+    z = z_func(chi)
+    phi = np.real(omega_func(z))
+    integral[:, :m] = phi[:, np.newaxis] * np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
 
 
     for ii in range(m):
@@ -196,22 +185,14 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
     integral = np.zeros((n, m), dtype=complex)
     coef = np.zeros(m, dtype=complex)
 
-    if VECTOR:
-        chi = np.exp(1j * thetas)
-        z = z_func(chi)
-        psi = np.imag(omega_func(z))
-        for jj in range(m):
-            integral[:, jj] = psi * np.exp(-1j * jj * thetas)
-    else:
-        for ii in range(n):
-            chi = np.exp(1j * thetas[ii])
-            z = z_func(chi)
-            psi = np.imag(omega_func(z))
-            for jj in range(m):
-                integral[ii, jj] = psi * np.exp(-1j * jj * thetas[ii])
+    chi = np.exp(1j * thetas)
+    z = z_func(chi)
+    psi = np.imag(omega_func(z))
+    for jj in range(m):
+        integral[:, jj] = psi * np.exp(-1j * jj * thetas)
 
     for ii in range(m):
-        coef[ii] = 2 * sum(integral[:, ii]) / n
+        coef[ii] = 2j * sum(integral[:, ii]) / n
     coef[0] = coef[0] / 2
 
     return coef

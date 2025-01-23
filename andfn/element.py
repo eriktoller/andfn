@@ -56,6 +56,7 @@ Element Types:
 1 = Bounding Circle
 2 = Well
 3 = Constant Head Line
+4 = Impermeable Circle
 """
 element_index_dtype = np.dtype([
         ('label', np.str_,100),
@@ -118,7 +119,7 @@ def initiate_elements_array():
 
 def initiate_elements_array_hpc():
     """
-    Function that initiates the elements array.
+    Function that initiates the elements array for HPC.
 
     Returns
     -------

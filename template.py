@@ -1,17 +1,17 @@
 """
 Notes
 -----
-This is a template file to demonstrate how to use the AnDFN package.
+This is a template file to demonstrate how to use the andfn package.
 
-The AnDFN package is a python package for solving flow in Discrete Fracture Networks (DFN).
+The andfn package is a python package for solving flow in Discrete Fracture Networks (DFN).
 
 Author: Erik Toller
 Date: 2025-01-21
-Repository: https://github.com/eriktoller/AnDFN
+Repository: https://github.com/eriktoller/andfn
 """
 
-# Import the AnDFN package and numpy
-import AnDFN
+# Import the andfn package and numpy
+import andfn
 import numpy as np
 
 if __name__ == '__main__':
@@ -21,29 +21,29 @@ if __name__ == '__main__':
     print('--------------------------------------------------------------------')
     ncoef = 10; nint = ncoef*2  # number of coefficients and integration points
     # Crete 4 fractures
-    frac0 = AnDFN.fracture.Fracture('alplha', 1, radius=0.7,
+    frac0 = andfn.fracture.Fracture('alplha', 1, radius=0.7,
                                     center=np.array([-0.7,  0.1, -0.3]),
                                     normal=np.array([-0.2,  0.4, -0.9]),
                                     ncoef=ncoef, nint=nint)
-    frac1 = AnDFN.fracture.Fracture('beta', 1, radius=1.0,
+    frac1 = andfn.fracture.Fracture('beta', 1, radius=1.0,
                                     center=np.array([-0.6, -0.61, -0.7]),
                                     normal=np.array([-0.6, -0.5,  0.6]),
                                     ncoef=ncoef*30, nint=nint*30)
-    frac2 = AnDFN.fracture.Fracture('gamma', 1, radius=0.5,
+    frac2 = andfn.fracture.Fracture('gamma', 1, radius=0.5,
                                     center=np.array([ 0.0, 0.0,  -0.1]),
                                     normal=np.array([ 0.3, -0.8, -0.4]),
                                     ncoef=ncoef, nint=nint)
-    frac3 = AnDFN.fracture.Fracture('delta', 1, radius=0.7,
+    frac3 = andfn.fracture.Fracture('delta', 1, radius=0.7,
                                     center=np.array([ -0.1, -1.0, 0.3]),
                                     normal=np.array([ 0.5, 0.0, 0.0]),
                                     ncoef=ncoef, nint=nint)
 
     # Create 2 constant head lines
-    const_head0 = AnDFN.const_head.ConstantHeadLine('const_head0',
+    const_head0 = andfn.const_head.ConstantHeadLine('const_head0',
                                                    np.array([0.3 + 0.2j,
                                                              0.2 - 0.3j]),
                                                    10.0, frac3, ncoef, nint)
-    const_head1 = AnDFN.const_head.ConstantHeadLine('const_head1',
+    const_head1 = andfn.const_head.ConstantHeadLine('const_head1',
                                                    np.array([-0.4 - 0.1j,
                                                              -0.3-0.3j]),
                                                    2.0, frac0, ncoef, nint)
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     print('--------------------------------------------------------------------')
     print('\t CREATE THE DFN AND ADD THE FRACTURES')
     print('--------------------------------------------------------------------')
-    dfn = AnDFN.DFN('DFN template')  # create a DFN object
+    dfn = andfn.DFN('DFN template')  # create a DFN object
     dfn.add_fracture([frac0, frac1, frac2, frac3])  # add fractures to the DFN object
 
     print('\n')

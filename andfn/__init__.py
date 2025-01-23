@@ -19,6 +19,7 @@ from andfn.dfn import DFN
 from andfn.fracture import Fracture
 from andfn.intersection import Intersection
 from andfn.well import Well
+from andfn.impermeable_object import ImpermeableCircle
 import andfn.geometry_functions
 import andfn.math_functions
 
