@@ -37,7 +37,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/eriktoller/andfn"
-Documentation = "https://github.com/eriktoller/andfn"
+Documentation = "https://eriktoller.github.io/andfn/n"
 Repository = "https://github.com/eriktoller/andfn"
 Issues = "https://github.com/eriktoller/andfn/issues"
 
