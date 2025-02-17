@@ -1,4 +1,4 @@
-Element
+Elements
 ========
 
 This is a collection of classes that are used to create the elements of the DFN. The classes are:
@@ -11,6 +11,9 @@ This is a collection of classes that are used to create the elements of the DFN.
    impermeable_objects
    intersection
    well
+
+Element parent class
+--------------------
 
 .. automodule:: andfn.element
    :members:

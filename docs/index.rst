@@ -6,7 +6,7 @@ Method (AEM).
 
 
 .. toctree::
-    :maxdepth: 1
+   :maxdepth: 0
    :titlesonly:
    :caption: Contents:
 

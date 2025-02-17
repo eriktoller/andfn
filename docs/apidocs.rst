@@ -6,5 +6,5 @@ API Reference
 
     dfn
     fracture
-    element
+    elements
     math_geometry
