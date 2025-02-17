@@ -26,13 +26,6 @@ def calc_omega(self_, z):
     """
     chi = gf.map_z_circle_to_chi(z, self_['radius'], self_['center'])
     omega = mf.well_chi(chi, self_['q'])
-    #if isinstance(chi, np.complex128):
-    #    omega = mf.well_chi(chi, self_['q'])
-    #    if np.abs(chi) < 1.0 - 1e-10:
-    #        omega = self_['head'] * t + 0* 1j
-    #else:
-    #    omega = mf.well_chi(chi, self_['q'])
-    #    omega[np.abs(chi) < 1.0 - 1e-10] = self_['head'] * t + 0 * 1j
     return omega
 
 @nb.jit(nopython=NO_PYTHON)

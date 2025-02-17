@@ -3,6 +3,8 @@ HPC
 
 This module contains the High Performance Computing (HPC) functions.
 
+These functions are not to be called from the user directly, but are used by the other functions in the package.
+
 Solver functions
 ----------------
 

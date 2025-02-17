@@ -1,7 +1,7 @@
 User Guide
 ==========
 
-This is the user guide.
+This is the user guide and it is currently under development.
 
 The first step of creating a DFN model is to create a dfn object with ``my_dfn = andfn.DFN('My DFN example')``.
 
