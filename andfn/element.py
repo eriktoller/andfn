@@ -168,6 +168,7 @@ class Element:
     def set_id(self, id_):
         """
         Set the id of the element.
+
         Parameters
         ----------
         id_ : int
@@ -178,6 +179,7 @@ class Element:
     def change_property(self, **kwargs):
         """
         Change a given property/ies of the element.
+
         Parameters
         ----------
         kwargs : dict

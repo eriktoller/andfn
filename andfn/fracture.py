@@ -16,6 +16,7 @@ class Fracture:
     def __init__(self, label, t, radius, center, normal, ncoef=5, nint=10, elements=None, **kwargs):
         """
         Initializes the fracture class.
+
         Parameters
         ----------
         label : str
@@ -65,6 +66,7 @@ class Fracture:
     def __str__(self):
         """
         Returns the string representation of the fracture.
+
         Returns
         -------
         str
@@ -75,6 +77,7 @@ class Fracture:
     def set_id(self, id_):
         """
         Sets the id for the fracture.
+
         Parameters
         ----------
         id_ : int
@@ -85,6 +88,7 @@ class Fracture:
     def consolidate(self):
         """
         Consolidates the fracture into a structured array.
+
         Returns
         -------
         fracture_struc_array : np.ndarray
@@ -114,6 +118,7 @@ class Fracture:
     def consolidate_hpc(self):
         """
         Consolidates the fracture into a structured array for HPC.
+
         Returns
         -------
         fracture_struc_array : np.ndarray
@@ -145,6 +150,7 @@ class Fracture:
     def unconsolidate(self, fracture_struc_array, fracture_index_array):
         """
         Unconsolidates the fracture from the structured array.
+
         Parameters
         ----------
         fracture_struc_array : np.ndarray
@@ -166,6 +172,7 @@ class Fracture:
     def unconsolidate_hpc(self, fracture_struc_array, fracture_index_array):
         """
         Unconsolidates the fracture from the structured array for HPC.
+
         Parameters
         ----------
         fracture_struc_array : np.ndarray
@@ -188,6 +195,7 @@ class Fracture:
     def add_element(self, new_element):
         """
         Adds a new element to the fracture.
+
         Parameters
         ----------
         new_element : Element
@@ -201,6 +209,7 @@ class Fracture:
     def get_discharge_elements(self):
         """
         Returns the elements in the fracture that have a discharge.
+
         Returns
         -------
         list
@@ -214,6 +223,7 @@ class Fracture:
     def get_discharge_entries(self):
         """
         Returns the elements in the fracture that have a discharge.
+
         Returns
         -------
         int
@@ -230,6 +240,7 @@ class Fracture:
     def get_total_discharge(self):
         """
         Returns the total discharge from absolute values in the fracture.
+
         Returns
         -------
         float
@@ -241,6 +252,7 @@ class Fracture:
     def check_discharge(self):
         """
         Checks so the discharge in the fracture adds up to zero.
+
         Returns
         -------
         float
@@ -259,6 +271,7 @@ class Fracture:
     def get_max_min_head(self):
         """
         Returns the maximum and minimum head from the constant head elements for the fracture.
+
         Returns
         -------
         head : list
@@ -278,6 +291,7 @@ class Fracture:
     def set_new_label(self, new_label):
         """
         Sets a new label for the fracture.
+
         Parameters
         ----------
         new_label : str
@@ -372,6 +386,7 @@ class Fracture:
     def calc_flow_net(self, n_points, margin=0.1):
         """
         Calculates the flow net for the fracture.
+
         Parameters
         ----------
         n_points : int

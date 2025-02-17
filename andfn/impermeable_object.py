@@ -13,6 +13,7 @@ class ImpermeableEllipse:
     def __init__(self, label, focis, nu, ncoef, nint, frac):
         """
         Initializes the impermeable ellipse class.
+
         Parameters
         ----------
         label : str or int
@@ -49,6 +50,7 @@ class ImpermeableCircle(Element):
     def __init__(self, label, radius, center, frac0, ncoef=5, nint=10, **kwargs):
         """
         Initializes the impermeable circle class.
+
         Parameters
         ----------
         label : str or int
@@ -89,6 +91,7 @@ class ImpermeableCircle(Element):
     def z_array_tracking(self, n, offset=1e-3):
         """
         Create an array of z points along the constant head line with an offset.
+
         Parameters
         ----------
         n : int
@@ -107,10 +110,12 @@ class ImpermeableCircle(Element):
     def calc_omega(self, z):
         """
         Calculate the complex potential for the impermeable circle.
+
         Parameters
         ----------
         z : np.ndarray
             The points to calculate the complex potential at
+
         Returns
         -------
         omega : np.ndarray
@@ -131,10 +136,12 @@ class ImpermeableCircle(Element):
     def calc_w(self, z):
         """
         Calculate the complex discharge vector for the impermeable circle.
+
         Parameters
         ----------
         z : np.ndarray
             The points to calculate the complex discharge vector at
+
         Returns
         -------
         np.ndarray
@@ -194,10 +201,12 @@ class ImpermeableLine(Element):
     def calc_omega(self, z):
         """
         Calculate the complex potential for the impermeable circle.
+
         Parameters
         ----------
         z : np.ndarray
             The points to calculate the complex potential at
+
         Returns
         -------
         omega : np.ndarray
@@ -212,10 +221,12 @@ class ImpermeableLine(Element):
     def calc_w(self, z):
         """
         Calculate the complex discharge vector for the impermeable circle.
+
         Parameters
         ----------
         z : np.ndarray
             The points to calculate the complex discharge vector at
+
         Returns
         -------
         np.ndarray

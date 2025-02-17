@@ -15,6 +15,7 @@ from . import hpc_geometry_functions as gf
 def solve(self_, fracture_struc_array, element_struc_array, work_array):
     """
     Solves the constant head line element.
+
     Parameters
     ----------
     self_ : np.ndarray element_dtype

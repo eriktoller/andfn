@@ -10,6 +10,7 @@ from andfn.hpc import NO_PYTHON, hpc_fracture
 def get_chi(self_, z):
     """
     Maps the complex z plane to the complex chi plane for the bounding circle.
+
     Parameters
     ----------
     self_ : np.ndarray[element_dtype]
@@ -28,6 +29,7 @@ def get_chi(self_, z):
 def calc_omega(self_, z):
     """
     Calculates the omega for the bounding circle.
+
     Parameters
     ----------
     self_ : np.ndarray[element_dtype]
@@ -49,6 +51,7 @@ def calc_omega(self_, z):
 def find_branch_cuts(self_, fracture_struc_array, element_struc_array, work_array):
     """
     Find the branch cuts for the fracture.
+
     Parameters
     ----------
     self_ : np.ndarray[element_dtype]
@@ -138,6 +141,7 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
 def solve(self_, fracture_struc_array, element_struc_array, work_array):
     """
     Solves the bounding circle element.
+
     Parameters
     ----------
     self_ : np.ndarray[element_dtype]
@@ -174,6 +178,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
 def check_boundary_condition(self_, fracture_struc_array, element_struc_array, n=10):
     """
     Check if the bounding circle satisfies the boundary conditions.
+
     Parameters
     ----------
     self_ : np.ndarray[element_dtype]

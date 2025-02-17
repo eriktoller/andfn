@@ -18,6 +18,7 @@ class BoundingCircle(Element):
     def __init__(self, label, radius, frac0, ncoef=5, nint=10, **kwargs):
         """
         Initializes the bounding circle class.
+
         Parameters
         ----------
         label : str or int
@@ -56,6 +57,7 @@ class BoundingCircle(Element):
     def get_chi(self, z):
         """
         Get the chi for the bounding circle.
+
         Parameters
         ----------
         z : complex | np.ndarray
@@ -77,6 +79,7 @@ class BoundingCircle(Element):
     def calc_omega(self, z):
         """
         Calculates the omega for the bounding circle.
+
         Parameters
         ----------
         z : complex | np.ndarray
@@ -94,6 +97,7 @@ class BoundingCircle(Element):
     def calc_w(self, z):
         """
         Calculates the complex discharge vector for the bounding circle.
+
         Parameters
         ----------
         z : complex
@@ -113,7 +117,6 @@ class BoundingCircle(Element):
         """
         Find the branch cuts for the fracture.
         """
-        #TODO: Vectorize this function and only do the calculations once to find the index of the branch cuts.
 
         # Find the branch cuts
         z_pos = gf.map_chi_to_z_circle(np.exp(1j * self.thetas), self.radius)
@@ -179,6 +182,7 @@ class BoundingCircle(Element):
     def get_dpsi_corr(self):
         """
         Get the correction to the stream function for the branch cuts.
+
         Returns
         -------
         np.ndarray
@@ -207,6 +211,7 @@ class BoundingCircle(Element):
     def check_boundary_condition(self, n=10):
         """
         Check if the bounding circle satisfies the boundary conditions.
+
         Parameters
         ----------
         n : int

@@ -13,6 +13,7 @@ class Well(Element):
     def __init__(self, label, radius, center, head, frac0, **kwargs):
         """
         Initializes the well class.
+
         Parameters
         ----------
         label : str or int
@@ -136,6 +137,7 @@ class Well(Element):
     def check_chi_crossing(self, z0, z1, atol=1e-10):
         """
         Checks if the line between two points, z0 and z1, crosses the well.
+
         Parameters
         ----------
         z0 : complex

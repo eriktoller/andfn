@@ -133,6 +133,7 @@ def get_chi_from_theta(nint, start, stop):
 def map_2d_to_3d(z, fractures):
     """
     Function that maps a point in the complex z-plane to a point in the 3D plane
+
     Parameters
     ----------
     z : complex | np.ndarray
@@ -153,6 +154,7 @@ def map_2d_to_3d(z, fractures):
 def map_3d_to_2d(point, fractures):
     """
     Function that maps a point in the 3D plane to a point in the complex z-plane
+
     Parameters
     ----------
     point : np.ndarray
@@ -333,6 +335,7 @@ def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, labe
 def convert_trend_plunge_to_normal(trend, plunge):
     """
     Function that converts a trend and plunge to a normal vector
+
     Parameters
     ----------
     trend : float
@@ -353,6 +356,7 @@ def convert_trend_plunge_to_normal(trend, plunge):
 def convert_strike_dip_to_normal(strike, dip):
     """
     Function that converts a strike and dip to a normal vector
+
     Parameters
     ----------
     strike : float
@@ -375,6 +379,7 @@ def convert_strike_dip_to_normal(strike, dip):
 def convert_normal_to_strike_dip(normal):
     """
     Function that converts a normal vector to a strike and dip
+
     Parameters
     ----------
     normal : np.ndarray

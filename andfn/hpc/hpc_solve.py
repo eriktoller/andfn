@@ -36,6 +36,7 @@ dtype_z_arrays = np.dtype([
 def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge_int, max_error, max_iterations):
     """
     Solves the DFN.
+
     Parameters
     ----------
     fracture_struc_array : np.ndarray[fracture_dtype]
@@ -50,7 +51,6 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
         The maximum error allowed
     max_iterations : int
         The maximum number of iterations
-
 
     Returns
     -------
@@ -125,12 +125,11 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
 def get_discharge_elements(element_struc_array):
     """
     Get the discharge elements from the element array.
+
     Parameters
     ----------
     element_struc_array : np.ndarray[element_dtype]
         The array of elements
-    discharge_elements : np.ndarray[element_dtype]
-        The array of discharge elements
 
     Returns
     -------
@@ -169,6 +168,7 @@ def solve_discharge_matrix(fractures_struc_array, element_struc_array, discharge
                            discharge_int, head_matrix, discharges, z_int):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
+
     Parameters
     ----------
     fractures_struc_array : np.ndarray[fracture_dtype]
@@ -204,6 +204,7 @@ def pre_matirx_solve(fractures_struc_array, element_struc_array, discharge_eleme
                            discharge_int, head_matrix, z_int):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
+
     Parameters
     ----------
     fractures_struc_array : np.ndarray[fracture_dtype]
@@ -245,6 +246,7 @@ def post_matrix_solve(fractures_struc_array, element_struc_array, discharge_elem
                         discharges):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
+
     Parameters
     ----------
     fractures_struc_array : np.ndarray[fracture_dtype]

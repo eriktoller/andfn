@@ -13,6 +13,7 @@ class ConstantHeadLine(Element):
     def __init__(self, label, endpoints0, head, frac0, ncoef=5, nint=10, **kwargs):
         """
         Constructor for the constant head line element.
+
         Parameters
         ----------
         label : str
@@ -54,6 +55,7 @@ class ConstantHeadLine(Element):
     def discharge_term(self, z):
         """
         Calculate the discharge term for the constant head line.
+
         Parameters
         ----------
         z : np.ndarray
@@ -70,6 +72,7 @@ class ConstantHeadLine(Element):
     def update_head(self, head):
         """
         Update the head of the constant head line.
+
         Parameters
         ----------
         head : float
@@ -81,6 +84,7 @@ class ConstantHeadLine(Element):
     def length(self):
         """
         Calculate the length of the constant head line.
+
         Returns
         -------
         float
@@ -91,6 +95,7 @@ class ConstantHeadLine(Element):
     def z_array(self, n):
         """
         Create an array of z points along the constant head line.
+
         Parameters
         ----------
         n : int
@@ -106,6 +111,7 @@ class ConstantHeadLine(Element):
     def omega_along_element(self, n, frac_is):
         """
         Calculate the omega along the constant head line.
+
         Parameters
         ----------
         n : int
@@ -125,6 +131,7 @@ class ConstantHeadLine(Element):
     def z_array_tracking(self, n, offset=1e-3):
         """
         Create an array of z points along the constant head line with an offset.
+
         Parameters
         ----------
         n : int
@@ -144,10 +151,12 @@ class ConstantHeadLine(Element):
     def calc_omega(self, z):
         """
         Calculate the complex discharge potential for the constant head line.
+
         Parameters
         ----------
         z : np.ndarray
             The points to calculate the complex discharge potential at
+
         Returns
         -------
         np.ndarray
@@ -162,10 +171,12 @@ class ConstantHeadLine(Element):
     def calc_w(self, z):
         """
         Calculate the complex discharge vector for the constant head line.
+
         Parameters
         ----------
         z : np.ndarray
             The points to calculate the complex discharge vector at
+
         Returns
         -------
         np.ndarray
@@ -195,10 +206,12 @@ class ConstantHeadLine(Element):
     def check_boundary_condition(self, n=10):
         """
         Check if the constant head line satisfies the boundary conditions.
+
         Parameters
         ----------
         n : int
             The number of points to check the boundary condition at
+
         Returns
         -------
         float
@@ -214,6 +227,7 @@ class ConstantHeadLine(Element):
     def check_chi_crossing(self, z0, z1, atol=1e-10):
         """
         Check the line between two points crosses the constant head line.
+
         Parameters
         ----------
         z0 : complex

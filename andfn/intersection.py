@@ -12,6 +12,7 @@ class Intersection(Element):
     def __init__(self, label, endpoints0, endpoints1, frac0, frac1, ncoef=5, nint=10, **kwargs):
         """
         Constructor for the intersection element.
+
         Parameters
         ----------
         label : str
@@ -52,6 +53,7 @@ class Intersection(Element):
     def length(self):
         """
         Calculate the length of the intersection
+
         Returns
         -------
         length : float
@@ -62,6 +64,7 @@ class Intersection(Element):
     def discharge_term(self, z, frac_is):
         """
         Calculate the discharge term for the intersection.
+
         Parameters
         ----------
         z : np.ndarray
@@ -85,6 +88,7 @@ class Intersection(Element):
     def z_array(self, n, frac_is):
         """
         Create an array of z points along the intersection.
+
         Parameters
         ----------
         n : int
@@ -104,6 +108,7 @@ class Intersection(Element):
     def omega_along_element(self, n, frac_is):
         """
         Calculate the complex potential along the intersection.
+
         Parameters
         ----------
         n : int
@@ -123,12 +128,14 @@ class Intersection(Element):
     def calc_omega(self, z, frac_is):
         """
         Calculate the complex potential for the intersection.
+
         Parameters
         ----------
         z : np.ndarray
             The points to calculate the complex potential at
         frac_is : Fracture
             The fracture that the points are associated with
+
         Returns
         -------
         omega : np.ndarray
@@ -146,6 +153,7 @@ class Intersection(Element):
     def calc_w(self, z, frac_is):
         """
         Calculate the complex discharge vector for the intersection.
+
         Parameters
         ----------
         z : np.ndarray
@@ -190,10 +198,12 @@ class Intersection(Element):
     def check_boundary_condition(self, n=10):
         """
         Check if the intersection satisfies the boundary conditions.
+
         Parameters
         ----------
         n : int
             The number of points to calculate the boundary condition at
+
         Returns
         -------
         float
@@ -218,6 +228,7 @@ class Intersection(Element):
     def check_chi_crossing(self, z0, z1, frac, atol=1e-10):
         """
         Check if the line between two points crosses the intersection.
+
         Parameters
         ----------
         z0 : complex
