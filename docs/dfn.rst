@@ -1,10 +1,12 @@
 DFN
 ---
 
-.. automodule:: andfn.dfn
-    :members:
-    :undoc-members:
-    :show-inheritance:
+andfn.dfn module
+----------------
 
-.. autosummary:: andfn.dfn.DFN
+.. automodule:: andfn.dfn
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
