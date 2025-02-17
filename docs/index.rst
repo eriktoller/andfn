@@ -18,9 +18,10 @@ Installation
 .. toctree::
     :maxdepth: 1
     :titlesonly:
+    :hidden:
     :caption: Contents:
 
     user_guide
-    api_reference
+    apidocs
     example
     index
