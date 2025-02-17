@@ -15,6 +15,21 @@ DFN
     :undoc-members:
     :show-inheritance:
 
+.. autosummary::
+    :toctree: andfn.dfn
+
+    DFN
+    Fracture
+    Element
+    Bounding
+    Constant Head
+    Impermeable Objects
+    Intersection
+    Well
+    Math Functions
+    Geometry Functions
+    HPC
+
 Fracture
 --------
 

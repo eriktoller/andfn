@@ -16,7 +16,7 @@
     <script src="_static/bizstyle.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="User Guide" href="user_guide.html" />
+    <link rel="next" title="andfn.dfn.DFN" href="andfn.dfn/andfn.dfn.DFN.html" />
     <link rel="prev" title="An Analytic Discrete Fracture Network (AnDFN)" href="index.html" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <!--[if lt IE 9]>
@@ -33,7 +33,7 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="user_guide.html" title="User Guide"
+          <a href="andfn.dfn/andfn.dfn.DFN.html" title="andfn.dfn.DFN"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="index.html" title="An Analytic Discrete Fracture Network (AnDFN)"
@@ -66,7 +66,7 @@
 <dd><p>Adds a fracture to the DFN.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>new_fracture</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a><em> | </em><em>list</em>) – The fracture to add to the DFN.</p>
+<dd class="field-odd"><p><strong>new_fracture</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a><em> | </em><em>list</em>) – The fracture to add to the DFN.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -100,7 +100,7 @@
 <dd><p>Deletes a fracture from the DFN.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>fracture</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture to delete from the DFN.</p>
+<dd class="field-odd"><p><strong>fracture</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to delete from the DFN.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -119,7 +119,7 @@
 <li><p><strong>nint_i</strong> (<em>int</em>) – The number of integration points to use for the intersection elements.</p></li>
 <li><p><strong>ncoef_b</strong> (<em>int</em>) – The number of coefficients to use for the bounding elements.</p></li>
 <li><p><strong>nint_b</strong> (<em>int</em>) – The number of integration points to use for the bounding elements.</p></li>
-<li><p><strong>frac_surface</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture to use as the surface fracture.</p></li>
+<li><p><strong>frac_surface</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to use as the surface fracture.</p></li>
 </ul>
 </dd>
 </dl>
@@ -172,7 +172,7 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>ncoef</strong> (<em>int</em>) – The number of coefficients to use for the intersection elements.</p></li>
 <li><p><strong>nint</strong> (<em>int</em>) – The number of integration points to use for the intersection elements</p></li>
-<li><p><strong>new_frac</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture to calculate the intersections for.</p></li>
+<li><p><strong>new_frac</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to calculate the intersections for.</p></li>
 </ul>
 </dd>
 </dl>
@@ -347,7 +347,7 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>pl</strong> (<em>pyvista.Plotter</em>) – The plotter object.</p></li>
 <li><p><strong>z0</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – The starting point for the streamline tracking.</p></li>
-<li><p><strong>frac</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture where to start the streamline tracking.</p></li>
+<li><p><strong>frac</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture where to start the streamline tracking.</p></li>
 <li><p><strong>ds</strong> (<em>float</em>) – The step size for the streamline tracking.</p></li>
 <li><p><strong>max_length</strong> (<em>int</em>) – The maximum length of the streamline.</p></li>
 <li><p><strong>line_width</strong> (<em>float</em>) – The line width of the streamlines.</p></li>
@@ -369,7 +369,7 @@
 <li><p><strong>ds</strong> (<em>float</em>) – The step size.</p></li>
 <li><p><strong>tolerance</strong> (<em>float</em>) – The tolerance for the error.</p></li>
 <li><p><strong>max_it</strong> (<em>int</em>) – The maximum number of iterations.</p></li>
-<li><p><strong>frac</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture to trace the streamline on.</p></li>
+<li><p><strong>frac</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to trace the streamline on.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -435,7 +435,7 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>z0</strong> (<em>complex</em>) – Starting point for streamline tracking</p></li>
 <li><p><strong>elevation</strong> (<em>float</em>) – Elevation of the starting point</p></li>
-<li><p><strong>frac</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture where to start the streamline tracking</p></li>
+<li><p><strong>frac</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture where to start the streamline tracking</p></li>
 <li><p><strong>ds</strong> (<em>float</em>) – Step size for the streamline tracking</p></li>
 <li><p><strong>max_length</strong> (<em>int</em>) – Maximum length of the streamline</p></li>
 </ul>
@@ -476,7 +476,7 @@
 <li><p><strong>nint_i</strong> (<em>int</em>) – The number of integration points to use for the intersection elements.</p></li>
 <li><p><strong>ncoef_b</strong> (<em>int</em>) – The number of coefficients to use for the bounding elements.</p></li>
 <li><p><strong>nint_b</strong> (<em>int</em>) – The number of integration points to use for the bounding elements.</p></li>
-<li><p><strong>frac_surface</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture to use as the surface fracture.</p></li>
+<li><p><strong>frac_surface</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to use as the surface fracture.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -517,7 +517,7 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>seg</strong> (<em>np.ndarray</em>) – The line to plot.</p></li>
-<li><p><strong>f</strong> (<a class="reference internal" href="#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture plane.</p></li>
+<li><p><strong>f</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture plane.</p></li>
 <li><p><strong>pl</strong> (<em>pyvista.Plotter</em>) – The plotter object.</p></li>
 <li><p><strong>color</strong> (<em>str</em><em> | </em><em>tuple</em>) – The color of the line.</p></li>
 <li><p><strong>line_width</strong> (<em>float</em>) – The line width of the line.</p></li>
@@ -526,6 +526,22 @@
 </dl>
 </dd></dl>
 
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#andfn.dfn.DFN" title="andfn.dfn.DFN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFN</span></code></a>(label[, discharge_int])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Fracture</span></code></a>(label, t, radius, center, normal[, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="andfn.dfn/andfn.dfn.Intersection.html#andfn.dfn.Intersection" title="andfn.dfn.Intersection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Intersection</span></code></a>(label, endpoints0, endpoints1, ...)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="andfn.dfn/andfn.dfn.Well.html#andfn.dfn.Well" title="andfn.dfn.Well"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Well</span></code></a>(label, radius, center, head, frac0, ...)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
 </section>
 <section id="module-andfn.fracture">
 <span id="fracture"></span><h2>Fracture<a class="headerlink" href="#module-andfn.fracture" title="Link to this heading">¶</a></h2>
@@ -3023,8 +3039,8 @@ complex chi-plane.</p>
   </div>
   <div>
     <h4>Next topic</h4>
-    <p class="topless"><a href="user_guide.html"
-                          title="next chapter">User Guide</a></p>
+    <p class="topless"><a href="andfn.dfn/andfn.dfn.DFN.html"
+                          title="next chapter">andfn.dfn.DFN</a></p>
   </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
@@ -3057,7 +3073,7 @@ complex chi-plane.</p>
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="user_guide.html" title="User Guide"
+          <a href="andfn.dfn/andfn.dfn.DFN.html" title="andfn.dfn.DFN"
              >next</a> |</li>
         <li class="right" >
           <a href="index.html" title="An Analytic Discrete Fracture Network (AnDFN)"
