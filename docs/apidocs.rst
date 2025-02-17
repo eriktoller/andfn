@@ -4,6 +4,9 @@ API Reference
 .. toctree::
     :maxdepth: 4
 
+    andfn.dfn
+    andfn.fracture
+
 DFN
 ---
 
