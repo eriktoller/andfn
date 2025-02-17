@@ -1,8 +1,5 @@
 """Copyright (C), 2024, Erik A. L. Toller.
 
-Erik A. L. Toller, WSP Sverige AB
-erik dot toller at wsp dot com
-
 AnDFN is a computer program that calculated the flow in a discrete fracture network (DFN) using the Analytic Element
 Method (AEM).
 """

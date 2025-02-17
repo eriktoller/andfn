@@ -1,3 +1,3 @@
 
-NO_PYTHON = True
-FASTMATH = True
+NO_PYTHON = False
+PARALLEL = False

@@ -40,7 +40,13 @@ class BoundingCircle(Element):
 
         # Create the pre-calculation variables
         self.thetas = np.linspace(start=0, stop=2 * np.pi, num=nint, endpoint=False)
+        self.z_theta = gf.map_chi_to_z_circle(np.exp(1j * self.thetas), self.radius)
         self.coef = np.zeros(ncoef, dtype=complex)
+
+        # Correction to the stream function
+        self.sign_array = None
+        self.discharge_element = None
+        self.element_pos = None
         self.dpsi_corr = np.zeros(self.nint - 1, dtype=float)
 
         # Set the kwargs
@@ -107,10 +113,16 @@ class BoundingCircle(Element):
         """
         Find the branch cuts for the fracture.
         """
+        #TODO: Vectorize this function and only do the calculations once to find the index of the branch cuts.
+
         # Find the branch cuts
         z_pos = gf.map_chi_to_z_circle(np.exp(1j * self.thetas), self.radius)
         self.dpsi_corr = np.zeros(self.nint - 1, dtype=float)
+        element_pos = []
+        discharge_element = []
+        sign_array = []
 
+        #for e in self.frac0.elements:
         for ii in range(self.nint - 1):
             for e in self.frac0.elements:
                 if isinstance(e, Well):
@@ -119,12 +131,18 @@ class BoundingCircle(Element):
                     chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e.radius, e.center)
                     if np.sign(np.imag(chi0)) != np.sign(np.imag(chi1)) and np.real(chi0) < 0:
                         self.dpsi_corr[ii] -= e.q
+                        element_pos.append(ii)
+                        discharge_element.append(e)
+                        sign_array.append(-1)
                 elif isinstance(e, ConstantHeadLine):
                     # Find the branch cut for the constant head line
                     chi0 = gf.map_z_line_to_chi(z_pos[ii], e.endpoints0)
                     chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints0)
                     if np.sign(np.imag(chi0)) != np.sign(np.imag(chi1)) and np.real(chi0) < 0:
                         self.dpsi_corr[ii] -= e.q
+                        element_pos.append(ii)
+                        discharge_element.append(e)
+                        sign_array.append(-1)
                 elif isinstance(e, Intersection):
                     # Find the branch cut for the intersection
                     if e.frac0 == self.frac0:
@@ -134,6 +152,9 @@ class BoundingCircle(Element):
                         ln1 = np.imag(np.log(chi1))
                         if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
                             self.dpsi_corr[ii] -= e.q
+                            element_pos.append(ii)
+                            discharge_element.append(e)
+                            sign_array.append(-1)
                     else:
                         chi0 = gf.map_z_line_to_chi(z_pos[ii], e.endpoints1)
                         chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints1)
@@ -141,12 +162,41 @@ class BoundingCircle(Element):
                         ln1 = np.imag(np.log(chi1))
                         if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
                             self.dpsi_corr[ii] += e.q
+                            element_pos.append(ii)
+                            discharge_element.append(e)
+                            sign_array.append(1)
+
+        self.sign_array = sign_array
+        self.discharge_element = discharge_element
+        self.element_pos = element_pos
+
+
+        dpsi_corr2 = np.zeros(self.nint - 1, dtype=float)
+        for i, e in enumerate(discharge_element):
+                dpsi_corr2[element_pos[i]] += e.q*sign_array[i]
+
+
+    def get_dpsi_corr(self):
+        """
+        Get the correction to the stream function for the branch cuts.
+        Returns
+        -------
+        np.ndarray
+            The correction to the stream function.
+        """
+        if self.sign_array is None:
+            self.find_branch_cuts()
+        dpsi_corr2 = np.zeros(self.nint - 1, dtype=float)
+        for i, e in enumerate(self.discharge_element):
+            dpsi_corr2[self.element_pos[i]] += e.q * self.sign_array[i]
+        self.dpsi_corr = dpsi_corr2
 
     def solve(self):
         """
         Solve the coefficients of the bounding circle.
         """
-        self.find_branch_cuts()  # Find the branch cuts
+        #self.find_branch_cuts()  # Find the branch cuts
+        self.get_dpsi_corr()  # Get the correction to the stream function
         s = mf.cauchy_integral_domega(self.nint, self.ncoef, self.thetas, self.dpsi_corr,
                                       lambda z: self.frac0.calc_omega(z, exclude=self),
                                       lambda chi: gf.map_chi_to_z_circle(chi, self.radius))

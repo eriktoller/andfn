@@ -57,6 +57,7 @@ Element Types:
 2 = Well
 3 = Constant Head Line
 4 = Impermeable Circle
+5 = Impermeable Line
 """
 element_index_dtype = np.dtype([
         ('label', np.str_,100),

@@ -13,7 +13,8 @@ from . import intersection
 from . import const_head
 from .hpc import NO_PYTHON
 
-__all__ = []
+AMOUNT = 0.9
+
 
 
 def map_z_line_to_chi(z, endpoints):
@@ -297,7 +298,9 @@ def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
                 endpoints0, endpoints1 = fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
                     if fr2 not in []:
-                        intersections = intersection.Intersection(f'{fr.label}_{fr2.label}', endpoints0, endpoints1, fr, fr2, ncoef, nint)
+                        endpoints01 = shorten_line(endpoints0[0], endpoints0[1], AMOUNT)
+                        endpoints11 = shorten_line(endpoints1[0], endpoints1[1], AMOUNT)
+                        intersections = intersection.Intersection(f'{fr.label}_{fr2.label}', endpoints01, endpoints11, fr, fr2, ncoef, nint)
                         fr.add_element(intersections)
                         fr2.add_element(intersections)
                         if fr2 not in connected_fractures:
@@ -324,7 +327,27 @@ def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, labe
             continue
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
-            c_head = const_head.ConstantHeadLine(f'{label}_{fr2.label}', endpoints1, head, fr2, ncoef, nint)
+            endpoints = shorten_line(endpoints1[0], endpoints1[1], AMOUNT)
+            const_head.ConstantHeadLine(f'{label}_{fr2.label}', endpoints, head, fr2, ncoef, nint)
+
+def shorten_line(z0, z1, amount):
+    """
+    Function that shortens a line segment by a given amount and keeps the same center point.
+    Parameters
+    ----------
+    z0 : complex
+    z1 : complex
+    amount : float
+
+    Returns
+    -------
+    np.ndarray
+    """
+    center = (z0 + z1) / 2
+    z0 = center + (z0 - center) * amount
+    z1 = center + (z1 - center) * amount
+    return np.array([z0, z1])
+
 
 
 def convert_trend_plunge_to_normal(trend, plunge):

@@ -7,12 +7,12 @@ This module contains the HPC Constant head functions.
 import numpy as np
 import numba as nb
 
-from andfn.hpc import hpc_fracture, NO_PYTHON, FASTMATH
+from andfn.hpc import hpc_fracture, NO_PYTHON
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
-def solve(self_, fracture_struc_array, element_struc_array):
+@nb.jit(nopython=NO_PYTHON)
+def solve(self_, fracture_struc_array, element_struc_array, work_array):
     """
     Solves the constant head line element.
     Parameters
@@ -32,32 +32,33 @@ def solve(self_, fracture_struc_array, element_struc_array):
         The error in the calculation
     """
     frac0 = fracture_struc_array[self_['frac0']]
-    s0 = mf.cauchy_integral_real(self_['nint'], self_['ncoef'], self_['thetas'][:self_['nint']],
+    work_array['old_coef'][:self_['ncoef']] = self_['coef'][:self_['ncoef']]
+    mf.cauchy_integral_real(self_['nint'], self_['ncoef'], self_['thetas'][:self_['nint']],
                                 frac0, self_['id_'], element_struc_array,
-                                 self_['endpoints0'])
+                                 self_['endpoints0'], work_array, work_array['coef'][:self_['ncoef']])
 
-    s = -np.real(s0)
-    s[0] = 0.0  # Set the first coefficient to zero (constant embedded in discharge matrix)
-    error = np.max(np.abs(s - self_['coef'][:self_['ncoef']]))
+    for i in range(self_['ncoef']):
+        self_['coef'][i] = -np.real(work_array['coef'][i])
+    self_['coef'][0] = 0.0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+    self_['error'] = np.max(np.abs(self_['coef'][:self_['ncoef']] - work_array['old_coef'][:self_['ncoef']]))
 
-    return s, error
 
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON, inline='always')
 def calc_omega(self_, z):
     """
     Function that calculates the omega function for a given point z and fracture.
 
     Parameters
     ----------
-    self_ : np.ndarray element_dtype
+    self_ : np.ndarray[element_dtype]
         The intersection element
-    z : np.complex128
+    z : complex
         An array of points in the complex z-plane
 
     Return
     ------
-    omega : np.ndarray
+    omega : complex
         The resulting value for the omega function
     """
     chi = gf.map_z_line_to_chi(z, self_['endpoints0'])
@@ -67,7 +68,7 @@ def calc_omega(self_, z):
 
     return omega
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON)
 def z_array(self_, n):
     """
     Returns an array of n points on the well.
@@ -81,7 +82,7 @@ def z_array(self_, n):
 
     Returns
     -------
-    z : ndarray
+    z : np.ndarray[complex]
         An array of n points on the well.
     """
     return np.linspace(self_['endpoints0'][0], self_['endpoints0'][1], n)

@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "andfn"
+dynamic = ["version"]
+description = "An Analytic Element Model for Discrete Fracture Networks"
+authors = [
+    { name = "Erik A.L. Toller" }
+]
+maintainers = [
+  {name = "Erik A.L. Toller", email = "erik@toller.se"}
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">= 3.8"
+keywords = ["hydrology", "groundwater", "model", "analytic element method", "discrete fracture network", "dfn"]
+
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "pyvista",
+    "scipy",
+    "numba",
+    "h5py"
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Other Audience",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Topic :: Scientific/Engineering :: Hydrology",
+]
+
+[project.urls]
+Homepage = "https://github.com/eriktoller/andfn"
+Documentation = "https://github.com/eriktoller/andfn"
+Repository = "https://github.com/eriktoller/andfn"
+Issues = "https://github.com/eriktoller/andfn/issues"
+
+[tool.setuptools.packages.find]
+include = ["andfn", "andfn.*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "andfn.__version__" }

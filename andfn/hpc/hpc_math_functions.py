@@ -7,11 +7,11 @@ This module contains some general mathematical functions.
 import numpy as np
 import numba as nb
 import math
-from . import NO_PYTHON, FASTMATH
+from . import NO_PYTHON
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON, inline='always')
 def asym_expansion(chi, coef):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
@@ -19,14 +19,14 @@ def asym_expansion(chi, coef):
 
     Parameters
     ----------
-    chi : np.complex128
+    chi : complex
         A point in the complex chi-plane
     coef : np.ndarray[np.complex128]
         An array of coefficients
 
     Return
     ------
-    res : np.complex128
+    res : complex
         The resulting value for the asymptotic expansion
     """
     res = chi*0
@@ -59,7 +59,7 @@ def asym_expansion_d1(chi, coef):
 
     return res
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON, inline='always')
 def taylor_series(chi, coef):
     """
     Function that calculates the Taylor series starting from 0 for a given point chi and an array of
@@ -67,14 +67,14 @@ def taylor_series(chi, coef):
 
     Parameters
     ----------
-    chi : np.complex128
+    chi : complex
         A point in the complex chi-plane
     coef : np.ndarray
         An array of coefficients
 
     Return
     ------
-    res : np.complex128
+    res : complex
         The resulting value for the asymptotic expansion
     """
     res = chi*0
@@ -107,27 +107,27 @@ def taylor_series_d1(chi, coef):
 
     return res
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON, inline='always')
 def well_chi(chi, q):
     """
     Function that return the complex potential for a well as a function of chi.
 
     Parameters
     ----------
-    chi : np.complex128
+    chi : complex
         A point in the complex chi plane
     q : np.float64
         The discharge eof the well.
 
     Returns
     -------
-    omega : np.complex128
+    omega : complex
         The complex discharge potential
     """
     return q / (2 * np.pi) * np.log(chi)
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
-def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, endpoints0):
+@nb.jit(nopython=NO_PYTHON)
+def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, endpoints0, work_array, coef):
     """
     FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
 
@@ -153,21 +153,22 @@ def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, 
     coef : np.ndarray[np.complex128]
         Array of coefficients
     """
-    integral = np.zeros((n, m), dtype=np.complex128)
-    coef = np.zeros(m, dtype=np.complex128)
+    # set integral to zero
+    work_array['integral'][:] = 0.0
 
-    chi = np.exp(1j * thetas)
-    z = gf.map_chi_to_z_line(chi, endpoints0)
-    omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
-    phi = np.real(omega)
+    for ii in range(n):
+        chi = np.exp(1j * thetas[ii])
+        z = gf.map_chi_to_z_line(chi, endpoints0)
+        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
+        work_array['phi'][ii] = np.real(omega)
     for jj in range(m):
-        integral[:, jj] = phi * np.exp(-1j * jj * thetas)
+        for ii in range(n):
+            work_array['integral'][jj] += work_array['phi'][ii] * np.exp(-1j * jj * thetas[ii])
+
 
     for ii in range(m):
-        coef[ii] = 2 * sum(integral[:, ii]) / n
+        coef[ii] = 2 * work_array['integral'][ii] / n
     coef[0] = coef[0] / 2
-
-    return coef
 
 
 def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
@@ -209,8 +210,8 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
     return coef
 
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
-def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_struc_array, radius):
+@nb.jit(nopython=NO_PYTHON)
+def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_struc_array, radius, work_array, coef):
     """
     FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
 
@@ -238,35 +239,34 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_
     coef : np.ndarray[np.complex128]
         Array of coefficients
     """
-    integral = np.zeros((n, m), dtype=np.complex128)
-    coef = np.zeros(m, dtype=np.complex128)
-    dpsi = np.zeros(n, dtype=np.complex128)
-
-    chi = np.exp(1j * thetas)
-    z = gf.map_chi_to_z_circle(chi, radius)
-    omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
-    psi = np.imag(omega)
-    delta_psi = psi[1:] - psi[:-1]
-    dpsi[1:] = delta_psi - dpsi_corr
-
-    psi0 = psi[0]
     for ii in range(n):
-        psi1 = psi0 + dpsi[ii]
-        for jj in range(m):
-            integral[ii, jj] = psi1 * np.exp(-1j * jj * thetas[ii])
+        chi = np.exp(1j * thetas[ii])
+        z = gf.map_chi_to_z_circle(chi, radius)
+        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
+        work_array['psi'][ii] = np.imag(omega)
+    delta_psi = work_array['psi'][1:n] - work_array['psi'][:n-1]
+    work_array['dpsi'][1:n] = delta_psi - dpsi_corr
+    # set integral to zero
+    work_array['integral'][:] = 0.0
+
+    psi0 = work_array['psi'][0]
+    for ii in range(n):
+        psi1 = psi0 + work_array['dpsi'][ii]
+        work_array['psi'][ii] = psi1
         psi0 = psi1
+    for jj in range(m):
+        for ii in range(n):
+            work_array['integral'][jj] += work_array['psi'][ii] * np.exp(-1j * jj * thetas[ii])
 
     for ii in range(m):
-        coef[ii] = 2j * sum(integral[:, ii]) / n
-    coef[0] = coef[0] / 2
-
-    return coef
+        coef[ii] = 2j * work_array['integral'][ii] / n
+    coef[0] = work_array['coef'][0] / 2
 
 ########################################################################################################################
 # Functions NUMBA
 ########################################################################################################################
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON)
 def cut_trail(f_str):
     cut = 0
     for c in f_str[::-1]:
@@ -288,7 +288,7 @@ def cut_trail(f_str):
     return f_str
 
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON)
 def float2str(value):
     if math.isnan(value):
         return "nan"

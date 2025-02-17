@@ -13,11 +13,10 @@ import andfn
 from andfn import fracture
 from andfn import intersection
 from andfn import const_head
-from . import NO_PYTHON, FASTMATH
+from . import NO_PYTHON
 
-__all__ = []
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON, inline='always')
 def map_z_line_to_chi(z, endpoints):
     """
     Function that maps the exterior of a line in the complex z-plane onto the exterior of the unit circle in the
@@ -25,21 +24,21 @@ def map_z_line_to_chi(z, endpoints):
 
     Parameters
     ----------
-    z : np.complex128
+    z : complex
         A complex point in the complex z-plane
     endpoints : np.ndarray
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    chi : np.complex128
+    chi : complex
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
     big_z = (2 * z - endpoints[0] - endpoints[1]) / (endpoints[1] - endpoints[0])
     return big_z + np.sqrt(big_z - 1) * np.sqrt(big_z + 1)
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON, inline='always')
 def map_chi_to_z_line(chi, endpoints):
     """
     Function that maps the exterior of the unit circle in the complex chi-plane onto the exterior of a line in the
@@ -47,30 +46,29 @@ def map_chi_to_z_line(chi, endpoints):
 
     Parameters
     ----------
-    chi : np.ndarray[np.complex128]
+    chi : complex
         A point in the complex chi-plane
     endpoints : np.ndarray[np.complex128]
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    z : np.ndarray[np.complex128]
+    z : complex
         The corresponding point in the complex z-plane
     """
     # Map via the Z-plane
-    # big_z : np.ndarray[np.complex128]
     big_z = 1 / 2 * (chi + 1 / chi)
     z = 1 / 2 * (big_z * (endpoints[1] - endpoints[0]) + endpoints[0] + endpoints[1])
     return z
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON, inline='always')
 def map_z_circle_to_chi(z, r, center=0.0):
     """
     Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.
 
     Parameters
     ----------
-    z : np.complex128
+    z : complex
         A point in the complex z-plane
     r : float
         Radius of the circle
@@ -79,19 +77,19 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
     Return
     ------
-    chi : np.complex128
+    chi : complex
         The corresponding point in the complex chi-plane
     """
     return (z - center) / r
 
-@nb.jit(nopython=NO_PYTHON, fastmath=FASTMATH)
+@nb.jit(nopython=NO_PYTHON, inline='always')
 def map_chi_to_z_circle(chi, r, center=0.0):
     """
     Function that maps the unit circle in the complex chi-plane to a circle in the complex z-plane.
     
     Parameters
     ----------
-    chi : np.complex128
+    chi : complex
         A point in the complex chi-plane 
     r : float
         Radius of the circle 
@@ -100,7 +98,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
     
     Return
     ------
-    z : np.complex128
+    z : complex
         The corresponding point in the complex z-plane
     """
     return chi * r + center

@@ -33,7 +33,8 @@ class Fracture:
         nint : int
             The number of integration points for the bounding circle that bounds the fracture.
         elements : list
-            A list of elements that the fracture is associated with.
+            A list of elements that the fracture is associated with. If elements is None the bounding circle will be
+            created.
         kwargs : dict
             Additional keyword arguments.
         """
@@ -210,6 +211,22 @@ class Fracture:
                 or isinstance(e, ConstantHeadLine)
                 or isinstance(e, Well)]
 
+    def get_discharge_entries(self):
+        """
+        Returns the elements in the fracture that have a discharge.
+        Returns
+        -------
+        int
+            The number of discharge entries required in the discharge matrix.
+        """
+        el = self.get_discharge_elements()
+        len_el = len(el)
+        cnt = (len_el -1) * len_el + len_el
+        for e in el:
+            if isinstance(e, Intersection):
+                cnt += 1
+        return cnt
+
     def get_total_discharge(self):
         """
         Returns the total discharge from absolute values in the fracture.
@@ -367,10 +384,12 @@ class Fracture:
         omega_fn = np.zeros((n_points,n_points), dtype=complex)
         x_array = np.linspace(-radius_margin, radius_margin, n_points)
         y_array = np.linspace(-radius_margin, radius_margin, n_points)
+        z_array = (x_array[:,np.newaxis] + 1j * y_array).T
 
         # Calculate the omega for each point in the flow net
         for i, x in enumerate(x_array):
             z = x + 1j * y_array
             omega_fn[:, i] = self.calc_omega(z)
+        #omega_fn = self.calc_omega(z_array)
 
         return omega_fn, x_array, y_array

@@ -3,6 +3,7 @@ Notes
 -----
 This module contains the DFN class.
 """
+import concurrent
 from datetime import datetime
 
 import numpy as np
@@ -10,17 +11,18 @@ import pyvista as pv
 import matplotlib.pyplot as plt
 import scipy as sp
 import h5py
+from concurrent.futures import ThreadPoolExecutor
 
 from andfn import geometry_functions as gf
 from .fracture import Fracture
 from .hpc.hpc_solve import solve as hpc_solve
 from .well import Well
-from .impermeable_object import ImpermeableCircle
+from .impermeable_object import ImpermeableCircle, ImpermeableLine
 from .const_head import ConstantHeadLine
 from .intersection import Intersection
 from .bounding import BoundingCircle
 from .element import element_dtype, fracture_dtype, element_index_dtype, fracture_index_dtype, element_dtype_hpc, \
-    fracture_dtype_hpc
+    fracture_dtype_hpc, MAX_NCOEF, MAX_ELEMENTS
 
 
 def generate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b, nint_b, frac_surface=None):
@@ -139,6 +141,7 @@ class DFN:
 
         # Initialize the discharge matrix
         self.discharge_matrix = None
+        self.discharge_matrix_sparse = None
         self.discharge_elements = None
         self.discharge_elements_index = None
         self.lup = None
@@ -301,6 +304,36 @@ class DFN:
                                 phi=hf[f'elements/properties/phi/{i}'][()],
                                 thetas=hf[f'elements/properties/thetas/{i}'][()],
                                 coef=hf[f'elements/properties/coef/{i}'][()],
+                                error=hf[f'elements/properties/error/{i}'][()]
+                            )
+                        )
+                    case 4:  # Impermeable circle
+                        elements.append(
+                            ImpermeableCircle(
+                                label=hf['elements/index/label'][i].decode(),
+                                id_=hf['elements/index/id_'][i],
+                                radius=hf[f'elements/properties/radius/{i}'][()],
+                                center=hf[f'elements/properties/center/{i}'][()],
+                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                                nint=hf[f'elements/properties/nint/{i}'][()],
+                                thetas=hf[f'elements/properties/thetas/{i}'][()],
+                                coef=hf[f'elements/properties/coef/{i}'][()],
+                                error=hf[f'elements/properties/error/{i}'][()]
+                            )
+                        )
+                    case 5:  # Impermeable line
+                        elements.append(
+                            ImpermeableLine(
+                                label=hf['elements/index/label'][i].decode(),
+                                id_=hf['elements/index/id_'][i],
+                                endpoints0=hf[f'elements/properties/focis/{i}'][()],
+                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                                nint=hf[f'elements/properties/nint/{i}'][()],
+                                thetas=hf[f'elements/properties/thetas/{i}'][()],
+                                coef=hf[f'elements/properties/coef/{i}'][()],
+                                dpsi_corr=hf[f'elements/properties/dpsi_corr/{i}'][()],
                                 error=hf[f'elements/properties/error/{i}'][()]
                             )
                         )
@@ -582,6 +615,13 @@ class DFN:
         size = len(self.discharge_elements) + self.number_of_fractures()
         matrix = np.zeros((size, size))
 
+        # Create a sparse matrix
+        # create the row, col and data arrays
+        rows = []
+        cols = []
+        data = []
+
+
         # Add the discharge for each discharge element
         row = 0
         for e in self.discharge_elements:
@@ -595,8 +635,14 @@ class DFN:
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
                         matrix[row, pos] = e.frac0.head_from_phi(ee.discharge_term(z0, e.frac0))
+                        rows.append(row)
+                        cols.append(pos)
+                        data.append(e.frac0.head_from_phi(ee.discharge_term(z0, e.frac0)))
                     else:
                         matrix[row, pos] = e.frac0.head_from_phi(ee.discharge_term(z0))
+                        rows.append(row)
+                        cols.append(pos)
+                        data.append(e.frac0.head_from_phi(ee.discharge_term(z0)))
                 for ee in e.frac1.get_discharge_elements():
                     if ee == e:
                         continue
@@ -604,12 +650,24 @@ class DFN:
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
                         matrix[row, pos] = e.frac1.head_from_phi(-ee.discharge_term(z1, e.frac1))
+                        rows.append(row)
+                        cols.append(pos)
+                        data.append(e.frac1.head_from_phi(-ee.discharge_term(z1, e.frac1)))
                     else:
                         matrix[row, pos] = e.frac1.head_from_phi(-ee.discharge_term(z1))
+                        rows.append(row)
+                        cols.append(pos)
+                        data.append(e.frac1.head_from_phi(-ee.discharge_term(z1)))
                 pos_f0 = self.fractures.index(e.frac0)
                 matrix[row, len(self.discharge_elements) + pos_f0] = e.frac0.head_from_phi(1)
+                rows.append(row)
+                cols.append(len(self.discharge_elements) + pos_f0)
+                data.append(e.frac0.head_from_phi(1))
                 pos_f1 = self.fractures.index(e.frac1)
                 matrix[row, len(self.discharge_elements) + pos_f1] = e.frac1.head_from_phi(-1)
+                rows.append(row)
+                cols.append(len(self.discharge_elements) + pos_f1)
+                data.append(e.frac1.head_from_phi(-1))
             else:
                 z = e.z_array(self.discharge_int)
                 for ee in e.frac0.get_discharge_elements():
@@ -619,10 +677,19 @@ class DFN:
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
                         matrix[row, pos] = ee.discharge_term(z, e.frac0)
+                        rows.append(row)
+                        cols.append(pos)
+                        data.append(ee.discharge_term(z, e.frac0))
                     else:
                         matrix[row, pos] = ee.discharge_term(z)
+                        rows.append(row)
+                        cols.append(pos)
+                        data.append(ee.discharge_term(z))
                 pos_f = self.fractures.index(e.frac0)
                 matrix[row, len(self.discharge_elements) + pos_f] = 1
+                rows.append(row)
+                cols.append(len(self.discharge_elements) + pos_f)
+                data.append(1)
             row += 1
 
         # Add the constants for each fracture
@@ -635,13 +702,26 @@ class DFN:
                     if isinstance(e, Intersection):
                         if e.frac0 == f:
                             matrix[row, pos] = 1
+                            rows.append(row)
+                            cols.append(pos)
+                            data.append(1)
                         else:
                             matrix[row, pos] = -1
+                            rows.append(row)
+                            cols.append(pos)
+                            data.append(-1)
                     else:
                         matrix[row, pos] = 1
+                        rows.append(row)
+                        cols.append(pos)
+                        data.append(1)
             row += 1
 
+        # create the csr sparse matrix
+        matrix_sparse = sp.sparse.csr_matrix((data, (rows, cols)), shape=(size, size))
+
         self.discharge_matrix = matrix
+        self.discharge_matrix_sparse = matrix_sparse
 
     def lu_decomposition(self):
         """
@@ -649,7 +729,7 @@ class DFN:
         """
         if self.discharge_matrix is None:
             self.build_discharge_matrix()
-        self.lup = sp.linalg.lu_factor(self.discharge_matrix)
+        self.lup = sp.sparse.linalg.splu(self.discharge_matrix)
 
     def build_head_matrix(self):
         """
@@ -693,8 +773,9 @@ class DFN:
 
         # Solve the discharge matrix
         if lu_decomp:
-            discharges = sp.linalg.lu_solve(self.lup, head_matrix)
+            discharges = self.lup.solve(head_matrix)
         else:
+            #discharges = sp.sparse.linalg.spsolve(self.discharge_matrix, head_matrix)
             discharges = np.linalg.solve(self.discharge_matrix, head_matrix)
 
         error_list = []
@@ -717,6 +798,16 @@ class DFN:
         max_error = max(error_list)
         element = self.elements[error_list.index(max_error)]
         return max_error, element
+
+    @staticmethod
+    def solve_element(e, max_error, nit, cnt_error):
+        if isinstance(e, Well):
+            e.error = 0.0
+            return 1
+        if e.error < max_error and nit > 3 and cnt_error == 0:
+            return 1
+        e.solve()
+        return 0
 
     def solve(self, max_error=1e-5, max_iterations=50, boundary_check=False, tolerance=1e-2, n_boundary_check=100,
               max_iteration_boundary=5, coef_increase=1.5, increase_check=True, lu_decomp=False):
@@ -743,6 +834,8 @@ class DFN:
             nit += 1
             self.solve_discharge_matrix(lu_decomp)
             for i, e in enumerate(self.elements):
+                cnt += self.solve_element(e, max_error, nit, cnt_error)
+                """
                 if isinstance(e, Well):
                     print(f'\rSolved elements: {i + 1} / {len(self.elements)}', end='')
                     e.error = 0.0
@@ -753,7 +846,10 @@ class DFN:
                     cnt += 1
                     continue
                 e.solve()
+                """
                 print(f'\rSolved elements: {i + 1} / {len(self.elements)}', end='')
+
+
             error_old = error
             error, element = self.get_error()
 
@@ -804,11 +900,8 @@ class DFN:
         self.get_elements()
         self.consolidate_dfn(hpc=True)
         self.build_discharge_matrix()
-        start = datetime.now()
-        print('Compiling HPC code...', end='')
         self.elements_struc_array = hpc_solve(self.fractures_struc_array_hpc, self.elements_struc_array_hpc,
-                                                    self.discharge_matrix, self.discharge_int, max_error, max_iterations)
-        print(f'Solved DFN on HPC in {datetime.now() - start}.')
+                                                    self.discharge_matrix_sparse, self.discharge_int, max_error, max_iterations)
         self.unconsolidate_dfn(hpc=True)
 
     ####################################################################################################################
@@ -988,7 +1081,7 @@ class DFN:
             Whether to plot only the fractures with flow.
         color_map : str
             The color map to use for the flow net.
-        limits : tuple
+        limits : list | tuple
             Custom limits for the flow net, overwrites the calculated limits.
         """
         if only_flow:
@@ -1040,7 +1133,8 @@ class DFN:
                 for seg in contour:
                     if len(seg) == 0:
                         continue
-                    head = f.head_from_phi(np.real(f.calc_omega(seg[0][0] + seg[0][1]*1j)))
+                    loc = int(len(seg)/2)
+                    head = f.head_from_phi(np.real(f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j]))))
                     pos, = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0]
                     color = colors[pos]
                     plot_line_3d(seg, f, pl, color, line_width=line_width)
@@ -1080,7 +1174,7 @@ class DFN:
             if isinstance(e, Intersection):
                 line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
                 pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=3)
-            if isinstance(e, ConstantHeadLine):
+            if isinstance(e, (ConstantHeadLine, ImpermeableLine)):
                 line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
                 pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=3)
             if isinstance(e, (Well, ImpermeableCircle)):
@@ -1093,7 +1187,8 @@ class DFN:
     ####################################################################################################################
     #                    Streamline tracking functions                                                                 #
     ####################################################################################################################
-    def plot_streamline_tracking(self, pl, z0, frac, ds=1e-2, max_length=1000, line_width=2.0, elevation=0.0):
+    def plot_streamline_tracking(self, pl, z0, frac, ds=1e-2, max_length=1000, line_width=2.0, elevation=0.0,
+                                 remove_false=True, color='black'):
         """
         Plots the streamline tracking for a given fracture.
         Parameters
@@ -1112,6 +1207,8 @@ class DFN:
             The line width of the streamlines.
         elevation : float | np.ndarray
             The elevation of the starting point.
+        remove_false : bool
+            Whether to remove the streamlines that exit the DFN on flase locations.
         """
         if isinstance(z0, complex):
             z0 = np.array([z0])
@@ -1137,13 +1234,13 @@ class DFN:
             streamline_3d = []
             if len(s) == 0:
                 continue
-            if elements[i] is False:
+            if elements[i] is False and remove_false:
                 continue
             for ii, ss in enumerate(s):
                 psi_3d = gf.map_2d_to_3d(np.array(ss), streamlines_frac[i][ii])
                 streamline_3d.append(psi_3d)
             streamline_3d = np.concatenate(streamline_3d)
-            pl.add_mesh(pv.MultipleLines(streamline_3d), color='purple', line_width=line_width)
+            pl.add_mesh(pv.MultipleLines(streamline_3d), color=color, line_width=line_width)
 
         return streamlines, streamlines_frac, velocities, elements
 
