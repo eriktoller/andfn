@@ -1,4 +1,4 @@
-Elements
+Element
 ========
 
 This is a collection of classes that are used to create the elements of the DFN. The classes are:
@@ -12,7 +12,7 @@ This is a collection of classes that are used to create the elements of the DFN.
    intersection
    well
 
-.. automodule:: andfn.elements
+.. automodule:: andfn.element
    :members:
    :undoc-members:
    :show-inheritance:
