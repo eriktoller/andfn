@@ -8,9 +8,15 @@ Method (AEM).
    :width: 800
    :alt: example
 
+Installation
+------------
+
+.. code:: console
+
+   pip install andfn
+
 .. toctree::
     :titlesonly:
-    :hidden:
     :caption: Contents:
     user_guide
     api_reference
