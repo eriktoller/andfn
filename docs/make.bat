@@ -8,7 +8,7 @@ if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=..\.venv\Scripts\sphinx-build.exe
 )
 set SOURCEDIR=.
-set BUILDDIR=build
+set BUILDDIR=.
 
 %SPHINXBUILD% >NUL 2>NUL
 if errorlevel 9009 (

@@ -6,7 +6,7 @@ This is a template file to demonstrate how to use the andfn package.
 The andfn package is a python package for solving flow in Discrete Fracture Networks (DFN).
 
 Author: Erik Toller
-Date: 2025-02-17
+Date: 2025-01-21
 Repository: https://github.com/eriktoller/andfn
 """
 
