@@ -6,7 +6,7 @@ publish-to-testpypi:
 
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/<package-name>
+      url: https://test.pypi.org/p/andfn
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
