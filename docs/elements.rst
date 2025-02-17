@@ -8,6 +8,9 @@ This is a collection of classes that are used to create the elements of the DFN.
 
    bounding
    const_head
+   impermeable_objects
+   intersection
+   well
 
 .. automodule:: andfn.elements
    :members:
