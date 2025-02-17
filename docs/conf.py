@@ -43,6 +43,7 @@ master_doc = "index"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_book_theme'
+html_title = 'AnDFN'
 html_theme_options = {
     "navbar_align": "content",
     "icon_links": [
