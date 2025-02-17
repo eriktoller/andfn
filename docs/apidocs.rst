@@ -2,8 +2,9 @@ API Reference
 =============
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     dfn
     fracture
-    elements
+    element
+    math_geometry
