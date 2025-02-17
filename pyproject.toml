@@ -42,7 +42,7 @@ Repository = "https://github.com/eriktoller/andfn"
 Issues = "https://github.com/eriktoller/andfn/issues"
 
 [tool.setuptools.packages.find]
-include = ["andfn"]
+include = ["andfn", "andfn.hpc"]
 
 [tool.setuptools.dynamic]
 version = { attr = "andfn.__version__" }
