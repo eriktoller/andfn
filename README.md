@@ -24,6 +24,7 @@ pip uninstall andfn
 ### Dependencies
 AnDFN requires the following Python packages:
 - Numpy
+- Scipy
 - Pyvista
 - Matplotlib
 - Numba
