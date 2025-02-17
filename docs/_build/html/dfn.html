@@ -1,0 +1,648 @@
+
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>DFN &#8212; andfn 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="_static/bizstyle.css?v=5283bb3d" />
+    
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="User Guide" href="user_guide.html" />
+    <link rel="prev" title="API Reference" href="apidocs.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="user_guide.html" title="User Guide"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="apidocs.html" title="API Reference"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">andfn 0.1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="apidocs.html" accesskey="U">API Reference</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">DFN</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-andfn.dfn">
+<span id="dfn"></span><h1>DFN<a class="headerlink" href="#module-andfn.dfn" title="Link to this heading">¶</a></h1>
+<p class="rubric">Notes</p>
+<p>This module contains the DFN class.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="andfn.dfn.DFN">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">andfn.dfn.</span></span><span class="sig-name descname"><span class="pre">DFN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_int</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.add_fracture">
+<span class="sig-name descname"><span class="pre">add_fracture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_fracture</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.add_fracture"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.add_fracture" title="Link to this definition">¶</a></dt>
+<dd><p>Adds a fracture to the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>new_fracture</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a><em> | </em><em>list</em>) – The fracture to add to the DFN.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.build_discharge_matrix">
+<span class="sig-name descname"><span class="pre">build_discharge_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.build_discharge_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.build_discharge_matrix" title="Link to this definition">¶</a></dt>
+<dd><p>Builds the discharge matrix for the DFN and adds it to the DFN.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.build_head_matrix">
+<span class="sig-name descname"><span class="pre">build_head_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.build_head_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.build_head_matrix" title="Link to this definition">¶</a></dt>
+<dd><p>Builds the head matrix for the DFN and stores it.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.check_streamline_exit">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">check_streamline_exit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.check_streamline_exit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.check_streamline_exit" title="Link to this definition">¶</a></dt>
+<dd><p>Function that checks if the streamline has exited the DFN</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.consolidate_dfn">
+<span class="sig-name descname"><span class="pre">consolidate_dfn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hpc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.consolidate_dfn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.consolidate_dfn" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.delete_fracture">
+<span class="sig-name descname"><span class="pre">delete_fracture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fracture</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.delete_fracture"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.delete_fracture" title="Link to this definition">¶</a></dt>
+<dd><p>Deletes a fracture from the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fracture</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to delete from the DFN.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.generate_connected_dfn">
+<span class="sig-name descname"><span class="pre">generate_connected_dfn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_fracs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac_surface</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.generate_connected_dfn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.generate_connected_dfn" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a connected DFN and adds it and the intersections to the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_fracs</strong> (<em>int</em>) – Number of fractures to generate.</p></li>
+<li><p><strong>radius_factor</strong> (<em>float</em>) – The factor to multiply the radius by.</p></li>
+<li><p><strong>center_factor</strong> (<em>float</em>) – The factor to multiply the center by.</p></li>
+<li><p><strong>ncoef_i</strong> (<em>int</em>) – The number of coefficients to use for the intersection elements.</p></li>
+<li><p><strong>nint_i</strong> (<em>int</em>) – The number of integration points to use for the intersection elements.</p></li>
+<li><p><strong>ncoef_b</strong> (<em>int</em>) – The number of coefficients to use for the bounding elements.</p></li>
+<li><p><strong>nint_b</strong> (<em>int</em>) – The number of integration points to use for the bounding elements.</p></li>
+<li><p><strong>frac_surface</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to use as the surface fracture.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_dfn_center">
+<span class="sig-name descname"><span class="pre">get_dfn_center</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_dfn_center"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_dfn_center" title="Link to this definition">¶</a></dt>
+<dd><p>Gets the center of the DFN.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_dfn_discharge">
+<span class="sig-name descname"><span class="pre">get_dfn_discharge</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_dfn_discharge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_dfn_discharge" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_discharge_elements">
+<span class="sig-name descname"><span class="pre">get_discharge_elements</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_discharge_elements"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_discharge_elements" title="Link to this definition">¶</a></dt>
+<dd><p>Gets the discharge elements from the fractures and add store them in the DFN.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_elements">
+<span class="sig-name descname"><span class="pre">get_elements</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_elements"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_elements" title="Link to this definition">¶</a></dt>
+<dd><p>Gets the elements from the fractures and add store them in the DFN.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_error">
+<span class="sig-name descname"><span class="pre">get_error</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_error" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_exit_intersection">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_exit_intersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z3d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac_old</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elevation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dchi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_exit_intersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_exit_intersection" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_flow_fractures">
+<span class="sig-name descname"><span class="pre">get_flow_fractures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_flow_fractures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_flow_fractures" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_fracture_intersections">
+<span class="sig-name descname"><span class="pre">get_fracture_intersections</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ncoef</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_frac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_fracture_intersections"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_fracture_intersections" title="Link to this definition">¶</a></dt>
+<dd><p>Finds the intersections between the fractures in the DFN and adds them to the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ncoef</strong> (<em>int</em>) – The number of coefficients to use for the intersection elements.</p></li>
+<li><p><strong>nint</strong> (<em>int</em>) – The number of integration points to use for the intersection elements</p></li>
+<li><p><strong>new_frac</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to calculate the intersections for.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.get_travel_time_and_length">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_travel_time_and_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">streamline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocity</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.get_travel_time_and_length"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.get_travel_time_and_length" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the travel time for a streamline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>streamline</strong> (<em>list</em><em> | </em><em>ndarray</em>) – The streamline.</p></li>
+<li><p><strong>velocity</strong> (<em>ndarray</em>) – The velocity along the streamline.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>time</strong> (<em>float</em>) – The travel time for the streamline.</p></li>
+<li><p><strong>length</strong> (<em>float</em>) – The length of the streamline.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.hpc_solve">
+<span class="sig-name descname"><span class="pre">hpc_solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.hpc_solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.hpc_solve" title="Link to this definition">¶</a></dt>
+<dd><p>Solves the DFN on a HPC.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.initiate_plotter">
+<span class="sig-name descname"><span class="pre">initiate_plotter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(800,</span> <span class="pre">800)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lighting</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'light</span> <span class="pre">kit'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">off_screen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.initiate_plotter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.initiate_plotter" title="Link to this definition">¶</a></dt>
+<dd><p>Initiates the plotter for the DFN.
+:param window_size: The size of the plot window.
+:type window_size: tuple
+:param grid: Whether to add a grid to the plot.
+:type grid: bool
+:param lighting: The type of lighting to use.
+:type lighting: str
+:param title: Whether to add a title to the plot.
+:type title: bool or str
+:param off_screen: Whether to plot off-screen.
+:type off_screen: bool
+:param scale: The scale of the plot.
+:type scale: float
+:param axis: Whether to add the axis to the plot.
+:type axis: bool</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pl</strong> – The plotter object.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pyvista.Plotter</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.load_dfn">
+<span class="sig-name descname"><span class="pre">load_dfn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.load_dfn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.load_dfn" title="Link to this definition">¶</a></dt>
+<dd><p>Loads the DFN from a h5 file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – The name of the file to load the DFN from.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.lu_decomposition">
+<span class="sig-name descname"><span class="pre">lu_decomposition</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.lu_decomposition"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.lu_decomposition" title="Link to this definition">¶</a></dt>
+<dd><p>LU decomposition of the discharge matrix.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.number_of_elements">
+<span class="sig-name descname"><span class="pre">number_of_elements</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.number_of_elements"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.number_of_elements" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the number of elements in the DFN.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.number_of_fractures">
+<span class="sig-name descname"><span class="pre">number_of_fractures</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.number_of_fractures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.number_of_fractures" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the number of fractures in the DFN.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.plot_elements">
+<span class="sig-name descname"><span class="pre">plot_elements</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pl</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.plot_elements"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.plot_elements" title="Link to this definition">¶</a></dt>
+<dd><p>Plots the elements in the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pl</strong> (<em>pyvista.Plotter</em>) – The plotter object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.plot_fractures">
+<span class="sig-name descname"><span class="pre">plot_fractures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'#FFFFFF'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opacity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.plot_fractures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.plot_fractures" title="Link to this definition">¶</a></dt>
+<dd><p>Plots the fractures in the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pl</strong> (<em>pyvista.Plotter</em>) – The plotter object.</p></li>
+<li><p><strong>num_side</strong> (<em>int</em>) – The number of sides to use for the fractures.</p></li>
+<li><p><strong>filled</strong> (<em>bool</em>) – Whether to fill the fractures.</p></li>
+<li><p><strong>color</strong> (<em>str</em><em> | </em><em>tuple</em>) – The color of the fractures.</p></li>
+<li><p><strong>opacity</strong> (<em>float</em>) – The opacity of the fractures.</p></li>
+<li><p><strong>show_edges</strong> (<em>bool</em>) – Whether to show the edges of the fractures.</p></li>
+<li><p><strong>line_width</strong> (<em>float</em>) – The line width of the lines.</p></li>
+<li><p><strong>fracs</strong> (<em>list</em>) – The list of fractures to plot. If None, all fractures are plotted.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>fracs</strong> – The list of fractures that have been plotted.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.plot_fractures_flow_net">
+<span class="sig-name descname"><span class="pre">plot_fractures_flow_net</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lvs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">margin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">only_flow</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.plot_fractures_flow_net"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.plot_fractures_flow_net" title="Link to this definition">¶</a></dt>
+<dd><p>Plots the flow net for the fractures in the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pl</strong> (<em>pyvista.Plotter</em>) – The plotter object.</p></li>
+<li><p><strong>lvs</strong> (<em>int</em>) – The number of levels to contour for the flow net.</p></li>
+<li><p><strong>n_points</strong> (<em>int</em>) – The number of points to use for the flow net (n_points x n_points).</p></li>
+<li><p><strong>line_width</strong> (<em>float</em>) – The line width of the flow net.</p></li>
+<li><p><strong>margin</strong> (<em>float</em>) – The margin around the fracture to use for the flow net.</p></li>
+<li><p><strong>only_flow</strong> (<em>bool</em>) – Whether to plot only the fractures with flow.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.plot_fractures_head">
+<span class="sig-name descname"><span class="pre">plot_fractures_head</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lvs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">margin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opacity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">only_flow</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'jet'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.plot_fractures_head"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.plot_fractures_head" title="Link to this definition">¶</a></dt>
+<dd><p>Plots the flow net for the fractures in the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pl</strong> (<em>pyvista.Plotter</em>) – The plotter object.</p></li>
+<li><p><strong>lvs</strong> (<em>int</em>) – The number of levels to contour for the flow net.</p></li>
+<li><p><strong>n_points</strong> (<em>int</em>) – The number of points to use for the flow net (n_points x n_points).</p></li>
+<li><p><strong>line_width</strong> (<em>float</em>) – The line width of the flow net.</p></li>
+<li><p><strong>margin</strong> (<em>float</em>) – The margin around the fracture to use for the flow net.</p></li>
+<li><p><strong>opacity</strong> (<em>float</em>) – The opacity of the fractures in the flownet.</p></li>
+<li><p><strong>only_flow</strong> (<em>bool</em>) – Whether to plot only the fractures with flow.</p></li>
+<li><p><strong>color_map</strong> (<em>str</em>) – The color map to use for the flow net.</p></li>
+<li><p><strong>limits</strong> (<em>list</em><em> | </em><em>tuple</em>) – Custom limits for the flow net, overwrites the calculated limits.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.plot_streamline_tracking">
+<span class="sig-name descname"><span class="pre">plot_streamline_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elevation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_false</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'black'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.plot_streamline_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.plot_streamline_tracking" title="Link to this definition">¶</a></dt>
+<dd><p>Plots the streamline tracking for a given fracture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pl</strong> (<em>pyvista.Plotter</em>) – The plotter object.</p></li>
+<li><p><strong>z0</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – The starting point for the streamline tracking.</p></li>
+<li><p><strong>frac</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture where to start the streamline tracking.</p></li>
+<li><p><strong>ds</strong> (<em>float</em>) – The step size for the streamline tracking.</p></li>
+<li><p><strong>max_length</strong> (<em>int</em>) – The maximum length of the streamline.</p></li>
+<li><p><strong>line_width</strong> (<em>float</em>) – The line width of the streamlines.</p></li>
+<li><p><strong>elevation</strong> (<em>float</em><em> | </em><em>np.ndarray</em>) – The elevation of the starting point.</p></li>
+<li><p><strong>remove_false</strong> (<em>bool</em>) – Whether to remove the streamlines that exit the DFN on flase locations.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.runge_kutta">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">runge_kutta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_it</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.runge_kutta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.runge_kutta" title="Link to this definition">¶</a></dt>
+<dd><p>Runge-Kutta method for streamline tracing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z0</strong> (<em>complex</em>) – The initial point.</p></li>
+<li><p><strong>ds</strong> (<em>float</em>) – The step size.</p></li>
+<li><p><strong>tolerance</strong> (<em>float</em>) – The tolerance for the error.</p></li>
+<li><p><strong>max_it</strong> (<em>int</em>) – The maximum number of iterations.</p></li>
+<li><p><strong>frac</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to trace the streamline on.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z1</strong> – The point at the end of the streamline.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.save_dfn">
+<span class="sig-name descname"><span class="pre">save_dfn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.save_dfn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.save_dfn" title="Link to this definition">¶</a></dt>
+<dd><p>Saves the DFN to a h5 file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – The name of the file to save the DFN to.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.set_constant_head_boundary">
+<span class="sig-name descname"><span class="pre">set_constant_head_boundary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">center</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">head</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Constant</span> <span class="pre">Head</span> <span class="pre">Boundary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.set_constant_head_boundary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.set_constant_head_boundary" title="Link to this definition">¶</a></dt>
+<dd><p>Adds a constant head boundary to the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>center</strong> (<em>np.ndarray</em>) – The center of the constant head boundary.</p></li>
+<li><p><strong>normal</strong> (<em>np.ndarray</em>) – The normal of the constant head boundary.</p></li>
+<li><p><strong>radius</strong> (<em>float</em>) – The radius of the constant head boundary.</p></li>
+<li><p><strong>head</strong> (<em>float</em>) – The head of the constant head boundary.</p></li>
+<li><p><strong>label</strong> (<em>str</em>) – The label of the constant head boundary.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.solve">
+<span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary_check</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_boundary_check</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iteration_boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef_increase</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">increase_check</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lu_decomp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.solve" title="Link to this definition">¶</a></dt>
+<dd><p>Solves the DFN and saves the coefficients to the elements.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.solve_discharge_matrix">
+<span class="sig-name descname"><span class="pre">solve_discharge_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lu_decomp</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.solve_discharge_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.solve_discharge_matrix" title="Link to this definition">¶</a></dt>
+<dd><p>Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.solve_element">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">solve_element</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cnt_error</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.solve_element"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.solve_element" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.streamline_tracking">
+<span class="sig-name descname"><span class="pre">streamline_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elevation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.streamline_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.streamline_tracking" title="Link to this definition">¶</a></dt>
+<dd><p>Function that tracks the streamlines in a fracture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z0</strong> (<em>complex</em>) – Starting point for streamline tracking</p></li>
+<li><p><strong>elevation</strong> (<em>float</em>) – Elevation of the starting point</p></li>
+<li><p><strong>frac</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture where to start the streamline tracking</p></li>
+<li><p><strong>ds</strong> (<em>float</em>) – Step size for the streamline tracking</p></li>
+<li><p><strong>max_length</strong> (<em>int</em>) – Maximum length of the streamline</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>streamlines</strong> – Array with streamline</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="andfn.dfn.DFN.unconsolidate_dfn">
+<span class="sig-name descname"><span class="pre">unconsolidate_dfn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hpc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#DFN.unconsolidate_dfn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.DFN.unconsolidate_dfn" title="Link to this definition">¶</a></dt>
+<dd><p>Unconsolidates the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>hpc</strong> (<em>bool</em>) – If True, the DFN is unconsolidated for the HPC.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.dfn.generate_connected_fractures">
+<span class="sig-prename descclassname"><span class="pre">andfn.dfn.</span></span><span class="sig-name descname"><span class="pre">generate_connected_fractures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_fracs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac_surface</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#generate_connected_fractures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.generate_connected_fractures" title="Link to this definition">¶</a></dt>
+<dd><p>Generates connected fractures and intersections.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_fracs</strong> (<em>int</em>) – The number of fractures to generate.</p></li>
+<li><p><strong>radius_factor</strong> (<em>float</em>) – The factor to multiply the radius by.</p></li>
+<li><p><strong>center_factor</strong> (<em>float</em>) – The factor to multiply the center by.</p></li>
+<li><p><strong>ncoef_i</strong> (<em>int</em>) – The number of coefficients to use for the intersection elements.</p></li>
+<li><p><strong>nint_i</strong> (<em>int</em>) – The number of integration points to use for the intersection elements.</p></li>
+<li><p><strong>ncoef_b</strong> (<em>int</em>) – The number of coefficients to use for the bounding elements.</p></li>
+<li><p><strong>nint_b</strong> (<em>int</em>) – The number of integration points to use for the bounding elements.</p></li>
+<li><p><strong>frac_surface</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture to use as the surface fracture.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>frac_list</strong> – The list of fractures.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.dfn.get_lvs">
+<span class="sig-prename descclassname"><span class="pre">andfn.dfn.</span></span><span class="sig-name descname"><span class="pre">get_lvs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lvs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega_fn_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#get_lvs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.get_lvs" title="Link to this definition">¶</a></dt>
+<dd><p>Gets the levels for the flow net.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lvs</strong> (<em>int</em>) – The number of levels for the equipotentials.</p></li>
+<li><p><strong>omega_fn_list</strong> (<em>list</em><em> | </em><em>np.ndarray</em>) – The list of complex discharge values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>lvs_re</strong> (<em>np.ndarray</em>) – The levels for the equipotentials.</p></li>
+<li><p><strong>lvs_im</strong> (<em>np.ndarray</em>) – The levels for the streamlines.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.dfn.plot_line_3d">
+<span class="sig-prename descclassname"><span class="pre">andfn.dfn.</span></span><span class="sig-name descname"><span class="pre">plot_line_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/dfn.html#plot_line_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.dfn.plot_line_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Plots a line in 3D for a given fracture plane.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seg</strong> (<em>np.ndarray</em>) – The line to plot.</p></li>
+<li><p><strong>f</strong> (<a class="reference internal" href="andfn.dfn/andfn.dfn.Fracture.html#andfn.dfn.Fracture" title="andfn.dfn.Fracture"><em>Fracture</em></a>) – The fracture plane.</p></li>
+<li><p><strong>pl</strong> (<em>pyvista.Plotter</em>) – The plotter object.</p></li>
+<li><p><strong>color</strong> (<em>str</em><em> | </em><em>tuple</em>) – The color of the line.</p></li>
+<li><p><strong>line_width</strong> (<em>float</em>) – The line width of the line.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#andfn.dfn.DFN" title="andfn.dfn.DFN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">andfn.dfn.DFN</span></code></a>(label[, discharge_int])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">DFN</a><ul>
+<li><a class="reference internal" href="#andfn.dfn.DFN"><code class="docutils literal notranslate"><span class="pre">DFN</span></code></a><ul>
+<li><a class="reference internal" href="#andfn.dfn.DFN.add_fracture"><code class="docutils literal notranslate"><span class="pre">DFN.add_fracture()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.build_discharge_matrix"><code class="docutils literal notranslate"><span class="pre">DFN.build_discharge_matrix()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.build_head_matrix"><code class="docutils literal notranslate"><span class="pre">DFN.build_head_matrix()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.check_streamline_exit"><code class="docutils literal notranslate"><span class="pre">DFN.check_streamline_exit()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.consolidate_dfn"><code class="docutils literal notranslate"><span class="pre">DFN.consolidate_dfn()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.delete_fracture"><code class="docutils literal notranslate"><span class="pre">DFN.delete_fracture()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.generate_connected_dfn"><code class="docutils literal notranslate"><span class="pre">DFN.generate_connected_dfn()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_dfn_center"><code class="docutils literal notranslate"><span class="pre">DFN.get_dfn_center()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_dfn_discharge"><code class="docutils literal notranslate"><span class="pre">DFN.get_dfn_discharge()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_discharge_elements"><code class="docutils literal notranslate"><span class="pre">DFN.get_discharge_elements()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_elements"><code class="docutils literal notranslate"><span class="pre">DFN.get_elements()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_error"><code class="docutils literal notranslate"><span class="pre">DFN.get_error()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_exit_intersection"><code class="docutils literal notranslate"><span class="pre">DFN.get_exit_intersection()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_flow_fractures"><code class="docutils literal notranslate"><span class="pre">DFN.get_flow_fractures()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_fracture_intersections"><code class="docutils literal notranslate"><span class="pre">DFN.get_fracture_intersections()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.get_travel_time_and_length"><code class="docutils literal notranslate"><span class="pre">DFN.get_travel_time_and_length()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.hpc_solve"><code class="docutils literal notranslate"><span class="pre">DFN.hpc_solve()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.initiate_plotter"><code class="docutils literal notranslate"><span class="pre">DFN.initiate_plotter()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.load_dfn"><code class="docutils literal notranslate"><span class="pre">DFN.load_dfn()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.lu_decomposition"><code class="docutils literal notranslate"><span class="pre">DFN.lu_decomposition()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.number_of_elements"><code class="docutils literal notranslate"><span class="pre">DFN.number_of_elements()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.number_of_fractures"><code class="docutils literal notranslate"><span class="pre">DFN.number_of_fractures()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.plot_elements"><code class="docutils literal notranslate"><span class="pre">DFN.plot_elements()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.plot_fractures"><code class="docutils literal notranslate"><span class="pre">DFN.plot_fractures()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.plot_fractures_flow_net"><code class="docutils literal notranslate"><span class="pre">DFN.plot_fractures_flow_net()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.plot_fractures_head"><code class="docutils literal notranslate"><span class="pre">DFN.plot_fractures_head()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.plot_streamline_tracking"><code class="docutils literal notranslate"><span class="pre">DFN.plot_streamline_tracking()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.runge_kutta"><code class="docutils literal notranslate"><span class="pre">DFN.runge_kutta()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.save_dfn"><code class="docutils literal notranslate"><span class="pre">DFN.save_dfn()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.set_constant_head_boundary"><code class="docutils literal notranslate"><span class="pre">DFN.set_constant_head_boundary()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.solve"><code class="docutils literal notranslate"><span class="pre">DFN.solve()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.solve_discharge_matrix"><code class="docutils literal notranslate"><span class="pre">DFN.solve_discharge_matrix()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.solve_element"><code class="docutils literal notranslate"><span class="pre">DFN.solve_element()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.streamline_tracking"><code class="docutils literal notranslate"><span class="pre">DFN.streamline_tracking()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.DFN.unconsolidate_dfn"><code class="docutils literal notranslate"><span class="pre">DFN.unconsolidate_dfn()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#andfn.dfn.generate_connected_fractures"><code class="docutils literal notranslate"><span class="pre">generate_connected_fractures()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.get_lvs"><code class="docutils literal notranslate"><span class="pre">get_lvs()</span></code></a></li>
+<li><a class="reference internal" href="#andfn.dfn.plot_line_3d"><code class="docutils literal notranslate"><span class="pre">plot_line_3d()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="apidocs.html"
+                          title="previous chapter">API Reference</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="user_guide.html"
+                          title="next chapter">User Guide</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/dfn.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="user_guide.html" title="User Guide"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="apidocs.html" title="API Reference"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">andfn 0.1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="apidocs.html" >API Reference</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">DFN</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2025, Erik A. L. Toller.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    </div>
+  </body>
+</html>
