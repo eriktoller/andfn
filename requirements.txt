@@ -1,4 +1,5 @@
 sphinx
+sphinx-book-theme
 ghp-import
 numpy
 matplotlib
