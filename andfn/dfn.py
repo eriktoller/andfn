@@ -28,6 +28,7 @@ from .element import element_dtype, fracture_dtype, element_index_dtype, fractur
 def generate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b, nint_b, frac_surface=None):
     """
     Generates connected fractures and intersections.
+
     Parameters
     ----------
     num_fracs : int
@@ -126,6 +127,7 @@ class DFN:
     def __init__(self, label, discharge_int=50, **kwargs):
         """
         Initializes the DFN class.
+
         Parameters
         ----------
         label : str or int
@@ -162,6 +164,7 @@ class DFN:
     def __str__(self):
         """
         Returns the string representation of the DFN.
+
         Returns
         -------
         str
@@ -175,6 +178,7 @@ class DFN:
     def save_dfn(self, filename):
         """
         Saves the DFN to a h5 file.
+
         Parameters
         ----------
         filename : str
@@ -214,6 +218,7 @@ class DFN:
     def load_dfn(self, filename):
         """
         Loads the DFN from a h5 file.
+
         Parameters
         ----------
         filename : str
@@ -393,6 +398,11 @@ class DFN:
     def unconsolidate_dfn(self, hpc=False):
         """
         Unconsolidates the DFN.
+
+        Parameters
+        ----------
+        hpc : bool
+            If True, the DFN is unconsolidated for the HPC.
         """
 
         # Unconsolidate fractures
@@ -471,6 +481,7 @@ class DFN:
     def add_fracture(self, new_fracture):
         """
         Adds a fracture to the DFN.
+
         Parameters
         ----------
         new_fracture : Fracture | list
@@ -498,6 +509,7 @@ class DFN:
     def delete_fracture(self, fracture):
         """
         Deletes a fracture from the DFN.
+
         Parameters
         ----------
         fracture : Fracture
@@ -512,6 +524,7 @@ class DFN:
     def generate_connected_dfn(self, num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b, nint_b, frac_surface=None):
         """
         Generates a connected DFN and adds it and the intersections to the DFN.
+
         Parameters
         ----------
         num_fracs : int
@@ -540,6 +553,7 @@ class DFN:
     def get_fracture_intersections(self, ncoef=5, nint=10, new_frac=None):
         """
         Finds the intersections between the fractures in the DFN and adds them to the DFN.
+
         Parameters
         ----------
         ncoef : int
@@ -588,6 +602,7 @@ class DFN:
     def set_constant_head_boundary(self, center, normal, radius, head, label='Constant Head Boundary', ncoef=5, nint=10):
         """
         Adds a constant head boundary to the DFN.
+
         Parameters
         ----------
         center : np.ndarray
@@ -968,6 +983,7 @@ class DFN:
                        line_width=2.0, fracs=None):
         """
         Plots the fractures in the DFN.
+
         Parameters
         ----------
         pl : pyvista.Plotter
@@ -1006,6 +1022,7 @@ class DFN:
     def plot_fractures_flow_net(self, pl, lvs, n_points, line_width=2, margin=0.01, only_flow=False):
         """
         Plots the flow net for the fractures in the DFN.
+
         Parameters
         ----------
         pl : pyvista.Plotter
@@ -1063,6 +1080,7 @@ class DFN:
                             color_map='jet', limits=None):
         """
         Plots the flow net for the fractures in the DFN.
+
         Parameters
         ----------
         pl : pyvista.Plotter
@@ -1161,6 +1179,7 @@ class DFN:
     def plot_elements(self, pl):
         """
         Plots the elements in the DFN.
+
         Parameters
         ----------
         pl : pyvista.Plotter
@@ -1191,6 +1210,7 @@ class DFN:
                                  remove_false=True, color='black'):
         """
         Plots the streamline tracking for a given fracture.
+
         Parameters
         ----------
         pl : pyvista.Plotter
@@ -1247,6 +1267,7 @@ class DFN:
     def streamline_tracking(self, z0, frac, elevation, ds, max_length):
         """
         Function that tracks the streamlines in a fracture.
+
         Parameters
         ----------
         z0 : complex
@@ -1400,6 +1421,7 @@ class DFN:
     def runge_kutta(z0, frac,  ds, tolerance=1e-6, max_it=10):
         """
         Runge-Kutta method for streamline tracing.
+
         Parameters
         ----------
         z0 : complex
@@ -1439,12 +1461,14 @@ class DFN:
     def get_travel_time_and_length(streamline, velocity):
         """
         Returns the travel time for a streamline.
+
         Parameters
         ----------
         streamline : list | ndarray
             The streamline.
         velocity : ndarray
             The velocity along the streamline.
+
         Returns
         -------
         time : float
