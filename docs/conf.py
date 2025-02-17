@@ -20,13 +20,23 @@ release = '0.1.0'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ["sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.todo",
-    "sphinx.ext.napoleon"]
+                "sphinx.ext.autosummary",
+                "sphinx.ext.viewcode",
+                "sphinx.ext.todo",
+                "sphinx.ext.napoleon",
+              "sphinx.ext.githubpages"]
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+# The suffix(es) of source filenames.
+# You can specify multiple suffix as a list of string:
+#
+# source_suffix = ['.rst', '.md']
+source_suffix = ".rst"
+
+# The master toctree document.
+master_doc = "index"
 
 
 
@@ -34,7 +44,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "bizstyle"
-html_static_path = ['_static']
 html_theme_options = {
     "navbar_align": "content",
     "icon_links": [
