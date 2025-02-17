@@ -11,6 +11,7 @@ Solver functions
 .. automodule:: andfn.hpc.hpc_solve
    :members:
    :undoc-members:
+   :show-inheritance
 
 Fracture functions
 ------------------

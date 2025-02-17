@@ -49,8 +49,9 @@ element_dtype_hpc = np.dtype([
         ('dpsi_corr', np.float64, MAX_NCOEF*2),
         ('error', np.float64)
 ])
-
 """
+The element data type for the HPC solver. Note that not all elements have all properties.
+
 Element Types:
 0 = Intersection
 1 = Bounding Circle
@@ -58,6 +59,47 @@ Element Types:
 3 = Constant Head Line
 4 = Impermeable Circle
 5 = Impermeable Line
+
+Parameters
+----------
+id_ : int
+    The id of the element.
+type_ : int
+    The type of the element. (see above)
+frac0 : int
+    The id of the first fracture.
+frac1 : int
+    The id of the second fracture.
+endpoints0 : np.ndarray
+    The endpoints of the element in frac0.
+endpoints1 : np.ndarray
+    The endpoints of the element in frac1.
+radius : float
+    The radius of the element.
+center : np.ndarray
+    The center of the element.
+head : float
+    The hydraulic head of the element.
+phi : float
+    The discharge potential of the element.
+ncoef : int
+    The number of coefficients in the expansion.
+nint : int
+    The number of integration points.
+q : float
+    The discharge of the element.
+thetas : np.ndarray
+    The angles of the integration points in the chi-plane.
+coef : np.ndarray
+    The coefficients of the expansion.
+old_coef : np.ndarray
+    The old coefficients of the expansion.
+dpsi_corr : np.ndarray
+    The correction to the psi values.
+error : float
+    The error of the element.
+    
+
 """
 element_index_dtype = np.dtype([
         ('label', np.str_,100),
