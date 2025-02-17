@@ -8,3 +8,10 @@ Method (AEM).
    :width: 800
    :alt: example
 
+.. toctree::
+    :titlesonly:
+    :hidden:
+    :caption: Contents:
+    user_guide
+    api_reference
+    example
