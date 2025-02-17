@@ -17,6 +17,6 @@ Element parent class
 
 .. automodule:: andfn.element
    :members:
-   :special-members:
+   :special-members: __init__
    :undoc-members:
    :show-inheritance:
