@@ -4,8 +4,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, os.path.abspath('../andfn'))
+# sys.path.insert(0, os.path.abspath('../andfn'))
+import andfn
 
 
 # -- Project information -----------------------------------------------------
