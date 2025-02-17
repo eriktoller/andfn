@@ -45,4 +45,4 @@ Issues = "https://github.com/eriktoller/andfn/issues"
 include = ["andfn", "andfn.*"]
 
 [tool.setuptools.dynamic]
-version = { attr = "andfn.__version__" }
+version = { attr = 0.0.1 }
