@@ -1,2 +1,8 @@
 sphinx
 ghp-import
+numpy
+matplotlib
+pyvista
+scipy
+numba
+h5py
