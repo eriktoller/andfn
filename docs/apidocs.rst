@@ -4,13 +4,8 @@ API Reference
 .. toctree::
     :maxdepth: 4
 
-DFN
----
+    dfn
 
-.. automodule:: andfn.dfn
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 Fracture
 --------
