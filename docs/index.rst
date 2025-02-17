@@ -16,6 +16,7 @@ Installation
    pip install andfn
 
 .. toctree::
+    :maxdepth: 0
     :titlesonly:
     :caption: Contents:
     user_guide
