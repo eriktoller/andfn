@@ -5,7 +5,7 @@ This is the DFN module that contains the DFN class. The DFN class is used to cre
 
 .. automodule:: andfn.dfn
    :members:
-   :special-members:
+   :special-members: __init__, __str__
    :undoc-members:
    :show-inheritance:
 

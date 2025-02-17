@@ -5,5 +5,6 @@ This module contains the Well class. The Well class is used to create a Well obj
 
 .. automodule:: andfn.well
    :members:
+   :special-members: __init__, __str__
    :undoc-members:
    :show-inheritance:

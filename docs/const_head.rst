@@ -5,6 +5,6 @@ This is the module that contains the constant head elements of the DFN.
 
 .. automodule:: andfn.const_head
    :members:
-   :special-members:
+   :special-members: __init__, __str__
    :undoc-members:
    :show-inheritance:

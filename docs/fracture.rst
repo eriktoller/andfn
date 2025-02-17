@@ -5,5 +5,6 @@ This is the Fracture module that contains the Fracture class. The Fracture class
 
 .. automodule:: andfn.fracture
    :members:
+   :special-members: __init__, __str__
    :undoc-members:
    :show-inheritance:
