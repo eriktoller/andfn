@@ -62,11 +62,11 @@ def map_chi_to_z_line(chi, endpoints):
 
 #@nb.jit(nopython=NO_PYTHON)
 def map_z_circle_to_chi(z, r, center=0.0):
-    """
+    r"""
     Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.
 
     .. math::
-            \(\chi = \frac{z - \text{center}}{r}\)
+            \chi = \frac{z - \text{center}}{r}
 
 
     Parameters
