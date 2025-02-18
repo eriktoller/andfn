@@ -47,6 +47,7 @@ def map_chi_to_z_line(chi, endpoints):
     .. math::
             Z = \frac{1}{2} \left( \chi + \frac{1}{\chi} \right)
 
+    .. math::
             z = \frac{1}{2} \left( Z \left(\text{endpoints}[1] - \text{endpoints}[0] \right) + \text{endpoints}[0] + \text{endpoints}[1]\right)
 
     Parameters
