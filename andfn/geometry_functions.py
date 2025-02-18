@@ -66,7 +66,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
     Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.
 
     .. math::
-        \chi = \frac{z - center}{r}
+            \(\chi = \frac{z - \text{center}}{r}\)
 
 
     Parameters
