@@ -40,9 +40,14 @@ def map_z_line_to_chi(z, endpoints):
 
 
 def map_chi_to_z_line(chi, endpoints):
-    """
+    r"""
     Function that maps the exterior of the unit circle in the complex chi-plane onto the exterior of a line in the
     complex z-plane.
+
+    .. math::
+            Z = \frac{1}{2} \left( \chi + \frac{1}{\chi} \right)
+
+            z = \frac{1}{2} \left( Z \left(\text{endpoints}[1] - \text{endpoints}[0] \right) + \text{endpoints}[0] + \text{endpoints}[1]\right)
 
     Parameters
     ----------
@@ -87,8 +92,11 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
 
 def map_chi_to_z_circle(chi, r, center=0.0):
-    """
+    r"""
     Function that maps the unit circle in the complex chi-plane to a circle in the complex z-plane.
+
+    .. math::
+            z = \chi r + \text{center}
     
     Parameters
     ----------
