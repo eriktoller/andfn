@@ -309,31 +309,29 @@ def build_head_matrix(fractures_struc_array, element_struc_array, discharge_elem
         for i in range(discharge_int):
             omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array) / discharge_int
         omega = np.sum(omega_vec)
-        match e['type_']:
-            case 0: # Intersection
-                frac1 = fractures_struc_array[e['frac1']]
-                z1 = z_int['z1'][j][:discharge_int]
-                omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
-                for i in range(discharge_int):
-                    omega1_vec[i] = hpc_fracture.calc_omega(frac1, z1[i], element_struc_array) / discharge_int
-                omega1 = np.sum(omega1_vec)
-                head_matrix[j] = np.real(omega1) / frac1['t'] - np.real(omega) / frac0['t']
-            case 2 | 3: # Well or Constant head line
-                head_matrix[j] = e['phi'] - np.real(omega)
+        if e['type_'] == 0:  # Intersection
+            frac1 = fractures_struc_array[e['frac1']]
+            z1 = z_int['z1'][j][:discharge_int]
+            omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
+            for i in range(discharge_int):
+                omega1_vec[i] = hpc_fracture.calc_omega(frac1, z1[i], element_struc_array) / discharge_int
+            omega1 = np.sum(omega1_vec)
+            head_matrix[j] = np.real(omega1) / frac1['t'] - np.real(omega) / frac0['t']
+        elif e['type_'] in [2, 3]:  # Well or Constant head line
+            head_matrix[j] = e['phi'] - np.real(omega)
 
 @nb.jit(nopython=NO_PYTHON)
 def get_z_int_array(z_int, discharge_elements, discharge_int):
     # Add the head for each discharge element
     for j in range(discharge_elements.size):
         e = discharge_elements[j]
-        match e['type_']:
-            case 0:  # Intersection
-                z_int['z0'][j][:discharge_int] = hpc_intersection.z_array(e, discharge_int, e['frac0'])
-                z_int['z1'][j][:discharge_int] = hpc_intersection.z_array(e, discharge_int, e['frac1'])
-            case 2:  # Well
-                z_int['z0'][j][:discharge_int] = hpc_well.z_array(e, discharge_int)
-            case 3:  # Constant head line
-                z_int['z0'][j][:discharge_int] = hpc_const_head_line.z_array(e, discharge_int)
+        if e['type_'] == 0:  # Intersection
+            z_int['z0'][j][:discharge_int] = hpc_intersection.z_array(e, discharge_int, e['frac0'])
+            z_int['z1'][j][:discharge_int] = hpc_intersection.z_array(e, discharge_int, e['frac1'])
+        elif e['type_'] == 2:  # Well
+            z_int['z0'][j][:discharge_int] = hpc_well.z_array(e, discharge_int)
+        elif e['type_'] == 3:  # Constant head line
+            z_int['z0'][j][:discharge_int] = hpc_const_head_line.z_array(e, discharge_int)
 
 @nb.jit(nopython=NO_PYTHON)
 def set_new_ncoef(self_, n, nint_mult=2):
@@ -349,21 +347,20 @@ def set_new_ncoef(self_, n, nint_mult=2):
     nint_mult : int
         The multiplier for the number of integration points.
     """
-    match self_['type_']:
-        case 0:  # Intersection
-            self_['ncoef'] = n
-            self_['nint'] = n * nint_mult
-            stop = 2 * np.pi + 2 * np.pi / self_['nint']
-            self_['thetas'] = np.linspace(start=np.pi / (2 * self_['nint']), stop=stop - stop/self_['nint'],
+    if self_['type_'] == 0:  # Intersection
+        self_['ncoef'] = n
+        self_['nint'] = n * nint_mult
+        stop = 2 * np.pi + 2 * np.pi / self_['nint']
+        self_['thetas'] = np.linspace(start=np.pi / (2 * self_['nint']), stop=stop - stop/self_['nint'],
                                       num=self_['nint'])
-        case 3:  # Constant Head Line
-            self_['ncoef'] = n
-            self_['nint'] = n * nint_mult
-            stop = 2 * np.pi + 2 * np.pi / self_['nint']
-            self_['thetas'] = np.linspace(start=np.pi / (2 * self_['nint']), stop=stop - stop / self_['nint'],
-                                          num=self_['nint'])
-        case 1:  # Bounding Circle
-            self_['ncoef'] = n
-            self_['nint'] = n * nint_mult
-            self_['thetas'][:self_['nint']] = np.linspace(start=0, stop=2 * np.pi - 2 * np.pi/self_['nint'],
-                                                          num=self_['nint'])
+    elif self_['type_'] == 3:  # Constant Head Line
+        self_['ncoef'] = n
+        self_['nint'] = n * nint_mult
+        stop = 2 * np.pi + 2 * np.pi / self_['nint']
+        self_['thetas'] = np.linspace(start=np.pi / (2 * self_['nint']), stop=stop - stop / self_['nint'],
+                                      num=self_['nint'])
+    elif self_['type_'] == 1:  # Bounding Circle
+        self_['ncoef'] = n
+        self_['nint'] = n * nint_mult
+        self_['thetas'][:self_['nint']] = np.linspace(start=0, stop=2 * np.pi - 2 * np.pi/self_['nint'],
+                                                      num=self_['nint'])
