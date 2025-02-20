@@ -1,6 +1,7 @@
 """
 Notes
 -----
+
 This module contains the element class that is a parent class to all elements.
 """
 
@@ -187,6 +188,25 @@ class Element:
     The parent class for all elements in the andfn model.
     """
     def __init__(self, label, id_, type_):
+        """
+        Initialize the element.
+
+        Parameters
+        ----------
+        label : str
+            The label of the element.
+        id_ : int
+            The id of the element.
+        type_ : int
+            The type of the element.
+            Element Types:
+                0 = Intersection
+                1 = Bounding Circle
+                2 = Well
+                3 = Constant Head Line
+                4 = Impermeable Circle
+                5 = Impermeable Line
+        """
         self.label = label
         self.id_ = id_
         self.type_ = type_
@@ -215,6 +235,10 @@ class Element:
         ----------
         id_ : int
             The id of the element.
+
+        Returns
+        -------
+        None. The id is updated in place.
         """
         self.id_ = id_
 
@@ -226,6 +250,10 @@ class Element:
         ----------
         kwargs : dict
             The properties to change
+
+        Returns
+        -------
+        None. The element is updated in place.
         """
         assert all(key in element_dtype.names for key in kwargs.keys()), 'Invalid property name.'
         assert all(key in element_index_dtype.names for key in kwargs.keys()), 'Invalid property name.'
@@ -236,16 +264,22 @@ class Element:
     def consolidate(self):
         """
         Consolidate into a numpy structures array.
+
+        Returns
+        -------
+        struc_array : np.ndarray
+            The structure array.
+        index_array : np.ndarray
+            The index array.
         """
         struc_array = initiate_elements_array()
 
         for key in self.__dict__.keys():
             if key in element_dtype.names:
-                match key:
-                    case 'frac0' | 'frac1':
-                        struc_array[key][0] = self.__dict__[key].id_
-                    case _:
-                        struc_array[key][0] = self.__dict__[key]
+                if key in ['frac0', 'frac1']:
+                    struc_array[key][0] = self.__dict__[key].id_
+                else:
+                    struc_array[key][0] = self.__dict__[key]
 
         index_array = np.array([(
             self.label,
@@ -258,18 +292,24 @@ class Element:
     def consolidate_hpc(self):
         """
         Consolidate into a numpy structures array for HPC solver.
+
+        Returns
+        -------
+        struc_array : np.ndarray
+            The structure array.
+        index_array : np.ndarray
+            The index array.
         """
         struc_array = initiate_elements_array_hpc()
 
         for key in self.__dict__.keys():
             if key in element_dtype.names:
-                match key:
-                    case 'frac0' | 'frac1':
-                        struc_array[key][0] = self.__dict__[key].id_
-                    case 'thetas' | 'coef' | 'old_coef' | 'dpsi_corr':
-                        struc_array[key][0][:self.__dict__[key].size] = self.__dict__[key]
-                    case _:
-                        struc_array[key][0] = self.__dict__[key]
+                if key in ['frac0', 'frac1']:
+                    struc_array[key][0] = self.__dict__[key].id_
+                elif key in ['thetas', 'coef', 'old_coef', 'dpsi_corr']:
+                    struc_array[key][0][:self.__dict__[key].size] = self.__dict__[key]
+                else:
+                    struc_array[key][0] = self.__dict__[key]
 
         index_array = np.array([(
             self.label,
@@ -282,6 +322,10 @@ class Element:
     def unconsolidate(self, struc_array, index_array, fracs):
         """
         Unconsolidate from a numpy structures array.
+
+        Returns
+        -------
+        None. The element is updated in place.
         """
         for key in self.__dict__.keys():
             if key in element_dtype.names:
@@ -296,6 +340,10 @@ class Element:
     def unconsolidate_hpc(self, struc_array, index_array, fracs):
         """
         Unconsolidate from a numpy structures array for HPC solver.
+
+        Returns
+        -------
+        None. The element is updated in place.
         """
         for key in self.__dict__.keys():
             if key in element_dtype.names:
@@ -324,15 +372,14 @@ class Element:
         nint_mult : int
             The multiplier for the number of integration points.
         """
-        match self.type_:
-            case 0, 3:  # Intersection, Constant Head Line
-                self.ncoef = n
-                self.coef = np.append(self.coef, np.zeros(n-self.coef.size, dtype=complex))
-                self.nint = n * nint_mult
-                self.thetas = np.linspace(start=np.pi / (2 * self.nint), stop=np.pi + np.pi / (2 * self.nint),
-                                          num=self.nint, endpoint=False)
-            case 1:  # Bounding Circle
-                self.ncoef = n
-                self.coef = np.append(self.coef, np.zeros(n-self.coef.size, dtype=complex))
-                self.nint = n * nint_mult
-                self.thetas = np.linspace(start=0, stop=2 * np.pi, num=self.nint, endpoint=False)
+        if self.type_ in [0, 3]:  # Intersection, Constant Head Line
+            self.ncoef = n
+            self.coef = np.append(self.coef, np.zeros(n-self.coef.size, dtype=complex))
+            self.nint = n * nint_mult
+            self.thetas = np.linspace(start=np.pi / (2 * self.nint), stop=np.pi + np.pi / (2 * self.nint),
+                                      num=self.nint, endpoint=False)
+        elif self.type_ == 1:  # Bounding Circle
+            self.ncoef = n
+            self.coef = np.append(self.coef, np.zeros(n-self.coef.size, dtype=complex))
+            self.nint = n * nint_mult
+            self.thetas = np.linspace(start=0, stop=2 * np.pi, num=self.nint, endpoint=False)

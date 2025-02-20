@@ -1,7 +1,7 @@
 """
 Notes
 -----
-This module contains some geometrical functions.
+This module contains some geometrical functions for e.g. conformal mappings and mapping between 3D space and fracture planes.
 """
 
 import numpy as np
@@ -21,6 +21,12 @@ def map_z_line_to_chi(z, endpoints):
     """
     Function that maps the exterior of a line in the complex z-plane onto the exterior of the unit circle in the
     complex chi-plane.
+
+    .. math::
+            Z = \frac{ 2z - \text{endpoints}[0] - \text{endpoints}[1] }{ \text{endpoints}[1] - \text{endpoints}[0]}
+
+    .. math::
+            \chi = \frac{1}{2} \left( z + \sqrt{z - 1} \sqrt{z + 1} \right)
 
     Parameters
     ----------
@@ -146,6 +152,9 @@ def map_2d_to_3d(z, fractures):
     """
     Function that maps a point in the complex z-plane to a point in the 3D plane
 
+    .. math::
+            x_i = x u_i + y v_i + x_{i,0}
+
     Parameters
     ----------
     z : complex | np.ndarray
@@ -165,7 +174,16 @@ def map_2d_to_3d(z, fractures):
 
 def map_3d_to_2d(point, fractures):
     """
-    Function that maps a point in the 3D plane to a point in the complex z-plane
+    Function that maps a point in the 3D plane to a point in the complex z-plane.
+
+    .. math::
+            x = \left( x_i - x_{i,0} \right) u_i
+
+    .. math::
+            y = \left( x_i - x_{i,0} \right) v_i
+
+    .. math::
+            z = x + iy
 
     Parameters
     ----------
@@ -184,6 +202,23 @@ def map_3d_to_2d(point, fractures):
     return x + 1j * y
 
 def fracture_intersection(frac0, frac1):
+    """
+    Function that calculates the intersection between two fractures.
+
+    Parameters
+    ----------
+    frac0 : Fracture
+        The first fracture.
+    frac1 : Fracture
+        The second fracture.
+
+    Returns
+    -------
+    endpoints0 : list
+        The endpoints of the intersection line in the first fracture. If no intersection is found, None is returned.
+    endpoints1 : list
+        The endpoints of the intersection line in the second fracture. If no intersection is found, None is returned.
+    """
     # vector parallel to the intersection line
     n = np.cross(frac0.normal, frac1.normal)
     if n.sum() == 0:  # Check if the normals are parallel
@@ -239,6 +274,25 @@ def fracture_intersection(frac0, frac1):
 
 
 def line_circle_intersection(z0, z1, radius):
+    """
+    Function that calculates the intersection between a line and a circle.
+
+    Parameters
+    ----------
+    z0 : complex
+        A point on the line.
+    z1 : complex
+        Another point on the line.
+    radius : float
+        The radius of the circle.
+
+    Returns
+    -------
+    z_0 : complex
+        The first intersection point. If no intersection is found, None is returned.
+    z_1 : complex
+        The second intersection point. If no intersection is found, None is returned.
+    """
     # Get the components of the line equation y = mx + x0
     dx = np.real(z1 - z0)
     dy = np.imag(z1 - z0)
@@ -266,6 +320,25 @@ def line_circle_intersection(z0, z1, radius):
 
 
 def line_line_intersection(z0, z1, z2, z3):
+    """
+    Function that calculates the intersection between two lines.
+
+    Parameters
+    ----------
+    z0 : complex
+        A point on the first line.
+    z1 : complex
+        Another point on the first line.
+    z2 : complex
+        A point on the second line.
+    z3 : complex
+        Another point on the second line.
+
+    Returns
+    -------
+    z : complex
+        The intersection point. If no intersection is found, None is returned.
+    """
 
     determinant = ((np.conj(z1) - np.conj(z0))*(z3 - z2) - (z1 - z0)*(np.conj(z3) - np.conj(z2)))
 
@@ -280,6 +353,27 @@ def line_line_intersection(z0, z1, z2, z3):
 
 
 def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0, ncoef=10, nint=20):
+    """
+    Function that generates a number of fractures with random radii, centers and normals.
+
+    Parameters
+    ----------
+    n_fractures : int
+        Number of fractures to generate.
+    radius_factor : float
+        The maximum radius of the fractures.
+    center_factor : float
+        The maximum distance from the origin of the centers of the fractures.
+    ncoef : int
+        The number of coefficients for the bounding circle.
+    nint : int
+        The number of integration points for the bounding circle.
+
+    Returns
+    -------
+    fractures : list
+        A list of the generated fractures.
+    """
     fractures = []
     radii = np.random.rand(n_fractures) * radius_factor
     centers = np.random.rand(n_fractures, 3) * center_factor
@@ -292,6 +386,26 @@ def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0, ncoef
 
 
 def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
+    """
+    Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
+    a given fracture, the function iterates through the list of fractures and finds all connected fractures.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+    ncoef : int
+        The number of coefficients for the intersection elements.
+    nint : int
+        The number of integration points for the intersection elements.
+    fracture_surface : Fracture
+        The fracture to start the search from. If None, the first fracture in the list is used.
+
+    Returns
+    -------
+    connected_fractures : list
+        A list of connected fractures.
+    """
     connected_fractures = []
     fracture_list = fractures.copy()
     if fracture_surface is not None:
@@ -333,6 +447,33 @@ def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
 
 
 def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, label):
+    """
+    Function that sets a constant head boundary condition on the intersection line between a fracture and a defined
+    fracture. The constant head lines are added to the fractures in the list.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+    ncoef : int
+        The number of coefficients for the constant head line.
+    nint : int
+        The number of integration points for the constant head line.
+    head : float
+        The hydraulic head value.
+    center : np.ndarray
+        The center of the constant head fracture plane.
+    radius : float
+        The radius of the constant head fracture plane.
+    normal : np.ndarray
+        The normal vector of the constant head fracture plane.
+    label : str
+        The label of the constant head fracture plane.
+
+    Returns
+    -------
+    None
+    """
     fracture_surface = andfn.Fracture(label, 1, radius, center, normal, ncoef, nint)
     fr = fracture_surface
     for fr2 in fractures:

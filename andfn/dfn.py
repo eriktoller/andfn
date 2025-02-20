@@ -249,99 +249,98 @@ class DFN:
             # Load the elements
             elements = []
             for i in range(len(hf['elements/index/label'])):
-                match hf['elements/index/type_'][i]:
-                    case 0:  # Intersection
-                        elements.append(
-                            Intersection(
-                                label=hf['elements/index/label'][i].decode(),
-                                id_=hf['elements/index/id_'][i],
-                                endpoints0=hf[f'elements/properties/endpoints0/{i}'][()],
-                                endpoints1=hf[f'elements/properties/endpoints1/{i}'][()],
-                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
-                                nint=hf[f'elements/properties/nint/{i}'][()],
-                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
-                                frac1=fracs[hf[f'elements/properties/frac1/{i}'][()]],
-                                thetas=hf[f'elements/properties/thetas/{i}'][()],
-                                coef=hf[f'elements/properties/coef/{i}'][()],
-                                error=hf[f'elements/properties/error/{i}'][()]
-                            )
+                if hf['elements/index/type_'][i] == 0:  # Intersection
+                    elements.append(
+                        Intersection(
+                            label=hf['elements/index/label'][i].decode(),
+                            id_=hf['elements/index/id_'][i],
+                            endpoints0=hf[f'elements/properties/endpoints0/{i}'][()],
+                            endpoints1=hf[f'elements/properties/endpoints1/{i}'][()],
+                            ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                            nint=hf[f'elements/properties/nint/{i}'][()],
+                            frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                            frac1=fracs[hf[f'elements/properties/frac1/{i}'][()]],
+                            thetas=hf[f'elements/properties/thetas/{i}'][()],
+                            coef=hf[f'elements/properties/coef/{i}'][()],
+                            error=hf[f'elements/properties/error/{i}'][()]
                         )
-                    case 1:  # Bounding circle
-                        elements.append(
-                            BoundingCircle(
-                                label=hf['elements/index/label'][i].decode(),
-                                id_=hf['elements/index/id_'][i],
-                                radius=hf[f'elements/properties/radius/{i}'][()],
-                                center=hf[f'elements/properties/center/{i}'][()],
-                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
-                                thetas=hf[f'elements/properties/thetas/{i}'][()],
-                                coef=hf[f'elements/properties/coef/{i}'][()],
-                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
-                                nint=hf[f'elements/properties/nint/{i}'][()],
-                                dpsi_corr=hf[f'elements/properties/dpsi_corr/{i}'][()],
-                                error=hf[f'elements/properties/error/{i}'][()]
-                            )
+                    )
+                elif hf['elements/index/type_'][i] == 1:  # Bounding circle
+                    elements.append(
+                        BoundingCircle(
+                            label=hf['elements/index/label'][i].decode(),
+                            id_=hf['elements/index/id_'][i],
+                            radius=hf[f'elements/properties/radius/{i}'][()],
+                            center=hf[f'elements/properties/center/{i}'][()],
+                            frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                            thetas=hf[f'elements/properties/thetas/{i}'][()],
+                            coef=hf[f'elements/properties/coef/{i}'][()],
+                            ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                            nint=hf[f'elements/properties/nint/{i}'][()],
+                            dpsi_corr=hf[f'elements/properties/dpsi_corr/{i}'][()],
+                            error=hf[f'elements/properties/error/{i}'][()]
                         )
-                    case 2:  # Well
-                        elements.append(
-                            Well(
-                                label=hf['elements/index/label'][i].decode(),
-                                id_=hf['elements/index/id_'][i],
-                                radius=hf[f'elements/properties/radius/{i}'][()],
-                                center=hf[f'elements/properties/center/{i}'][()],
-                                head=hf[f'elements/properties/head/{i}'][()],
-                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
-                                q=hf[f'elements/properties/q/{i}'][()],
-                                phi=hf[f'elements/properties/phi/{i}'][()],
-                                error=hf[f'elements/properties/error/{i}'][()]
-                            )
+                    )
+                elif hf['elements/index/type_'][i] == 2:  # Well
+                    elements.append(
+                        Well(
+                            label=hf['elements/index/label'][i].decode(),
+                            id_=hf['elements/index/id_'][i],
+                            radius=hf[f'elements/properties/radius/{i}'][()],
+                            center=hf[f'elements/properties/center/{i}'][()],
+                            head=hf[f'elements/properties/head/{i}'][()],
+                            frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                            q=hf[f'elements/properties/q/{i}'][()],
+                            phi=hf[f'elements/properties/phi/{i}'][()],
+                            error=hf[f'elements/properties/error/{i}'][()]
                         )
-                    case 3:  # Constant head line
-                        elements.append(
-                            ConstantHeadLine(
-                                label=hf['elements/index/label'][i].decode(),
-                                id_=hf['elements/index/id_'][i],
-                                head=hf[f'elements/properties/head/{i}'][()],
-                                endpoints0=hf[f'elements/properties/endpoints0/{i}'][()],
-                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
-                                nint=hf[f'elements/properties/nint/{i}'][()],
-                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
-                                phi=hf[f'elements/properties/phi/{i}'][()],
-                                thetas=hf[f'elements/properties/thetas/{i}'][()],
-                                coef=hf[f'elements/properties/coef/{i}'][()],
-                                error=hf[f'elements/properties/error/{i}'][()]
-                            )
+                    )
+                elif hf['elements/index/type_'][i] == 3:  # Constant head line
+                    elements.append(
+                        ConstantHeadLine(
+                            label=hf['elements/index/label'][i].decode(),
+                            id_=hf['elements/index/id_'][i],
+                            head=hf[f'elements/properties/head/{i}'][()],
+                            endpoints0=hf[f'elements/properties/endpoints0/{i}'][()],
+                            ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                            nint=hf[f'elements/properties/nint/{i}'][()],
+                            frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                            phi=hf[f'elements/properties/phi/{i}'][()],
+                            thetas=hf[f'elements/properties/thetas/{i}'][()],
+                            coef=hf[f'elements/properties/coef/{i}'][()],
+                            error=hf[f'elements/properties/error/{i}'][()]
                         )
-                    case 4:  # Impermeable circle
-                        elements.append(
-                            ImpermeableCircle(
-                                label=hf['elements/index/label'][i].decode(),
-                                id_=hf['elements/index/id_'][i],
-                                radius=hf[f'elements/properties/radius/{i}'][()],
-                                center=hf[f'elements/properties/center/{i}'][()],
-                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
-                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
-                                nint=hf[f'elements/properties/nint/{i}'][()],
-                                thetas=hf[f'elements/properties/thetas/{i}'][()],
-                                coef=hf[f'elements/properties/coef/{i}'][()],
-                                error=hf[f'elements/properties/error/{i}'][()]
-                            )
+                    )
+                elif hf['elements/index/type_'][i] == 4:  # Impermeable circle
+                    elements.append(
+                        ImpermeableCircle(
+                            label=hf['elements/index/label'][i].decode(),
+                            id_=hf['elements/index/id_'][i],
+                            radius=hf[f'elements/properties/radius/{i}'][()],
+                            center=hf[f'elements/properties/center/{i}'][()],
+                            frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                            ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                            nint=hf[f'elements/properties/nint/{i}'][()],
+                            thetas=hf[f'elements/properties/thetas/{i}'][()],
+                            coef=hf[f'elements/properties/coef/{i}'][()],
+                            error=hf[f'elements/properties/error/{i}'][()]
                         )
-                    case 5:  # Impermeable line
-                        elements.append(
-                            ImpermeableLine(
-                                label=hf['elements/index/label'][i].decode(),
-                                id_=hf['elements/index/id_'][i],
-                                endpoints0=hf[f'elements/properties/focis/{i}'][()],
-                                frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
-                                ncoef=hf[f'elements/properties/ncoef/{i}'][()],
-                                nint=hf[f'elements/properties/nint/{i}'][()],
-                                thetas=hf[f'elements/properties/thetas/{i}'][()],
-                                coef=hf[f'elements/properties/coef/{i}'][()],
-                                dpsi_corr=hf[f'elements/properties/dpsi_corr/{i}'][()],
-                                error=hf[f'elements/properties/error/{i}'][()]
-                            )
+                    )
+                elif hf['elements/index/type_'][i] == 5:  # Impermeable line
+                    elements.append(
+                        ImpermeableLine(
+                            label=hf['elements/index/label'][i].decode(),
+                            id_=hf['elements/index/id_'][i],
+                            endpoints0=hf[f'elements/properties/focis/{i}'][()],
+                            frac0=fracs[hf[f'elements/properties/frac0/{i}'][()]],
+                            ncoef=hf[f'elements/properties/ncoef/{i}'][()],
+                            nint=hf[f'elements/properties/nint/{i}'][()],
+                            thetas=hf[f'elements/properties/thetas/{i}'][()],
+                            coef=hf[f'elements/properties/coef/{i}'][()],
+                            dpsi_corr=hf[f'elements/properties/dpsi_corr/{i}'][()],
+                            error=hf[f'elements/properties/error/{i}'][()]
                         )
+                    )
 
             # Add the fractures and elements to the DFN
             for e in elements:

@@ -12,6 +12,9 @@ def asym_expansion(chi, coef):
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
     coefficients.
 
+    .. math::
+        f(\chi) = \sum_{n=0}^{\infty} c_n \chi^{-n}
+
     Parameters
     ----------
     chi : complex | np.ndarray
@@ -34,8 +37,11 @@ def asym_expansion(chi, coef):
 
 def asym_expansion_d1(chi, coef):
     """
-    Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
-    coefficients.
+    Function that calculates the first derivative of the asymptotic expansion starting from 0 for a given point chi and
+    an array of coefficients.
+
+    .. math::
+        f(\chi) = -\sum_{n=0}^{\infty} n c_n \chi^{-n-1}
 
     Parameters
     ----------
@@ -61,6 +67,9 @@ def taylor_series(chi, coef):
     Function that calculates the Taylor series starting from 0 for a given point chi and an array of
     coefficients.
 
+    .. math::
+        f(\chi) = \sum_{n=0}^{\infty} c_n \chi^{n}
+
     Parameters
     ----------
     chi : complex
@@ -83,8 +92,11 @@ def taylor_series(chi, coef):
 
 def taylor_series_d1(chi, coef):
     """
-    Function that calculates the Taylor series starting from 0 for a given point chi and an array of
+    Function that calculates the first derivative of the Taylor series starting from 0 for a given point chi and an array of
     coefficients.
+
+    .. math::
+        f(\chi) = \sum_{n=1}^{\infty} n c_n \chi^{n-1}
 
     Parameters
     ----------
@@ -107,6 +119,9 @@ def taylor_series_d1(chi, coef):
 def well_chi(chi, q):
     """
     Function that return the complex potential for a well as a function of chi.
+
+    .. math::
+        \omega = \frac{q}{2\pi} \log(\chi)
 
     Parameters
     ----------

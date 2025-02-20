@@ -7,7 +7,7 @@ Method (AEM).
 # version number
 __name__ = "andfn"
 __author__ = "Erik A.L. Toller"
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 # Import all classes and functions
 from andfn.bounding import BoundingCircle
