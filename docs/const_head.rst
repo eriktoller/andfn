@@ -8,3 +8,9 @@ This is the module that contains the constant head elements of the DFN.
    :special-members: __init__, __str__
    :undoc-members:
    :show-inheritance:
+
+.. autoclass:: andfn.const_head
+   :members:
+   :special-members: __init__, __str__
+   :undoc-members:
+   :show-inheritance:
