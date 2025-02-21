@@ -4,8 +4,6 @@ Notes
 This module contains the impermeable object classes.
 """
 import numpy as np
-from PIL.ImageChops import offset
-
 from .element import Element
 from . import math_functions as mf
 from . import geometry_functions as gf
