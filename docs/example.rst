@@ -3,7 +3,7 @@ Example
 
 This is an example of a andfn model.
 
-Tempelate
+Template
 ---------
 
 This is a working template of an andfn model that produces the following plot:

@@ -2,6 +2,8 @@
 Notes
 -----
 This module contains some geometrical functions for e.g. conformal mappings and mapping between 3D space and fracture planes.
+
+The geometrical functions are used by the element classes and to create the DFN in the andfn module.
 """
 
 import numpy as np

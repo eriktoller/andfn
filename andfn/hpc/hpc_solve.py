@@ -1,7 +1,7 @@
 """
 Notes
 -----
-This module contains the hpc_solve class.
+This module contains the HPC solve functions.
 """
 import time
 

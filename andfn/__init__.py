@@ -1,4 +1,5 @@
-"""Copyright (C), 2024, Erik A. L. Toller.
+"""
+Copyright (C), 2024, Erik A. L. Toller.
 
 AnDFN is a computer program that calculated the flow in a discrete fracture network (DFN) using the Analytic Element
 Method (AEM).
@@ -7,7 +8,7 @@ Method (AEM).
 # version number
 __name__ = "andfn"
 __author__ = "Erik A.L. Toller"
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 # Import all classes and functions
 from andfn.bounding import BoundingCircle

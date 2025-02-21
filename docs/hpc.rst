@@ -1,7 +1,10 @@
 HPC
 ===
 
-This module contains the High Performance Computing (HPC) functions.
+This module contains the High Performance Computing (HPC) functions. The module uses Numba to create a compiled version
+of the solve and plotter. The code is separated into different files, each containing a different set of functions.
+
+The compiled function utilizes parallel processing to speed up the computation.
 
 These functions are not to be called from the user directly, but are used by the other functions in the package.
 

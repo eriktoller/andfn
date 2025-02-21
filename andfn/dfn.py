@@ -2,6 +2,9 @@
 Notes
 -----
 This module contains the DFN class.
+
+The DFN class is the main class for the AnDFN package. It contains the fractures and elements of the DFN and methods to
+solve the DFN.
 """
 import concurrent
 from datetime import datetime
@@ -1201,6 +1204,50 @@ class DFN:
                             color='#000000', line_width=3)
             print(f'\rPlotting elements: {i + 1} / {len(self.elements)}', end='')
         print('')
+
+    def plot_sparse_matrix(self, save=False, name='sparse_matrix.png'):
+        """
+        Plots the sparse matrix of the DFN.
+
+        Parameters
+        ----------
+        save : bool
+            Whether to save the plot.
+        name : str
+            The name of the plot.
+
+        Returns
+        -------
+        None
+        """
+        # Check if the discharge matrix has been built
+        if self.discharge_matrix is None:
+            self.build_discharge_matrix()
+
+        # Set up the figure
+        fig, ax = plt.subplots(figsize=(10, 10))
+        # set background color of plot surface
+        fig.set_facecolor('black')
+        ax.set_facecolor('black')
+        # set tick and title color and axis box
+        ax.tick_params(axis='x', colors='white')
+        ax.tick_params(axis='y', colors='white')
+        ax.title.set_color('white')
+        for spine in ['top', 'left', 'right', 'bottom']:
+            ax.spines[spine].set_color('white')
+        ax.spy(self.discharge_matrix_sparse, markersize=0.5, color='white')
+        # Equal axis
+        ax.set_aspect('equal')
+
+        num_entries = self.discharge_matrix_sparse.nnz
+        num_zeros = self.discharge_matrix_sparse.shape[0] * self.discharge_matrix_sparse.shape[1]
+        # title
+        ax.set_title(f'Sparse matrix of the DFN\nNumber of fractures: {self.number_of_fractures()}, Number of elements: {self.number_of_elements()}'
+                     f'\nNumber of entries: {num_entries}, Number of zeros: '
+                     f'{num_zeros - num_entries}\nFilled percentage: {num_entries / num_zeros * 100:.2f}%')
+        if save:
+            plt.savefig(name)
+        plt.show()
 
     ####################################################################################################################
     #                    Streamline tracking functions                                                                 #

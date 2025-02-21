@@ -1,7 +1,9 @@
 """
 Notes
 -----
-This module contains some general mathematical functions.
+This module contains some general mathematical functions, e.g. series expansions and Cauchy integrals.
+
+The mathematical functions are used by the element classes in the andfn module.
 """
 
 import numpy as np
@@ -117,7 +119,7 @@ def taylor_series_d1(chi, coef):
     return res
 
 def well_chi(chi, q):
-    """
+    r"""
     Function that return the complex potential for a well as a function of chi.
 
     .. math::

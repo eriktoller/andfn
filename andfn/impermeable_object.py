@@ -4,6 +4,8 @@ Notes
 This module contains the impermeable object classes.
 """
 import numpy as np
+from PIL.ImageChops import offset
+
 from .element import Element
 from . import math_functions as mf
 from . import geometry_functions as gf
@@ -104,7 +106,7 @@ class ImpermeableCircle(Element):
         np.ndarray
             The array of z points
         """
-        chi = np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) * (1 + offset)
+        chi = np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) * (1 + offset/self.radius)
         return gf.map_chi_to_z_circle(chi, self.radius, self.center)
 
     def calc_omega(self, z):
@@ -169,7 +171,7 @@ class ImpermeableCircle(Element):
                                     lambda chi: gf.map_chi_to_z_circle(chi, self.radius, self.center))
         s[0] = 0.0 + 0.0j
 
-        self.error = np.max(np.abs(s - self.coef))
+        self.error = np.max(np.abs(np.conj(s) - self.coef))
         self.coef = np.conj(s)
 
 

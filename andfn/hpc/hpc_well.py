@@ -1,4 +1,9 @@
+"""
+Notes
+-----
+This module contains the HPC well functions.
 
+"""
 
 import numpy as np
 import numba as nb
