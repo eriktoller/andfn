@@ -9,7 +9,7 @@ This is the module that contains the constant head elements of the DFN.
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: andfn.const_head
+.. autoclass:: andfn.const_head.ConstHeadLine
    :members:
    :special-members: __init__, __str__
    :undoc-members:
