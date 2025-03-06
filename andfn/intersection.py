@@ -102,8 +102,8 @@ class Intersection(Element):
             The array of z points
         """
         if frac_is == self.frac0:
-            return np.linspace(self.endpoints0[0], self.endpoints0[1], n)
-        return np.linspace(self.endpoints1[0], self.endpoints1[1], n)
+            return np.linspace(self.endpoints0[0], self.endpoints0[1], n+2)[1:n+1]
+        return np.linspace(self.endpoints1[0], self.endpoints1[1], n+2)[1:n+1]
 
     def omega_along_element(self, n, frac_is):
         """

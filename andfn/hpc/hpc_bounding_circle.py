@@ -25,6 +25,29 @@ def get_chi(self_, z):
     chi = gf.map_z_circle_to_chi(z, self_['radius'])
     return chi
 
+
+@nb.jit(nopython=NO_PYTHON, inline='always')
+def z_array(self_, n):
+    """
+    Returns an array of points in the complex z plane.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    n : int
+        The number of points to return.
+
+    Returns
+    -------
+    z : np.ndarray[complex]
+        The array of points in the complex z plane.
+    """
+    theta = mf.calc_thetas(n, self_['type_'])
+    chi = np.exp(1j * theta)
+    z = gf.map_chi_to_z_circle(chi, self_['radius'])
+    return z
+
 @nb.jit(nopython=NO_PYTHON, inline='always')
 def calc_omega(self_, z):
     """
@@ -128,6 +151,24 @@ def find_branch_cuts(self_, fracture_struc_array, element_struc_array, work_arra
 
 @nb.jit(nopython=NO_PYTHON)
 def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
+    """
+    Get the correction to the stream function due to the branch cuts.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    fracture_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+    work_array : np.ndarray[dtype_work]
+        The work array
+
+    Returns
+    -------
+    Edits the self_ array in place.
+    """
     if work_array['len_discharge_element'] == 0:
         find_branch_cuts(self_, fracture_struc_array, element_struc_array, work_array)
     # set dpsi_corr to zero
@@ -155,11 +196,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
 
     Returns
     -------
-    s : np.ndarray[np.complex128]
-        The resulting coefficients for the bounding circle
-    error : np.float64
-        The error in the calculation
-
+    Edits the self_ array and works_array in place.
     """
 
     get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array)
@@ -167,11 +204,11 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     work_array['old_coef'][:self_['ncoef']] = self_['coef'][:self_['ncoef']]
     mf.cauchy_integral_domega(self_['nint'], self_['ncoef'], self_['thetas'][:self_['nint']], self_['dpsi_corr'][:self_['nint']-1],
                                    frac0, self_['id_'], element_struc_array,
-                                   self_['radius'], work_array, self_['coef'][:self_['ncoef']])
-    self_['coef'][:self_['ncoef']] = -self_['coef'][:self_['ncoef']]
-    self_['error'] = np.max(np.abs(self_['coef'][:self_['ncoef']] - work_array['old_coef'][:self_['ncoef']]))
-
-    #return s, error
+                                   self_['radius'], work_array, work_array['coef'][:self_['ncoef']])
+    work_array['coef'][:self_['ncoef']] = -work_array['coef'][:self_['ncoef']]
+    #self_['error'] = np.max(np.abs(work_array['coef'][:self_['ncoef']] - work_array['old_coef'][:self_['ncoef']]))
+    self_['error_old'] = self_['error']
+    self_['error'] = mf.calc_error(work_array['coef'][:self_['ncoef']], work_array['old_coef'][:self_['ncoef']])
 
 
 @nb.jit(nopython=NO_PYTHON)

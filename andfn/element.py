@@ -48,7 +48,8 @@ element_dtype_hpc = np.dtype([
         ('coef', np.complex128, MAX_NCOEF),
         ('old_coef', np.complex128, MAX_NCOEF),
         ('dpsi_corr', np.float64, MAX_NCOEF*2),
-        ('error', np.float64)
+        ('error', np.float64),
+        ('error_old', np.float64)
 ])
 """
 The element data type for the HPC solver. Note that not all elements have all properties.

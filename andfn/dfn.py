@@ -150,6 +150,7 @@ class DFN:
         self.discharge_elements = None
         self.discharge_elements_index = None
         self.lup = None
+        self.rcm_order = None
         self.discharge_error = 1
 
         # Initialize the structure array
@@ -624,9 +625,14 @@ class DFN:
     #                      Solve functions                                                                             #
     ####################################################################################################################
 
-    def build_discharge_matrix(self):
+    def build_discharge_matrix(self, rcm):
         """
         Builds the discharge matrix for the DFN and adds it to the DFN.
+
+        Parameters
+        ----------
+        rcm : bool
+            If True, the reverse Cuthill-McKee algorithm is used to reorder the sparse matrix
         """
         self.get_discharge_elements()
         size = len(self.discharge_elements) + self.number_of_fractures()
@@ -735,10 +741,14 @@ class DFN:
             row += 1
 
         # create the csr sparse matrix
-        matrix_sparse = sp.sparse.csr_matrix((data, (rows, cols)), shape=(size, size))
+        matrix_sparse = sp.sparse.csc_matrix((data, (rows, cols)), shape=(size, size))
 
         self.discharge_matrix = matrix
         self.discharge_matrix_sparse = matrix_sparse
+        if rcm:
+            rcm_order = sp.sparse.csgraph.reverse_cuthill_mckee(self.discharge_matrix_sparse)
+            self.discharge_matrix_sparse = self.discharge_matrix_sparse[rcm_order, :][:, rcm_order]
+            self.rcm_order = rcm_order
 
     def lu_decomposition(self):
         """
@@ -792,8 +802,8 @@ class DFN:
         if lu_decomp:
             discharges = self.lup.solve(head_matrix)
         else:
-            #discharges = sp.sparse.linalg.spsolve(self.discharge_matrix, head_matrix)
-            discharges = np.linalg.solve(self.discharge_matrix, head_matrix)
+            discharges = sp.sparse.linalg.spsolve(self.discharge_matrix_sparse, head_matrix)
+            #discharges = np.linalg.solve(self.discharge_matrix, head_matrix)
 
         error_list = []
         # Set the discharges for each element
@@ -827,7 +837,7 @@ class DFN:
         return 0
 
     def solve(self, max_error=1e-5, max_iterations=50, boundary_check=False, tolerance=1e-2, n_boundary_check=100,
-              max_iteration_boundary=5, coef_increase=1.5, increase_check=True, lu_decomp=False):
+              max_iteration_boundary=5, coef_increase=1.5, increase_check=True, lu_decomp=False, rcm=False):
         """
         Solves the DFN and saves the coefficients to the elements.
         """
@@ -836,7 +846,7 @@ class DFN:
             self.get_elements()
         # Check if the discharge matrix has been built
         if self.discharge_matrix is None:
-            self.build_discharge_matrix()
+            self.build_discharge_matrix(rcm)
         if lu_decomp:
             self.lu_decomposition()
 
@@ -910,13 +920,14 @@ class DFN:
 
         print(f'Solved DFN in {datetime.now() - start}.')
 
-    def hpc_solve(self, max_error=1e-5, max_iterations=50):
+    def hpc_solve(self, max_error=1e-5, max_iterations=20, rcm=False):
         """
         Solves the DFN on a HPC.
         """
         self.get_elements()
         self.consolidate_dfn(hpc=True)
-        self.build_discharge_matrix()
+        self.build_discharge_matrix(rcm)
+        print(f'Number of elements: {len(self.elements)} \nNumber of fractures: {len(self.fractures)} \nNumber of entries in discharge matrix: {self.discharge_matrix_sparse.getnnz()}')
         self.elements_struc_array = hpc_solve(self.fractures_struc_array_hpc, self.elements_struc_array_hpc,
                                                     self.discharge_matrix_sparse, self.discharge_int, max_error, max_iterations)
         self.unconsolidate_dfn(hpc=True)
@@ -926,7 +937,7 @@ class DFN:
     ####################################################################################################################
 
     def initiate_plotter(self, window_size=(800, 800), grid=False, lighting='light kit', title=True, off_screen=False,
-                         scale=1, axis=True):
+                         scale=1, axis=True, notebook=False):
         """
         Initiates the plotter for the DFN.
         Parameters
@@ -945,13 +956,15 @@ class DFN:
             The scale of the plot.
         axis : bool
             Whether to add the axis to the plot.
+        notebook : bool
+            Whether to plot in a notebook. Set this to true when using Jupyter notebooks.
 
         Returns
         -------
         pl : pyvista.Plotter
             The plotter object.
         """
-        pl = pv.Plotter(window_size=window_size, lighting=lighting, off_screen=off_screen)
+        pl = pv.Plotter(window_size=window_size, lighting=lighting, off_screen=off_screen, notebook=notebook)
         if axis:
             _ = pl.add_axes(
                 line_width=2*scale,
@@ -1235,7 +1248,7 @@ class DFN:
         ax.title.set_color('white')
         for spine in ['top', 'left', 'right', 'bottom']:
             ax.spines[spine].set_color('white')
-        ax.spy(self.discharge_matrix_sparse, markersize=0.5, color='white')
+        ax.spy( self.discharge_matrix_sparse, markersize=0.5, color='white')
         # Equal axis
         ax.set_aspect('equal')
 

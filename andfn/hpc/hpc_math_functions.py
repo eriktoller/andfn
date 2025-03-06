@@ -7,6 +7,9 @@ This module contains some general mathematical functions.
 import numpy as np
 import numba as nb
 import math
+
+from docutils.nodes import inline
+
 from . import NO_PYTHON
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
@@ -261,6 +264,59 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_
     for ii in range(m):
         coef[ii] = 2j * work_array['integral'][ii] / n
     coef[0] = work_array['coef'][0] / 2
+
+@nb.jit(nopython=NO_PYTHON, inline='always')
+def calc_error(coef, coef_ref):
+    """
+    Function that calculates the error between two sets of coefficients.
+
+    Parameters
+    ----------
+    coef : np.ndarray
+        The coefficients to compare
+    coef_ref : np.ndarray
+        The reference coefficients
+
+    Return
+    ------
+    error : float
+        The error
+    """
+    error = 0.0
+    max_coef = np.max(np.abs(coef))
+    for i in range(len(coef)):
+        error += np.abs(coef[i] - coef_ref[i])
+    if max_coef == 0:
+        max_coef = 1
+    return (error/len(coef))
+
+@nb.jit(nopython=NO_PYTHON, inline='always')
+def calc_thetas(n, type_):
+    """
+    Function that calculates the thetas for the unit circle.
+
+    Parameters
+    ----------
+    n : int
+        The number of thetas to calculate
+    type_ : int
+        The element type. 0 for bounding circle, 1 for constant head line, 3 for intersection.
+
+    Return
+    ------
+    thetas : np.ndarray
+        The thetas
+    """
+    thetas = np.zeros(n, dtype=np.float64)
+    # if type_ is 0 or 3
+    del_theta = np.pi / n
+    start = del_theta / 2
+    if type_ == 1:
+        del_theta = 2 * np.pi / n
+        start = 0.0
+    for i in range(n):
+        thetas[i] = start + i * del_theta
+    return thetas
 
 ########################################################################################################################
 # Functions NUMBA

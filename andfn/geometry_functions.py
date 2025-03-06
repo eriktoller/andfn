@@ -429,6 +429,9 @@ def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
                 endpoints0, endpoints1 = fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
                     if fr2 not in []:
+                        #length = np.linalg.norm(endpoints0[0] - endpoints0[1])
+                        #if length < 1e-1*fr.radius or length < 1e-1*fr2.radius:
+                        #    continue
                         endpoints01 = shorten_line(endpoints0[0], endpoints0[1], AMOUNT)
                         endpoints11 = shorten_line(endpoints1[0], endpoints1[1], AMOUNT)
                         intersections = intersection.Intersection(f'{fr.label}_{fr2.label}', endpoints01, endpoints11, fr, fr2, ncoef, nint)

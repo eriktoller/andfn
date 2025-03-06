@@ -106,7 +106,7 @@ class ConstantHeadLine(Element):
         np.ndarray
             The array of z points
         """
-        return np.linspace(self.endpoints0[0], self.endpoints0[1], n)
+        return np.linspace(self.endpoints0[0], self.endpoints0[1], n+2)[1:n+1]
 
     def omega_along_element(self, n, frac_is):
         """
