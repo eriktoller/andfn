@@ -14,15 +14,21 @@ The package is uploaded to the Python Package Index (PyPI) and can be installed 
 
 Install the package:
 
+.. code-block:: console
+
     pip install andfn
 
 Update the package to the latest version:
 
-   pip install andfn  --upgrade
+.. code-block:: console
+
+    pip install andfn  --upgrade
 
 Uninstall the package:
 
-   pip uninstall andfn
+.. code-block:: console
+
+    pip uninstall andfn
 
 .. toctree::
     :maxdepth: 1
