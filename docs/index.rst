@@ -13,17 +13,14 @@ Installation
 The package is uploaded to the Python Package Index (PyPI) and can be installed using pip.
 
 Install the package:
-.. code:: console
 
-   pip install andfn
+    pip install andfn
 
 Update the package to the latest version:
-.. code:: console
 
    pip install andfn  --upgrade
 
 Uninstall the package:
-.. code:: console
 
    pip uninstall andfn
 
