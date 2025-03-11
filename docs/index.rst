@@ -22,7 +22,7 @@ Update the package to the latest version:
 
 .. code-block:: console
 
-    pip install andfn  --upgrade
+    pip install andfn --upgrade
 
 Uninstall the package:
 

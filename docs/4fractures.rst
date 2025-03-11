@@ -1,10 +1,5 @@
-Example
-=======
-
-This is an example of a andfn model.
-
-Template
----------
+4 Fractures
+===========
 
 This is a working template of an andfn model that produces the following plot:
 
