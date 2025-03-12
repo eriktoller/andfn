@@ -4,7 +4,6 @@ Notes
 This module contains the HPC solve functions.
 """
 import time
-from zipfile import error
 
 import numpy as np
 import numba as nb
@@ -35,7 +34,7 @@ dtype_z_arrays = np.dtype([
     ])
 
 MAX_COEF = 50
-MULTIPLIER = 1.2
+MULTIPLIER = 1.4
 
 
 def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge_int, max_error, max_iterations):
@@ -118,7 +117,7 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
 
         # Solve the elements
         StartE = time.time()
-        cnt = element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error)
+        cnt = element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, head_matrix, max_error, nit, cnt_error)
         print(f'Solve E time: {time.time() - StartE}')
 
         error, id_ = get_error(element_struc_array)
@@ -131,7 +130,7 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
             print(f'Iteration: {nit}, Max error: {mf.float2str(error)}, Error Q: {mf.float2str(error_q)}, '
                   f'Elements in solve loop: {len(element_struc_array) - cnt}')
 
-        cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, discharge_int, bnd_error, z_int_error, nit)
+        cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, head_matrix, discharge_int, bnd_error, z_int_error, nit)
         print(f'Max boundary error: {np.max(bnd_error):.4e}, Element id: {np.argmax(bnd_error)} [type: '
               f'{element_struc_array[np.argmax(bnd_error)]["type_"]}, ncoef: {element_struc_array[np.argmax(bnd_error)]["ncoef"]}]')
 
@@ -145,9 +144,10 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
             error = 1.0
 
     print(f'Solve time: {time.time() - start}')
-    for i in range(num_elements):
-        e = element_struc_array[i]
-        print(f'Element id: {i}, Type: {e["type_"]}, ncoef: {e["ncoef"]}, Error: {e["error"]}, bnd error: {bnd_error[i]}')
+    # export as csv using numpy
+    np.savetxt('element_struc_array.csv', element_struc_array, delimiter=',', fmt='%s')
+    np.savetxt('bnd_error.csv', bnd_error, delimiter=',', fmt='%s')
+
     return element_struc_array
 
 @nb.jit(nopython=NO_PYTHON)
@@ -226,7 +226,7 @@ def element_solver(num_elements, element_struc_array, fracture_struc_array, work
     return cnt
 
 @nb.jit(nopython=NO_PYTHON, parallel=True, cache=False)
-def element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error):
+def element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, head_matrix, max_error, nit, cnt_error):
     error = 1.0
     nit_el = 0
     while error > max_error and nit_el < 5:
@@ -424,7 +424,7 @@ def build_head_matrix(fractures_struc_array, element_struc_array, discharge_elem
 
 
 #@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=True)
-def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, discharge_int, bnd_error, z_int, nit):
+def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, head_matrix, discharge_int, bnd_error, z_int, nit):
     """
     Builds the head matrix for the DFN and stores it.
 
@@ -448,6 +448,8 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
     matrix : np.ndarray
         The head matrix
     """
+
+    # TODO: See how I can fix the boundary error, is it going up to engough coef or do I need the head cond check in the loop?
 
     cnt_bnd = 0
 
@@ -483,8 +485,15 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
             for i in range(discharge_int):
                 omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
-            head_min = np.min(np.real(omega_vec))/frac0['t']
-            head_max = np.max(np.real(omega_vec))/frac0['t']
+            phi_min = np.min(np.real(omega_vec))
+            phi_max = np.max(np.real(omega_vec))
+            ids = frac0['elements'][:frac0['nelements']]
+            phi_max1, phi_min1 = get_max_min_phi(element_struc_array, fracture_struc_array, ids,
+                                                 e['frac0'], z_int, discharge_int)
+            if np.abs(phi_max1 - phi_min1) < 1e-2:
+                phi_error = 0.0
+            else:
+                phi_error = np.max([np.abs((phi_max - phi_max1)/phi_max), np.abs((phi_min - phi_min1)/phi_min)])
             dpsi = np.imag(omega_vec[1:] - omega_vec[:-1])
             dpsi_pos = work_array[j]['element_pos'][:work_array[j]['len_discharge_element']]
             dpsi_corr = e['dpsi_corr'][dpsi_pos]
@@ -507,6 +516,8 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
             rmse = np.sqrt(np.sum((dpsi-omega)**2)/discharge_int)
             psi_ratio =  np.abs(domega/denom)
             bnd_error[j] = rmse
+            if phi_error > bnd_error[j]:
+                bnd_error[j] = phi_error
 
         if bnd_error[j] < coef_ratio:
             bnd_error[j] = coef_ratio
@@ -547,6 +558,43 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
                             #element_struc_array[id_is2]['error'] = 1e30
             """
     return cnt_bnd
+
+
+def get_max_min_phi(element_struc_array, fracture_struc_array, ids, frac_id, z_int, discharge_int):
+    """
+    Get the maximum and minimum phi values from the elements.
+
+    Parameters
+    ----------
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+
+    Returns
+    -------
+    max_phi : float
+        The maximum phi value
+    min_phi : float
+        The minimum phi value
+    """
+    max_phi = 0.0
+    min_phi = 1e30
+    for j, e in enumerate(element_struc_array[ids]):
+        if e['type_'] in [0, 2, 3]:  # Well, Constant head line
+            z0 = z_int['z0'][ids[j]][:discharge_int]
+            frac0 = fracture_struc_array[e['frac0']]
+            if e['type_'] == 0: # Intersection
+                if e['frac1'] == frac_id:
+                    z0 = z_int['z1'][ids[j]][:discharge_int]
+                    frac0 = fracture_struc_array[e['frac1']]
+            omega_vec = np.zeros(discharge_int, dtype=np.complex128)
+            for i in range(discharge_int):
+                omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array) / discharge_int
+            phi = np.real(np.sum(omega_vec))
+            if phi > max_phi:
+                max_phi = phi
+            if phi < min_phi:
+                min_phi = phi
+    return max_phi, min_phi
 
 @nb.jit(nopython=NO_PYTHON)
 def get_z_int_array(z_int, elements, discharge_int):
