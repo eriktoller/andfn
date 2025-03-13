@@ -32,10 +32,15 @@ def asym_expansion(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    res = chi*0
-    for n in range(len(coef)):
-        res += coef[n] * chi ** -n
-
+    #res = chi*0
+    #for n in range(len(coef)):
+    #    res += coef[n] * chi ** -n
+    res = 0.0 + 0.0j
+    l = len(coef)
+    for n in range(l - 1):
+        res += coef[l - n - 1]
+        res /= chi
+    res += coef[0]
     return res
 
 
@@ -80,9 +85,15 @@ def taylor_series(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    res = chi*0
-    for n, c in enumerate(coef):
-        res += c * chi ** n
+    #res = chi*0
+    #for n, c in enumerate(coef):
+    #    res += c * chi ** n
+    res = 0.0 + 0.0j
+    nn = len(coef)
+    for n in range(nn - 1):
+        res += coef[nn - n - 1]
+        res *= chi
+    res += coef[0]
 
     return res
 
@@ -114,6 +125,9 @@ def taylor_series_d1(chi, coef):
 def well_chi(chi, q):
     """
     Function that return the complex potential for a well as a function of chi.
+
+    .. math::
+        \omega = \frac{q}{2 \pi} \log(\chi)
 
     Parameters
     ----------
@@ -166,7 +180,8 @@ def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, 
         work_array['phi'][ii] = np.real(omega)
     for jj in range(m):
         for ii in range(n):
-            work_array['integral'][jj] += work_array['phi'][ii] * np.exp(-1j * jj * thetas[ii])
+            #work_array['integral'][jj] += work_array['phi'][ii] * np.exp(-1j * jj * thetas[ii])
+            work_array['integral'][jj] += work_array['phi'][ii] * work_array['exp_array'][jj, ii]
 
 
     for ii in range(m):
@@ -259,7 +274,8 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_
         psi0 = psi1
     for jj in range(m):
         for ii in range(n):
-            work_array['integral'][jj] += work_array['psi'][ii] * np.exp(-1j * jj * thetas[ii])
+            #work_array['integral'][jj] += work_array['psi'][ii] * np.exp(-1j * jj * thetas[ii])
+            work_array['integral'][jj] += work_array['psi'][ii] * work_array['exp_array'][jj, ii]
 
     for ii in range(m):
         coef[ii] = 2j * work_array['integral'][ii] / n
@@ -284,10 +300,10 @@ def calc_error(coef, coef_ref):
     """
     error = 0.0
     max_coef = np.max(np.abs(coef))
-    for i in range(len(coef)):
-        error += np.abs(coef[i] - coef_ref[i])
     if max_coef == 0:
         max_coef = 1
+    for i in range(len(coef)):
+        error += np.abs((coef[i] - coef_ref[i]))
     return (error/len(coef))
 
 @nb.jit(nopython=NO_PYTHON, inline='always')
@@ -317,6 +333,12 @@ def calc_thetas(n, type_):
     for i in range(n):
         thetas[i] = start + i * del_theta
     return thetas
+
+@nb.jit(nopython=NO_PYTHON)
+def fill_exp_array(n, m, thetas, exp_array):
+    for jj in range(m):
+        for ii in range(n):
+            exp_array[jj, ii] = np.exp(-1j * jj * thetas[ii])
 
 ########################################################################################################################
 # Functions NUMBA

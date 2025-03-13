@@ -25,7 +25,8 @@ dtype_work = np.dtype([
         ('sign_array', np.int64, MAX_ELEMENTS),
         ('discharge_element', np.int64, MAX_ELEMENTS),
         ('element_pos', np.int64, MAX_ELEMENTS),
-        ('len_discharge_element', np.int64)
+        ('len_discharge_element', np.int64),
+        ('exp_array', np.complex128, (MAX_NCOEF, MAX_NCOEF * 2))
     ])
 
 dtype_z_arrays = np.dtype([
@@ -34,7 +35,9 @@ dtype_z_arrays = np.dtype([
     ])
 
 MAX_COEF = 50
-MULTIPLIER = 1.4
+MULTIPLIER = 5
+
+CACHE = False
 
 
 def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge_int, max_error, max_iterations):
@@ -92,6 +95,13 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
         e['error_old'] = 1e30
         e['error'] = 1e30
 
+    # fill work array ex_array
+    for i, e in enumerate(element_struc_array):
+        n = e['nint']
+        m = e['ncoef']
+        thetas = e['thetas']
+        mf.fill_exp_array(n, m, thetas, work_array[i]['exp_array'])
+
     # solve once to get the initial discharges
     t = mf.calc_thetas(element_struc_array[0]['nint'], element_struc_array[0]['type_'])
     #solve_discharge_matrix(fracture_struc_array, element_struc_array, discharge_matrix, discharge_elements,
@@ -117,7 +127,7 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
 
         # Solve the elements
         StartE = time.time()
-        cnt = element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, head_matrix, max_error, nit, cnt_error)
+        cnt = element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error)
         print(f'Solve E time: {time.time() - StartE}')
 
         error, id_ = get_error(element_struc_array)
@@ -130,23 +140,25 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
             print(f'Iteration: {nit}, Max error: {mf.float2str(error)}, Error Q: {mf.float2str(error_q)}, '
                   f'Elements in solve loop: {len(element_struc_array) - cnt}')
 
-        cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, head_matrix, discharge_int, bnd_error, z_int_error, nit)
+        cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array,
+                                discharge_int, bnd_error, z_int_error, nit, max_error)
         print(f'Max boundary error: {np.max(bnd_error):.4e}, Element id: {np.argmax(bnd_error)} [type: '
               f'{element_struc_array[np.argmax(bnd_error)]["type_"]}, ncoef: {element_struc_array[np.argmax(bnd_error)]["ncoef"]}]')
 
 
 
-        if cnt_bnd > 0:
+        if cnt_bnd > 1:
             error = 1.0
 
         if error < max_error:
             cnt_error += 1
             error = 1.0
 
-    print(f'Solve time: {time.time() - start}')
-    # export as csv using numpy
-    np.savetxt('element_struc_array.csv', element_struc_array, delimiter=',', fmt='%s')
-    np.savetxt('bnd_error.csv', bnd_error, delimiter=',', fmt='%s')
+    solve_time = time.time() - start
+    days, rem = divmod(solve_time, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, seconds = divmod(rem, 60)
+    print(f'Solve time: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds')
 
     return element_struc_array
 
@@ -175,7 +187,7 @@ def get_error(element_struc_array):
             id_ = e['id_']
     return error, id_
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=True)
+@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
 def get_discharge_elements(element_struc_array):
     """
     Get the discharge elements from the element array.
@@ -198,7 +210,7 @@ def get_discharge_elements(element_struc_array):
     discharge_elements = element_struc_array[el]
     return discharge_elements
 
-@nb.jit(nopython=NO_PYTHON, parallel=True, cache=True)
+@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
 def element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error):
     cnt = 0
 
@@ -225,8 +237,8 @@ def element_solver(num_elements, element_struc_array, fracture_struc_array, work
 
     return cnt
 
-@nb.jit(nopython=NO_PYTHON, parallel=True, cache=False)
-def element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, head_matrix, max_error, nit, cnt_error):
+@nb.jit(nopython=NO_PYTHON, parallel=False, cache=False)
+def element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error):
     error = 1.0
     nit_el = 0
     while error > max_error and nit_el < 5:
@@ -237,6 +249,7 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
 
         error, id_ = get_error(element_struc_array)
 
+        """
         # Get the coefficients from the work array
         for i in range(num_elements):
             e = element_struc_array[i]
@@ -247,7 +260,7 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                 work_array[i]['len_discharge_element'] = 0
                 e['coef'][:e['ncoef']] = 0.0
                 e['error'] = 1e30
-
+        """
 
 
         print(f'Error: {mf.float2str(error)}, Element id: {id_} [type: {element_struc_array[id_]["type_"]}, '
@@ -300,7 +313,7 @@ def solve_discharge_matrix(fractures_struc_array, element_struc_array, discharge
     post_matrix_solve(fractures_struc_array, element_struc_array, discharge_elements, discharges)
     print(f'Post solve time: {time.time() - start0}')
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=True)
+@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
 def pre_matrix_solve(fractures_struc_array, element_struc_array, discharge_elements,
                      discharge_int, head_matrix, z_int):
     """
@@ -343,7 +356,7 @@ def pre_matrix_solve(fractures_struc_array, element_struc_array, discharge_eleme
     build_head_matrix(fractures_struc_array, element_struc_array, discharge_elements, discharge_int, head_matrix, z_int)
 
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=True)
+@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
 def post_matrix_solve(fractures_struc_array, element_struc_array, discharge_elements,
                         discharges):
     """
@@ -376,7 +389,7 @@ def post_matrix_solve(fractures_struc_array, element_struc_array, discharge_elem
     for i in nb.prange(len(fractures_struc_array)):
         fractures_struc_array[i]['constant'] = discharges[len(discharge_elements) + i]
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=True)
+@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
 def build_head_matrix(fractures_struc_array, element_struc_array, discharge_elements, discharge_int, head_matrix, z_int):
     """
     Builds the head matrix for the DFN and stores it.
@@ -423,8 +436,9 @@ def build_head_matrix(fractures_struc_array, element_struc_array, discharge_elem
             head_matrix[j] = e['phi'] - np.real(omega)
 
 
-#@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=True)
-def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, head_matrix, discharge_int, bnd_error, z_int, nit):
+#@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
+def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, discharge_int,
+                  bnd_error, z_int, nit, max_error):
     """
     Builds the head matrix for the DFN and stores it.
 
@@ -449,19 +463,20 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
         The head matrix
     """
 
-    # TODO: See how I can fix the boundary error, is it going up to engough coef or do I need the head cond check in the loop?
-
     cnt_bnd = 0
 
     # Add the head for each discharge element
     for j in range(num_elements):
         e = element_struc_array[j]
+        if e['type_'] == 2: # Well
+            bnd_error[j] = 0.0
+            continue
         coefs = e['coef'][:e['ncoef']]
         coef_ratio_re = np.abs(np.real(coefs[-1]) / np.real(coefs[1]))
         coef_ratio_im = np.abs(np.imag(coefs[-1]) / np.imag(coefs[1]))
-        coef_ratio = np.max([coef_ratio_re, coef_ratio_im])
-        if e['type_'] == 2: # Well
-            bnd_error[j] = 0.0
+        coef_ratio = np.nanmax([coef_ratio_re, coef_ratio_im])
+        if np.abs(coefs[-1]) < max_error/10:
+            coef_ratio = 0.0
         elif e['type_'] in [0, 3]:  # Intersection, Constant head line
             frac0 = fracture_struc_array[e['frac0']]
             z0 = z_int['z0'][j][:discharge_int]
@@ -508,13 +523,10 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
             for i in range(discharge_int - 1):
                 omega_vec[i+1] = psi0 + dpsi[i]
                 psi0 = omega_vec[i+1]
-            domega = np.sum(dpsi) / discharge_int
             omega = np.abs( np.sum(np.real(omega_vec)) / discharge_int )
-            q_sum = np.sum( np.abs(element_struc_array[work_array[j]['discharge_element'][:work_array[j]['len_discharge_element']]]['q'] ))
-            # TODO: Get the endpoints and increase the coefficients in fractures with short elements
-            denom = np.max([q_sum, omega])
+
             rmse = np.sqrt(np.sum((dpsi-omega)**2)/discharge_int)
-            psi_ratio =  np.abs(domega/denom)
+
             bnd_error[j] = rmse
             if phi_error > bnd_error[j]:
                 bnd_error[j] = phi_error
@@ -524,39 +536,13 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
 
         if bnd_error[j] > 0.01 and e['ncoef'] < MAX_COEF and nit > 1:
             cnt_bnd += 1
-            e['ncoef'] = int(e['ncoef'] * MULTIPLIER)
+            e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
             e['nint'] = e['ncoef'] * 2
             e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
             work_array[j]['len_discharge_element'] = 0
-            e['coef'][:e['ncoef']] = 0.0
-            """
-            fr = fracture_struc_array[e['frac0']]
-            el = element_struc_array[fr['elements'][:fr['nelements']]]
-            for jj in range(fr['nelements']):
-                id_is = el[jj]['id_']
-                work_array[id_is]['len_discharge_element'] = 0
-                if element_struc_array[id_is]['ncoef'] < MAX_COEF:
-                    element_struc_array[id_is]['ncoef'] = int(element_struc_array[id_is]['ncoef'] * MULTIPLIER)
-                    element_struc_array[id_is]['nint'] = element_struc_array[id_is]['ncoef'] * 2
-                    element_struc_array[id_is]['thetas'][:element_struc_array[id_is]['nint']] = mf.calc_thetas(
-                        element_struc_array[id_is]['nint'], element_struc_array[id_is]['type_'])
-                    element_struc_array[id_is]['coef'][:element_struc_array[id_is]['ncoef']] = 0.0
-                    #element_struc_array[id_is]['error'] = 1e30
-                if element_struc_array[id_is]['type_'] == 10:
-                    fr = fracture_struc_array[element_struc_array[id_is]['frac1']]
-                    el2 = element_struc_array[fr['elements'][:fr['nelements']]]
-                    for jj2 in range(fr['nelements']):
-                        id_is2 = el2[jj2]['id_']
-                        if id_is == id_is2:
-                            continue
-                        work_array[id_is2]['len_discharge_element'] = 0
-                        if element_struc_array[id_is2]['ncoef'] < MAX_COEF:
-                            element_struc_array[id_is2]['ncoef'] = int(element_struc_array[id_is2]['ncoef'] * MULTIPLIER)
-                            element_struc_array[id_is2]['nint'] = element_struc_array[id_is2]['ncoef'] * 2
-                            element_struc_array[id_is2]['thetas'][:element_struc_array[id_is2]['nint']] = mf.calc_thetas(
-                                element_struc_array[id_is2]['nint'], element_struc_array[id_is]['type_'])
-                            #element_struc_array[id_is2]['error'] = 1e30
-            """
+            mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[j]['exp_array'])
+            #e['coef'][:e['ncoef']] = 0.0
+
     return cnt_bnd
 
 

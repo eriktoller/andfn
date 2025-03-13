@@ -6,8 +6,8 @@ This module contains the element class that is a parent class to all elements.
 """
 
 import numpy as np
-MAX_NCOEF = 3000
-MAX_ELEMENTS = 100
+MAX_NCOEF = 300
+MAX_ELEMENTS = 150
 
 element_dtype = np.dtype([
         ('id_', np.int_),

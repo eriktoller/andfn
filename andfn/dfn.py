@@ -16,6 +16,8 @@ import scipy as sp
 import h5py
 from concurrent.futures import ThreadPoolExecutor
 
+from matplotlib.pyplot import tight_layout
+
 from andfn import geometry_functions as gf
 from .fracture import Fracture
 from .hpc.hpc_solve import solve as hpc_solve
@@ -1258,6 +1260,36 @@ class DFN:
         ax.set_title(f'Sparse matrix of the DFN\nNumber of fractures: {self.number_of_fractures()}, Number of elements: {self.number_of_elements()}'
                      f'\nNumber of entries: {num_entries}, Number of zeros: '
                      f'{num_zeros - num_entries}\nFilled percentage: {num_entries / num_zeros * 100:.2f}%')
+        if save:
+            plt.savefig(name)
+        plt.show()
+
+    def plot_ncoef(self, save=False, name='ncoef.png'):
+        """
+        Plots the number of coefficients for the elements in the DFN.
+
+        Parameters
+        ----------
+        save : bool
+            Whether to save the plot.
+        name : str
+            The name of the plot.
+
+        Returns
+        -------
+        None
+        """
+        ncoef = []
+        for e in self.elements:
+            ncoef.append(e.ncoef)
+        fig, ax = plt.subplots(figsize=(10, 5), tight_layout=True)
+        nbins = np.ceil((max(ncoef) - min(ncoef))/5).astype(int)
+        counts, edges, bars = ax.hist(ncoef, bins=nbins, color='grey', edgecolor='black')
+        ax.set_title('Number of coefficients for the elements in the DFN')
+        ax.set_xlabel('Number of coefficients')
+        ax.set_ylabel('Number of elements')
+        ax.set_yscale('log')
+        ax.bar_label(bars)
         if save:
             plt.savefig(name)
         plt.show()
