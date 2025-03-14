@@ -26,7 +26,7 @@ dtype_work = np.dtype([
         ('discharge_element', np.int64, MAX_ELEMENTS),
         ('element_pos', np.int64, MAX_ELEMENTS),
         ('len_discharge_element', np.int64),
-        ('exp_array', np.complex128, (MAX_NCOEF, MAX_NCOEF * 2))
+        ('exp_array', np.complex128, (MAX_NCOEF))
     ])
 
 dtype_z_arrays = np.dtype([
@@ -34,7 +34,7 @@ dtype_z_arrays = np.dtype([
         ('z1', complex, MAX_ELEMENTS)
     ])
 
-MAX_COEF = 50
+MAX_COEF = 100
 MULTIPLIER = 5
 
 CACHE = False
@@ -125,6 +125,8 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
             error_q = np.max(np.abs(discharges - discharges_old))
         print(f'Solve Q time: {time.time() - startQ}')
 
+
+
         # Solve the elements
         StartE = time.time()
         cnt = element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error)
@@ -142,12 +144,15 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
 
         cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array,
                                 discharge_int, bnd_error, z_int_error, nit, max_error)
+
         print(f'Max boundary error: {np.max(bnd_error):.4e}, Element id: {np.argmax(bnd_error)} [type: '
               f'{element_struc_array[np.argmax(bnd_error)]["type_"]}, ncoef: {element_struc_array[np.argmax(bnd_error)]["ncoef"]}]')
 
 
 
         if cnt_bnd > 1:
+            cnt = element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit,
+                                  cnt_error)
             error = 1.0
 
         if error < max_error:
@@ -249,18 +254,17 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
 
         error, id_ = get_error(element_struc_array)
 
-        """
         # Get the coefficients from the work array
         for i in range(num_elements):
             e = element_struc_array[i]
-            if e['error'] > e['error_old'] and e['error'] > max_error and e['ncoef'] < MAX_COEF and nit_el > 100:
-                e['ncoef'] = int(e['ncoef'] * MULTIPLIER)
+            if e['error'] > e['error_old'] and e['error'] > max_error and e['ncoef'] < MAX_COEF and nit_el > 2:
+                e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
                 e['nint'] = e['ncoef'] * 2
                 e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
                 work_array[i]['len_discharge_element'] = 0
+                mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[i]['exp_array'])
                 e['coef'][:e['ncoef']] = 0.0
                 e['error'] = 1e30
-        """
 
 
         print(f'Error: {mf.float2str(error)}, Element id: {id_} [type: {element_struc_array[id_]["type_"]}, '
@@ -477,7 +481,7 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
         coef_ratio = np.nanmax([coef_ratio_re, coef_ratio_im])
         if np.abs(coefs[-1]) < max_error/10:
             coef_ratio = 0.0
-        elif e['type_'] in [0, 3]:  # Intersection, Constant head line
+        if e['type_'] in [0, 3]:  # Intersection, Constant head line
             frac0 = fracture_struc_array[e['frac0']]
             z0 = z_int['z0'][j][:discharge_int]
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
@@ -505,6 +509,7 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
             ids = frac0['elements'][:frac0['nelements']]
             phi_max1, phi_min1 = get_max_min_phi(element_struc_array, fracture_struc_array, ids,
                                                  e['frac0'], z_int, discharge_int)
+
             if np.abs(phi_max1 - phi_min1) < 1e-2:
                 phi_error = 0.0
             else:
@@ -541,7 +546,8 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
             e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
             work_array[j]['len_discharge_element'] = 0
             mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[j]['exp_array'])
-            #e['coef'][:e['ncoef']] = 0.0
+            e['coef'][:e['ncoef']] = 0.0
+
 
     return cnt_bnd
 
@@ -574,8 +580,8 @@ def get_max_min_phi(element_struc_array, fracture_struc_array, ids, frac_id, z_i
                     frac0 = fracture_struc_array[e['frac1']]
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
             for i in range(discharge_int):
-                omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array) / discharge_int
-            phi = np.real(np.sum(omega_vec))
+                omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
+            phi = np.real(np.sum(omega_vec)) / discharge_int
             if phi > max_phi:
                 max_phi = phi
             if phi < min_phi:

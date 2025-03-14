@@ -1189,6 +1189,7 @@ class DFN:
             vertical=False,
             fmt='%10.1f',
         )
+        plt.close()
         print('')
 
 

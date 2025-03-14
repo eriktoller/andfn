@@ -179,10 +179,16 @@ def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, 
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array['phi'][ii] = np.real(omega)
     for jj in range(m):
-        for ii in range(n):
+        #for ii in range(n):
             #work_array['integral'][jj] += work_array['phi'][ii] * np.exp(-1j * jj * thetas[ii])
-            work_array['integral'][jj] += work_array['phi'][ii] * work_array['exp_array'][jj, ii]
-
+            #work_array['integral'][jj] += work_array['phi'][ii] * work_array['exp_array'][jj, ii]
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array['exp_array'][ii]
+            res_tmp += work_array['phi'][ii] * exp_val
+        work_array['integral'][jj] = res_tmp
 
     for ii in range(m):
         coef[ii] = 2 * work_array['integral'][ii] / n
@@ -272,10 +278,18 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_
         psi1 = psi0 + work_array['dpsi'][ii]
         work_array['psi'][ii] = psi1
         psi0 = psi1
+
     for jj in range(m):
-        for ii in range(n):
+        #for ii in range(n):
             #work_array['integral'][jj] += work_array['psi'][ii] * np.exp(-1j * jj * thetas[ii])
-            work_array['integral'][jj] += work_array['psi'][ii] * work_array['exp_array'][jj, ii]
+            #work_array['integral'][jj] += work_array['psi'][ii] * work_array['exp_array'][jj, ii]
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array['exp_array'][ii]
+            res_tmp += work_array['psi'][ii] * exp_val
+        work_array['integral'][jj] = res_tmp
 
     for ii in range(m):
         coef[ii] = 2j * work_array['integral'][ii] / n
@@ -336,9 +350,8 @@ def calc_thetas(n, type_):
 
 @nb.jit(nopython=NO_PYTHON)
 def fill_exp_array(n, m, thetas, exp_array):
-    for jj in range(m):
-        for ii in range(n):
-            exp_array[jj, ii] = np.exp(-1j * jj * thetas[ii])
+    for ii in range(n):
+        exp_array[ii] = np.exp(-1j * thetas[ii])
 
 ########################################################################################################################
 # Functions NUMBA
