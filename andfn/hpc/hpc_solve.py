@@ -34,7 +34,7 @@ dtype_z_arrays = np.dtype([
         ('z1', complex, MAX_ELEMENTS)
     ])
 
-MAX_COEF = 100
+MAX_COEF = 200
 MULTIPLIER = 5
 
 CACHE = False
@@ -246,7 +246,7 @@ def element_solver(num_elements, element_struc_array, fracture_struc_array, work
 def element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error):
     error = 1.0
     nit_el = 0
-    while error > max_error and nit_el < 5:
+    while error > max_error and nit_el < 10:
         nit_el += 1
 
         # Solve the elements
@@ -265,6 +265,8 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                 mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[i]['exp_array'])
                 e['coef'][:e['ncoef']] = 0.0
                 e['error'] = 1e30
+                # TODO: Try to add a resolve loop to find the necessary number of coefficients (if it is possible)
+                #       using the coef decay rate (or may put the bnd checker here?)
 
 
         print(f'Error: {mf.float2str(error)}, Element id: {id_} [type: {element_struc_array[id_]["type_"]}, '
@@ -479,7 +481,7 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
         coef_ratio_re = np.abs(np.real(coefs[-1]) / np.real(coefs[1]))
         coef_ratio_im = np.abs(np.imag(coefs[-1]) / np.imag(coefs[1]))
         coef_ratio = np.nanmax([coef_ratio_re, coef_ratio_im])
-        if np.abs(coefs[-1]) < max_error/10:
+        if np.abs(coefs[0]) < max_error/1000:
             coef_ratio = 0.0
         if e['type_'] in [0, 3]:  # Intersection, Constant head line
             frac0 = fracture_struc_array[e['frac0']]
