@@ -7,5 +7,5 @@ This is a working template of an andfn model that produces the following plot:
    :width: 800
    :alt: example
 
-.. literalinclude:: ../template.py
+.. literalinclude:: ../examples/template.py
    :language: python
