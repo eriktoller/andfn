@@ -38,5 +38,5 @@ Uninstall the package:
 
     user_guide
     apidocs
-    example
+    examples.rst
     index
