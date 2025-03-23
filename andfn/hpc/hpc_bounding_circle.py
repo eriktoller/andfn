@@ -69,6 +69,27 @@ def calc_omega(self_, z):
     omega = mf.taylor_series(chi, self_['coef'][:self_['ncoef']])
     return omega
 
+#@nb.jit(nopython=NO_PYTHON, inline='always')
+def calc_w(self_, z):
+    """
+    Calculates the omega for the bounding circle.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    z : complex
+        A point in the complex z plane.
+
+    Returns
+    -------
+    omega : complex
+        The complex potential for the bounding circle.
+    """
+    chi = get_chi(self_, z)
+    w = mf.taylor_series_d1(chi, self_['coef'][:self_['ncoef']])
+    return w
+
 
 @nb.jit(nopython=NO_PYTHON)
 def find_branch_cuts(self_, fracture_struc_array, element_struc_array, work_array):

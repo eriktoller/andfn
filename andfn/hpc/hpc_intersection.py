@@ -85,6 +85,35 @@ def calc_omega(self_, z, frac_is_id):
         omega = mf.asym_expansion(chi, -self_['coef'][:self_['ncoef']]) + mf.well_chi(chi, -self_['q'])
     return omega
 
+def calc_w(self_, z, frac_is_id):
+    """
+    Calculate the complex discharge vector for the intersection.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    z : complex
+        An array of points in the complex z-plane
+    frac_is_id : np.int64
+        The fracture that the point is in
+
+    Returns
+    -------
+    w : np.ndarray
+        The complex discharge vector
+    """
+    # Se if function is in the first or second fracture that the intersection is associated with
+    if frac_is_id == self_['frac0']:
+        chi = gf.map_z_line_to_chi(z, self_['endpoints0'])
+        w = -mf.asym_expansion_d1(chi, self_['coef'][:self_['ncoef']])  - self_['q'] / (2 * np.pi * chi)
+        w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self_['endpoints0'][1] - self_['endpoints0'][0])
+    else:
+        chi = gf.map_z_line_to_chi(z, self_['endpoints1'])
+        w = -mf.asym_expansion_d1(chi, -self_['coef'][:self_['ncoef']]) + self_['q'] / (2 * np.pi * chi)
+        w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self_['endpoints1'][1] - self_['endpoints1'][0])
+    return w
+
 @nb.jit(nopython=NO_PYTHON)
 def z_array(self_, n, frac_is):
     """

@@ -66,9 +66,28 @@ def calc_omega(self_, z):
     chi = gf.map_z_line_to_chi(z, self_['endpoints0'])
     omega = mf.well_chi(chi, self_['q'])
     omega += mf.asym_expansion(chi, self_['coef'][:self_['ncoef']])
-
-
     return omega
+
+def calc_w(self_, z):
+    """
+    Calculate the complex discharge vector for the constant head line.
+
+    Parameters
+    ----------
+    z : np.ndarray
+        The points to calculate the complex discharge vector at
+
+    Returns
+    -------
+    np.ndarray
+        The complex discharge vector
+    """
+    # Map the z point to the chi plane
+    chi = gf.map_z_line_to_chi(z, self_['endpoints0'])
+    # Calculate w
+    w = -mf.asym_expansion_d1(chi, self_['coef'][:self_['ncoef']]) - self_['q'] / (2 * np.pi * chi)
+    w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self_['endpoints0'][1] - self_['endpoints0'][0])
+    return w
 
 @nb.jit(nopython=NO_PYTHON)
 def z_array(self_, n):

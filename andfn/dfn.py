@@ -1161,18 +1161,28 @@ class DFN:
             mean_head = np.nanmean(head_fn_list[i])
             pos_frac, = np.where(np.abs(lvs_re - mean_head) == np.min(np.abs(lvs_re - mean_head)))[0]
             color_frac = colors[pos_frac]
-            self.plot_fractures(pl, filled=True, color=color_frac, opacity=opacity, show_edges=True, line_width=2.0,
-                                fracs=[f])
-            # Extract the contour line and plot them in 3D, real and imaginary parts
-            for contour in contours_re.allsegs:
-                for seg in contour:
-                    if len(seg) == 0:
-                        continue
-                    loc = int(len(seg)/2)
-                    head = f.head_from_phi(np.real(f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j]))))
-                    pos, = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0]
-                    color = colors[pos]
-                    plot_line_3d(seg, f, pl, color, line_width=line_width)
+            if np.nanmax(head_fn_list[i]) > 270 and np.nanmin(head_fn_list[i]) < 250 and f.center[2] > 600:
+                print(f'\n{i}')
+            #if i==111:
+                self.plot_fractures(pl, filled=True, color=color_frac, opacity=opacity, show_edges=True, line_width=2.0,
+                                    fracs=[f])
+                # Extract the contour line and plot them in 3D, real and imaginary parts
+                for contour in contours_re.allsegs:
+                    for seg in contour:
+                        if len(seg) == 0:
+                            continue
+                        loc = int(len(seg)/2)
+                        head = f.head_from_phi(np.real(f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j]))))
+                        pos, = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0]
+                        color = colors[pos]
+                        plot_line_3d(seg, f, pl, color, line_width=line_width)
+                z0 = np.array([ 3.39478000e+02+0.00000000e+00j,  3.22862764e+02+1.04904471e+02j,         2.74643471e+02+1.99540162e+02j,  1.99540162e+02+2.74643471e+02j,         1.04904471e+02+3.22862764e+02j,  2.07870323e-14+3.39478000e+02j,        -1.04904471e+02+3.22862764e+02j, -1.99540162e+02+2.74643471e+02j,
+       -2.74643471e+02+1.99540162e+02j, -3.22862764e+02+1.04904471e+02j,        -3.39478000e+02+4.15740646e-14j, -3.22862764e+02-1.04904471e+02j,        -2.74643471e+02-1.99540162e+02j, -1.99540162e+02-2.74643471e+02j,        -1.04904471e+02-3.22862764e+02j, -6.23610969e-14-3.39478000e+02j,         1.04904471e+02-3.22862764e+02j,  1.99540162e+02-2.74643471e+02j,
+        2.74643471e+02-1.99540162e+02j,  3.22862764e+02-1.04904471e+02j])
+                plot_line_3d(z0, f, pl, 'black', line_width=line_width*2)
+                omegaa = f.calc_omega(z0)
+                head = f.head_from_phi(np.real(omegaa))
+                print(head)
 
         # Add the color bar
         # Create a sample mesh

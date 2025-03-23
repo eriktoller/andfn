@@ -15,7 +15,7 @@ from . import intersection
 from . import const_head
 from .hpc import NO_PYTHON
 
-AMOUNT = 0.9
+AMOUNT = 0.9*0+1
 
 
 

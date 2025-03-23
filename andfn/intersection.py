@@ -59,7 +59,7 @@ class Intersection(Element):
         length : float
             The length of the intersection
         """
-        return np.abs(self.endpoints0[0] - self.endpoints0[1])
+        return np.abs(self.endpoints0[1] - self.endpoints0[0])
 
     def discharge_term(self, z, frac_is):
         """

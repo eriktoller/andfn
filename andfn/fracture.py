@@ -10,6 +10,7 @@ from andfn.const_head import ConstantHeadLine
 from andfn.well import Well
 import andfn.bounding
 from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
+from .hpc.hpc_fracture import calc_omega as hpc_calc_omega
 
 
 class Fracture:
