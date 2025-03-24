@@ -257,7 +257,6 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
 
         # Get the coefficients from the work array
 
-        cnt = 0
         for i in range(num_elements):
             e = element_struc_array[i]
             # TODO: try with check_bnd instead of the error check
@@ -268,6 +267,7 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
             if e['type_'] == 1:
                 coef_ratio_im = np.abs(np.imag(coefs[-1]) / np.imag(coefs[1]))
             coef_ratio = np.nanmax([coef_ratio_re, coef_ratio_im])
+            coefs = e['coef'][:e['ncoef']]
             coef0 = np.max(np.abs(coefs[1:2]))
             coef1 = np.max(np.abs(coefs[-2:]))
             coef_ratio = coef1 / coef0
@@ -275,7 +275,8 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                 coef_ratio = 0.0
             if np.max(np.abs(coefs[1:2])) < max_error*0:
                 coef_ratio = 0.0
-            if coef_ratio > 0.01 and e['ncoef'] < MAX_COEF and e['error'] > max_error*0 and nit > 1:
+            cnt = 0
+            while coef_ratio > 0.05 and e['ncoef'] < MAX_COEF and cnt < 5 and coef0 > max_error/100 and nit > 2:
                 e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
                 e['nint'] = e['ncoef'] * 2
                 e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
@@ -292,7 +293,10 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                     hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[i])
                 e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
                 cnt +=1
-                continue
+                coefs = e['coef'][:e['ncoef']]
+                coef0 = np.max(np.abs(coefs[1:2]))
+                coef1 = np.max(np.abs(coefs[-2:]))
+                coef_ratio = coef1 / coef0
             if e['error'] > e['error_old'] and e['error'] > max_error and e['ncoef'] < MAX_COEF and nit_el > 1000:
                 e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
                 e['nint'] = e['ncoef'] * 2
@@ -313,11 +317,12 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                 # TODO: Try to add a resolve loop to find the necessary number of coefficients (if it is possible)
                 #       using the coef decay rate (or may put the bnd checker here?)
 
-        if cnt > 1e300:
-            error = 1.0
+            if e['ncoef'] == 150 and np.max(np.abs(e["coef"][1:2])) > 1e-10:
+                print(f' coefs: {e["coef"][:e["ncoef"]]}')
 
         print(f'Error: {mf.float2str(error)}, Element id: {id_} [type: {element_struc_array[id_]["type_"]}, '
               f'ncoef: {element_struc_array[id_]["ncoef"]}]')
+        print(f'Max ncoef: {np.max([e["ncoef"] for e in element_struc_array])}')
 
         #get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, discharge_int,
         #              bnd_error, z_int, nit, max_error)
