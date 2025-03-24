@@ -1161,9 +1161,9 @@ class DFN:
             mean_head = np.nanmean(head_fn_list[i])
             pos_frac, = np.where(np.abs(lvs_re - mean_head) == np.min(np.abs(lvs_re - mean_head)))[0]
             color_frac = colors[pos_frac]
-            if np.nanmax(head_fn_list[i]) > 270 and np.nanmin(head_fn_list[i]) < 250 and f.center[2] > 600:
-                print(f'\n{i}')
-            #if i==111:
+            #if np.nanmin(head_fn_list[i]) < 190 or np.nanmax(head_fn_list[i]) > 420:
+            #    print(f'\n{i}')
+            if i>-1:#==38:
                 self.plot_fractures(pl, filled=True, color=color_frac, opacity=opacity, show_edges=True, line_width=2.0,
                                     fracs=[f])
                 # Extract the contour line and plot them in 3D, real and imaginary parts
@@ -1176,13 +1176,7 @@ class DFN:
                         pos, = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0]
                         color = colors[pos]
                         plot_line_3d(seg, f, pl, color, line_width=line_width)
-                z0 = np.array([ 3.39478000e+02+0.00000000e+00j,  3.22862764e+02+1.04904471e+02j,         2.74643471e+02+1.99540162e+02j,  1.99540162e+02+2.74643471e+02j,         1.04904471e+02+3.22862764e+02j,  2.07870323e-14+3.39478000e+02j,        -1.04904471e+02+3.22862764e+02j, -1.99540162e+02+2.74643471e+02j,
-       -2.74643471e+02+1.99540162e+02j, -3.22862764e+02+1.04904471e+02j,        -3.39478000e+02+4.15740646e-14j, -3.22862764e+02-1.04904471e+02j,        -2.74643471e+02-1.99540162e+02j, -1.99540162e+02-2.74643471e+02j,        -1.04904471e+02-3.22862764e+02j, -6.23610969e-14-3.39478000e+02j,         1.04904471e+02-3.22862764e+02j,  1.99540162e+02-2.74643471e+02j,
-        2.74643471e+02-1.99540162e+02j,  3.22862764e+02-1.04904471e+02j])
-                plot_line_3d(z0, f, pl, 'black', line_width=line_width*2)
-                omegaa = f.calc_omega(z0)
-                head = f.head_from_phi(np.real(omegaa))
-                print(head)
+                #self.plot_elements(pl, elements=f.elements)
 
         # Add the color bar
         # Create a sample mesh
@@ -1204,7 +1198,7 @@ class DFN:
 
 
 
-    def plot_elements(self, pl):
+    def plot_elements(self, pl, elements=None):
         """
         Plots the elements in the DFN.
 
@@ -1217,7 +1211,9 @@ class DFN:
         assert self.elements is not None and len(
             self.elements) > 0, 'The elements have not been stored in the DFN. Use the get_elements method.'
         # Plot the elements
-        for i, e in enumerate(self.elements):
+        if elements is None:
+            elements = self.elements
+        for i, e in enumerate(elements):
             if isinstance(e, Intersection):
                 line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
                 pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=3)

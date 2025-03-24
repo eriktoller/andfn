@@ -37,7 +37,7 @@ dtype_z_arrays = np.dtype([
 MAX_COEF = 150
 MULTIPLIER = 5
 
-CACHE = False
+CACHE = True
 
 
 def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge_int, max_error, max_iterations):
@@ -104,14 +104,14 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
 
     # solve once to get the initial discharges
     t = mf.calc_thetas(element_struc_array[0]['nint'], element_struc_array[0]['type_'])
-    #solve_discharge_matrix(fracture_struc_array, element_struc_array, discharge_matrix, discharge_elements,
-    #                               discharge_int, head_matrix, discharges, z_int, lu_matrix)
-    #cnt = element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, 0,
-    #                      0)
+    solve_discharge_matrix(fracture_struc_array, element_struc_array, discharge_matrix, discharge_elements,
+                                   discharge_int, head_matrix, discharges, z_int, lu_matrix)
+    cnt = element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, 0, 0)
 
     error = error_old = np.float64(1.0)
     nit = 0
     cnt_error = 0
+    cnt_bnd = 0
     error_q = 1.0
     start = time.time()
     while cnt_error < 2 and nit < max_iterations:
@@ -123,6 +123,7 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
             solve_discharge_matrix(fracture_struc_array, element_struc_array,discharge_matrix, discharge_elements,
                                    discharge_int, head_matrix, discharges, z_int, lu_matrix)
             error_q = np.max(np.abs(discharges - discharges_old))
+            error_q = np.mean(np.abs(discharges - discharges_old))
         print(f'Solve Q time: {time.time() - startQ}')
 
 
@@ -143,8 +144,8 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
             print(f'Iteration: {nit}, Max error: {mf.float2str(error)}, Error Q: {mf.float2str(error_q)}, '
                   f'Elements in solve loop: {len(element_struc_array) - cnt}')
 
-        cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array,
-                                discharge_int, bnd_error, z_int_error, nit, max_error)
+        #cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array,
+        #                        discharge_int, bnd_error, z_int_error, nit, max_error)
 
         print(f'Max boundary error: {np.max(bnd_error):.4e}, Element id: {np.argmax(bnd_error)} [type: '
               f'{element_struc_array[np.argmax(bnd_error)]["type_"]}, ncoef: {element_struc_array[np.argmax(bnd_error)]["ncoef"]}]')
@@ -154,7 +155,7 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
                                   cnt_error)
             error = 1.0
 
-        if error < max_error:
+        if error < max_error and error_q < max_error:
             cnt_error += 1
             error = 1.0
 
@@ -246,7 +247,7 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                     discharge_int, bnd_error, z_int):
     error = 1.0
     nit_el = 0
-    while error > max_error and nit_el < 5:
+    while error > max_error and nit_el < 1:
         nit_el += 1
 
         # Solve the elements
@@ -256,26 +257,31 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
 
         # Get the coefficients from the work array
 
+        cnt = 0
         for i in range(num_elements):
             e = element_struc_array[i]
             # TODO: try with check_bnd instead of the error check
             coefs = e['coef'][:e['ncoef']]
-            coef0 = np.max(np.abs(coefs[1]))
+            coef0 = np.max(np.abs(coefs[1:2]))
             coef_ratio_re = np.abs(np.real(coefs[-1]) / np.real(coefs[1]))
             coef_ratio_im = 0.0
             if e['type_'] == 1:
                 coef_ratio_im = np.abs(np.imag(coefs[-1]) / np.imag(coefs[1]))
             coef_ratio = np.nanmax([coef_ratio_re, coef_ratio_im])
-            #if coef_ratio < 0.4*1000:
-            #    coef_ratio = 0.0
-            if np.max(np.abs(coefs[1:2])) < max_error:
+            coef0 = np.max(np.abs(coefs[1:2]))
+            coef1 = np.max(np.abs(coefs[-2:]))
+            coef_ratio = coef1 / coef0
+            if coef_ratio < 0.01:
                 coef_ratio = 0.0
-            if coef_ratio > 0.01 and e['ncoef'] < MAX_COEF and e['error'] > max_error and nit > 1:
+            if np.max(np.abs(coefs[1:2])) < max_error*0:
+                coef_ratio = 0.0
+            if coef_ratio > 0.01 and e['ncoef'] < MAX_COEF and e['error'] > max_error*0 and nit > 1:
                 e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
                 e['nint'] = e['ncoef'] * 2
                 e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
                 work_array[i]['len_discharge_element'] = 0
                 mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[i]['exp_array'])
+                e['coef'][e['ncoef']] = 0.0
                 if e['type_'] == 0:  # Intersection
                     hpc_intersection.solve(e, fracture_struc_array, element_struc_array, work_array[i])
                 elif e['type_'] == 1:  # Bounding circle
@@ -285,13 +291,15 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                 elif e['type_'] == 3:  # Constant head line
                     hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[i])
                 e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
+                cnt +=1
                 continue
-            if e['error'] > e['error_old'] and e['error'] > max_error and e['ncoef'] < MAX_COEF and nit_el > 1:
+            if e['error'] > e['error_old'] and e['error'] > max_error and e['ncoef'] < MAX_COEF and nit_el > 1000:
                 e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
                 e['nint'] = e['ncoef'] * 2
                 e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
                 work_array[i]['len_discharge_element'] = 0
                 mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[i]['exp_array'])
+                e['coef'][e['ncoef']] = 0.0
                 if e['type_'] == 0:  # Intersection
                     hpc_intersection.solve(e, fracture_struc_array, element_struc_array, work_array[i])
                 elif e['type_'] == 1:  # Bounding circle
@@ -301,8 +309,12 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                 elif e['type_'] == 3:  # Constant head line
                     hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[i])
                 e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
+                cnt +=1
                 # TODO: Try to add a resolve loop to find the necessary number of coefficients (if it is possible)
                 #       using the coef decay rate (or may put the bnd checker here?)
+
+        if cnt > 1e300:
+            error = 1.0
 
         print(f'Error: {mf.float2str(error)}, Element id: {id_} [type: {element_struc_array[id_]["type_"]}, '
               f'ncoef: {element_struc_array[id_]["ncoef"]}]')
@@ -311,8 +323,8 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
         #              bnd_error, z_int, nit, max_error)
 
     # Solve the elements one more time before exiting
-    cnt = element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit,
-                         cnt_error)
+    #cnt = element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit,
+    #                     cnt_error)
     return cnt
 
 
@@ -469,15 +481,15 @@ def build_head_matrix(fractures_struc_array, element_struc_array, discharge_elem
         z0 = z_int['z0'][j][:discharge_int]
         omega_vec = np.zeros(discharge_int, dtype=np.complex128)
         for i in range(discharge_int):
-            omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array) / discharge_int
-        omega = np.sum(omega_vec)
+            omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
+        omega = np.sum(omega_vec) / discharge_int
         if e['type_'] == 0:  # Intersection
             frac1 = fractures_struc_array[e['frac1']]
             z1 = z_int['z1'][j][:discharge_int]
             omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
             for i in range(discharge_int):
-                omega1_vec[i] = hpc_fracture.calc_omega(frac1, z1[i], element_struc_array) / discharge_int
-            omega1 = np.sum(omega1_vec)
+                omega1_vec[i] = hpc_fracture.calc_omega(frac1, z1[i], element_struc_array)
+            omega1 = np.sum(omega1_vec) / discharge_int
             head_matrix[j] = np.real(omega1) / frac1['t'] - np.real(omega) / frac0['t']
         elif e['type_'] in [2, 3]:  # Well or Constant head line
             head_matrix[j] = e['phi'] - np.real(omega)
@@ -515,22 +527,23 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
     cnt_bnd = 0
 
     # Add the head for each discharge element
-    for j in range(num_elements):
+    for j in range(num_elements*0):
         e = element_struc_array[j]
         if e['type_'] == 2: # Well
             bnd_error[j] = 0.0
             continue
         coefs = e['coef'][:e['ncoef']]
         coef0 = np.max(np.abs(coefs[1:2]))
+        coef1 = np.max(np.abs(coefs[-2:]))
         coef_ratio_re = np.abs(np.real(coefs[-1]) / np.real(coefs[2]))
         coef_ratio_im = np.abs(np.imag(coefs[-1]) / np.imag(coefs[2]))
         coef_ratio_re = np.abs(np.real(coefs[-1]) / coef0)
         coef_ratio_im = np.abs(np.imag(coefs[-1]) / coef0)
         coef_ratio = np.nanmax([coef_ratio_re, coef_ratio_im])
-        #coef_ratio = np.abs(coefs[-1]) / coef0
-        if np.abs(coefs[1]) < max_error:
-            coef_ratio = 0.0
+        coef_ratio = coef1 / coef0
         if coef_ratio < 0.4:
+            coef_ratio = 0.0
+        if np.max(np.abs(coefs[1:2])) < max_error:
             coef_ratio = 0.0
         if e['type_'] in [0, 3]:  # Intersection, Constant head line
             frac0 = fracture_struc_array[e['frac0']]
@@ -546,7 +559,11 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
                 for i in range(discharge_int):
                     omega1_vec[i] = hpc_fracture.calc_omega(frac1, z1[i], element_struc_array)
                 omega1 = np.sum(omega1_vec) / discharge_int
-                bnd_error[j] = np.abs( (np.real(omega1) / frac1['t'] - np.real(omega) / frac0['t'] ) / (np.real(omega1) / frac1['t']) )
+                head1 = np.real(omega1) / frac1['t']
+                head0 = np.real(omega) / frac0['t']
+                bnd_error[j] = np.abs((head1 - head0 ) / head1)
+                if j == 450:
+                    print(f'450: {head1}, {head0}, {bnd_error[450]}')
             else:  # Well or Constant head line
                 bnd_error[j] = np.abs( (e['phi'] - np.real(omega)) / e['phi'] )
         elif e['type_'] == 1: # Bounding circle
@@ -598,36 +615,38 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
 
             if phi_error > bnd_error[j]:
                 bnd_error[j] = phi_error
-            if j == 354:
-                print(f'1026: {phi_error}, {phi_min/ frac0["t"]}, {phi_min1/ frac0["t"]}, {phi_max/ frac0["t"]}, {phi_max1/ frac0["t"]}, {bnd_error[1026]}, frac0: {frac0["id_"]}, ncoef: {e["ncoef"]}, coef: {e["coef"][:e["ncoef"]]}')
-                print(f'1026: {np.real(omega_vec)/ frac0["t"]}')
-                if e["ncoef"] < 15*0:
-                    bnd_error[j] = 1.0
+            #if j == 354:
+            #    print(f'1026: {phi_error}, {phi_min/ frac0["t"]}, {phi_min1/ frac0["t"]}, {phi_max/ frac0["t"]}, {phi_max1/ frac0["t"]}, {bnd_error[1026]}, frac0: {frac0["id_"]}, ncoef: {e["ncoef"]}, coef: {e["coef"][:e["ncoef"]]}')
+            #    print(f'1026: {np.real(omega_vec)/ frac0["t"]}')
+            #    if e["ncoef"] < 15*0:
+            #        bnd_error[j] = 1.0
 
 
         if bnd_error[j] < coef_ratio:
             bnd_error[j] = coef_ratio
+            #if nit > 10:
+            #    print('hej')
 
     n_coef = [MAX_COEF*2,MAX_COEF*2,MAX_COEF*2,MAX_COEF*2]
     bound_type = [0,0,0,0]
 
     for j in range(num_elements):
         e = element_struc_array[j]
-        if bnd_error[j] > 0.01 and e['ncoef'] < MAX_COEF and nit > 1:
+        if bnd_error[j] > 0.1 and e['ncoef'] < MAX_COEF and nit > 2:
             cnt_bnd += 1
             e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
             e['nint'] = e['ncoef'] * 2
             e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
             work_array[j]['len_discharge_element'] = 0
             mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[j]['exp_array'])
-            #e['coef'][:e['ncoef']] = 0.0
+            e['coef'][:e['ncoef']] = 0.0
             if e['type_'] == 0:  # Intersection
-                #hpc_intersection.solve(e, fracture_struc_array, element_struc_array, work_array[j])
+                hpc_intersection.solve(e, fracture_struc_array, element_struc_array, work_array[j])
                 bound_type[0] += 1
                 if e['ncoef'] < n_coef[0]:
                     n_coef[0] = e['ncoef']
             elif e['type_'] == 1:  # Bounding circle
-                #hpc_bounding_circle.solve(e, fracture_struc_array, element_struc_array, work_array[j])
+                hpc_bounding_circle.solve(e, fracture_struc_array, element_struc_array, work_array[j])
                 bound_type[1] += 1
                 if e['ncoef'] < n_coef[1]:
                     n_coef[1] = e['ncoef']
@@ -635,12 +654,15 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
             elif e['type_'] == 2:  # Well
                 e['error'] = 0.0
             elif e['type_'] == 3:  # Constant head line
-                #hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[j])
+                hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[j])
                 bound_type[3] += 1
                 if e['ncoef'] < n_coef[3]:
                     n_coef[3] = e['ncoef']
             #print(f'ctrl: {np.sum(e["coef"][:e["ncoef"]] - work_array[j]["coef"][:e["ncoef"]])}')
-            #e['coef'][:e['ncoef']] = work_array[j]['coef'][:e['ncoef']]
+            e['coef'][:e['ncoef']] = work_array[j]['coef'][:e['ncoef']]
+        #if j == 450:
+        #    print(f'450: {bnd_error[j]}, frac0: {fracture_struc_array[element_struc_array[j]["frac0"]]["id_"]}, '
+        #          f'ncoef: {element_struc_array[j]["ncoef"]}, coef: {element_struc_array[j]["coef"][:element_struc_array[j]["ncoef"]]}')
     print(f'cnt_bnd: {cnt_bnd}, bound_types:'
           f'\n0: {bound_type[0]} ncoef: {n_coef[0]} '
           f'\n1: {bound_type[1]} ncoef: {n_coef[1]}'
@@ -693,8 +715,6 @@ def get_max_min_phi(element_struc_array, fracture_struc_array, ids, frac_id, z_i
             if phi < min_phi:
                 min_phi = phi
                 z_min = z0[np.argmin(np.real(omega_vec))]
-            if e['id_'] == 1026:
-                print(f'342: {phi}, {phi_min}, {phi_max}, {e["id_"]}, {e["ncoef"]}')
             if e['type_'] == 0:  # Intersection
                 if phi_min < min_phi:
                     min_phi = phi_min
