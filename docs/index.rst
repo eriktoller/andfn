@@ -4,6 +4,8 @@ An Analytic Discrete Fracture Network (AnDFN)
 AnDFN is a computer program that calculated the flow in a discrete fracture network (DFN) using the Analytic Element
 Method (AEM).
 
+More information can be found in the `about <about>`_ tab.
+
 .. image:: example.svg
    :width: 800
    :alt: example
