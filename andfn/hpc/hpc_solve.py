@@ -35,7 +35,7 @@ dtype_z_arrays = np.dtype([
     ])
 
 MAX_COEF = 150
-MULTIPLIER = 5
+COEF_INCREASE = 5
 
 CACHE = True
 
@@ -104,9 +104,9 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
 
     # solve once to get the initial discharges
     t = mf.calc_thetas(element_struc_array[0]['nint'], element_struc_array[0]['type_'])
-    solve_discharge_matrix(fracture_struc_array, element_struc_array, discharge_matrix, discharge_elements,
-                                   discharge_int, head_matrix, discharges, z_int, lu_matrix)
-    cnt = element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, 0, 0)
+    #solve_discharge_matrix(fracture_struc_array, element_struc_array, discharge_matrix, discharge_elements,
+    #                               discharge_int, head_matrix, discharges, z_int, lu_matrix)
+    #cnt = element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, 0, 0)
 
     error = error_old = np.float64(1.0)
     nit = 0
@@ -242,7 +242,7 @@ def element_solver(num_elements, element_struc_array, fracture_struc_array, work
 
     return cnt
 
-#@nb.jit(nopython=NO_PYTHON, parallel=False, cache=False)
+@nb.jit(nopython=NO_PYTHON, parallel=False, cache=CACHE)
 def element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error,
                     discharge_int, bnd_error, z_int):
     error = 1.0
@@ -256,33 +256,29 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
         error, id_ = get_error(element_struc_array)
 
         # Get the coefficients from the work array
-
+        if nit < 2:
+            continue
         for i in range(num_elements):
             e = element_struc_array[i]
-            # TODO: try with check_bnd instead of the error check
-            coefs = e['coef'][:e['ncoef']]
-            coef0 = np.max(np.abs(coefs[1:2]))
-            coef_ratio_re = np.abs(np.real(coefs[-1]) / np.real(coefs[1]))
-            coef_ratio_im = 0.0
-            if e['type_'] == 1:
-                coef_ratio_im = np.abs(np.imag(coefs[-1]) / np.imag(coefs[1]))
-            coef_ratio = np.nanmax([coef_ratio_re, coef_ratio_im])
+            if e['type_'] == 2:  # Well
+                continue
             coefs = e['coef'][:e['ncoef']]
             coef0 = np.max(np.abs(coefs[1:2]))
             coef1 = np.max(np.abs(coefs[-2:]))
-            coef_ratio = coef1 / coef0
-            if coef_ratio < 0.01:
+            if coef0 == 0.0:
                 coef_ratio = 0.0
-            if np.max(np.abs(coefs[1:2])) < max_error*0:
+            else:
+                coef_ratio = coef1 / coef0
+            if np.max(np.abs(coefs[1:2])) < max_error/100000:
                 coef_ratio = 0.0
             cnt = 0
-            while coef_ratio > 0.05 and e['ncoef'] < MAX_COEF and cnt < 5 and coef0 > max_error/100 and nit > 2:
-                e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
+            while coef_ratio > 0.05 and e['ncoef'] < MAX_COEF and cnt < 5 and nit > 1:
+                e['ncoef'] = int(e['ncoef'] + COEF_INCREASE)
                 e['nint'] = e['ncoef'] * 2
                 e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
                 work_array[i]['len_discharge_element'] = 0
                 mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[i]['exp_array'])
-                e['coef'][e['ncoef']] = 0.0
+                #e['coef'][:e['ncoef']] = 0.0
                 if e['type_'] == 0:  # Intersection
                     hpc_intersection.solve(e, fracture_struc_array, element_struc_array, work_array[i])
                 elif e['type_'] == 1:  # Bounding circle
@@ -291,38 +287,21 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                     e['error'] = 0.0
                 elif e['type_'] == 3:  # Constant head line
                     hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[i])
-                e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
+                #e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
                 cnt +=1
-                coefs = e['coef'][:e['ncoef']]
+                coefs = work_array[i]['coef'][:e['ncoef']]
                 coef0 = np.max(np.abs(coefs[1:2]))
                 coef1 = np.max(np.abs(coefs[-2:]))
                 coef_ratio = coef1 / coef0
-            if e['error'] > e['error_old'] and e['error'] > max_error and e['ncoef'] < MAX_COEF and nit_el > 1000:
-                e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
-                e['nint'] = e['ncoef'] * 2
-                e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
-                work_array[i]['len_discharge_element'] = 0
-                mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[i]['exp_array'])
-                e['coef'][e['ncoef']] = 0.0
-                if e['type_'] == 0:  # Intersection
-                    hpc_intersection.solve(e, fracture_struc_array, element_struc_array, work_array[i])
-                elif e['type_'] == 1:  # Bounding circle
-                    hpc_bounding_circle.solve(e, fracture_struc_array, element_struc_array, work_array[i])
-                elif e['type_'] == 2:  # Well
-                    e['error'] = 0.0
-                elif e['type_'] == 3:  # Constant head line
-                    hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[i])
-                e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
-                cnt +=1
-                # TODO: Try to add a resolve loop to find the necessary number of coefficients (if it is possible)
-                #       using the coef decay rate (or may put the bnd checker here?)
 
-            if e['ncoef'] == 150 and np.max(np.abs(e["coef"][1:2])) > 1e-10:
-                print(f' coefs: {e["coef"][:e["ncoef"]]}')
+        for i in range(num_elements):
+            e = element_struc_array[i]
+            e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
 
-        print(f'Error: {mf.float2str(error)}, Element id: {id_} [type: {element_struc_array[id_]["type_"]}, '
-              f'ncoef: {element_struc_array[id_]["ncoef"]}]')
-        print(f'Max ncoef: {np.max([e["ncoef"] for e in element_struc_array])}')
+
+        #print(f'Error: {mf.float2str(error)}, Element id: {id_} [type: {element_struc_array[id_]["type_"]}, '
+        #      f'ncoef: {element_struc_array[id_]["ncoef"]}]')
+        #print(f'Max ncoef: {np.max([e["ncoef"] for e in element_struc_array])}')
 
         #get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, discharge_int,
         #              bnd_error, z_int, nit, max_error)
@@ -639,7 +618,7 @@ def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_
         e = element_struc_array[j]
         if bnd_error[j] > 0.1 and e['ncoef'] < MAX_COEF and nit > 2:
             cnt_bnd += 1
-            e['ncoef'] = int(e['ncoef'] + MULTIPLIER)
+            e['ncoef'] = int(e['ncoef'] + COEF_INCREASE)
             e['nint'] = e['ncoef'] * 2
             e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
             work_array[j]['len_discharge_element'] = 0

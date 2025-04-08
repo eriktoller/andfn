@@ -21,6 +21,8 @@ from matplotlib.pyplot import tight_layout
 from andfn import geometry_functions as gf
 from .fracture import Fracture
 from .hpc.hpc_solve import solve as hpc_solve
+from .hpc.hpc_fracture import calc_flow_net as hpc_calc_flow_net, get_flow_nets as hpc_get_flow_nets, \
+    get_heads as hpc_get_heads
 from .well import Well
 from .impermeable_object import ImpermeableCircle, ImpermeableLine
 from .const_head import ConstantHeadLine
@@ -129,7 +131,7 @@ def plot_line_3d(seg, f, pl, color, line_width):
 
 
 class DFN:
-    def __init__(self, label, discharge_int=50, **kwargs):
+    def __init__(self, label, discharge_int=10, **kwargs):
         """
         Initializes the DFN class.
 
@@ -354,6 +356,7 @@ class DFN:
                 if isinstance(e, Intersection):
                     e.frac1.add_element(e)
             self.add_fracture(fracs)
+            self.get_elements()
 
 
     def consolidate_dfn(self, hpc=False):
@@ -939,9 +942,10 @@ class DFN:
     ####################################################################################################################
 
     def initiate_plotter(self, window_size=(800, 800), grid=False, lighting='light kit', title=True, off_screen=False,
-                         scale=1, axis=True, notebook=False):
+                         scale=1.0, axis=True, notebook=False):
         """
         Initiates the plotter for the DFN.
+
         Parameters
         ----------
         window_size : tuple
@@ -1055,6 +1059,8 @@ class DFN:
         only_flow : bool
             Whether to plot only the fractures with flow.
         """
+        if self.fractures_struc_array_hpc is None:
+            self.consolidate_dfn(hpc=True)
         if only_flow:
             fracs = self.get_flow_fractures()
             self.plot_fractures(pl, fracs=fracs)
@@ -1062,24 +1068,18 @@ class DFN:
             fracs = self.fractures
 
         # Calculate the flow net for each fracture
-        omega_fn_list = []
-        x_array_list = []
-        y_array_list = []
-        for i, f in enumerate(fracs):
-            print(f'\rPlotting flow net: {i + 1} / {len(fracs)}', end='')
-            omega_fn, x_array, y_array = f.calc_flow_net(n_points, margin)
-            omega_fn_list.append(omega_fn)
-            x_array_list.append(x_array)
-            y_array_list.append(y_array)
+        omegas, x_arrays, y_arrays = hpc_get_flow_nets(self.fractures_struc_array_hpc, n_points, margin, self.elements_struc_array_hpc)
+
 
         # Get the levels for the flow net
-        lvs_re, lvs_im = get_lvs(lvs, omega_fn_list)
+        lvs_re, lvs_im = get_lvs(lvs, omegas)
 
         # Plot the flow net for each fracture
         for i, f in enumerate(fracs):
+            print(f'\rPlotting flow net: {i + 1} / {len(fracs)}', end='')
             # plot the flow net using matplotlib
-            contours_re = plt.contour(x_array_list[i], y_array_list[i], np.real(omega_fn_list[i]), levels=lvs_re)
-            contours_im = plt.contour(x_array_list[i], y_array_list[i], np.imag(omega_fn_list[i]), levels=lvs_im)
+            contours_re = plt.contour(x_arrays[i], y_arrays[i], np.real(omegas[i]), levels=lvs_re)
+            contours_im = plt.contour(x_arrays[i], y_arrays[i], np.imag(omegas[i]), levels=lvs_im)
             # Extract the contour line and plot them in 3D, real and imaginary parts
             for contour in contours_re.allsegs:
                 for seg in contour:
@@ -1119,28 +1119,23 @@ class DFN:
         limits : list | tuple
             Custom limits for the flow net, overwrites the calculated limits.
         """
+        if self.fractures_struc_array_hpc is None:
+            self.consolidate_dfn(hpc=True)
         if only_flow:
             fracs = self.get_flow_fractures()
         else:
             fracs = self.fractures
 
         # Calculate the flow net for each fracture
-        head_fn_list = []
         max_min_head_list = []
-        x_array_list = []
-        y_array_list = []
+        heads, x_arrays, y_arrays = hpc_get_heads(self.fractures_struc_array_hpc, n_points, margin, self.elements_struc_array_hpc)
         for i, f in enumerate(fracs):
-            omega_fn, x_array, y_array = f.calc_flow_net(n_points, margin)
-            head_fn_list.append(f.head_from_phi(np.real(omega_fn)))
             max_min_head = f.get_max_min_head()
             if max_min_head[0] is not None:
                 max_min_head_list.append(max_min_head)
-            x_array_list.append(x_array)
-            y_array_list.append(y_array)
-            print(f'\rPlotting hydraulic head: {i + 1} / {len(fracs)}', end='')
 
         # Get the levels for the flow net
-        head_max, head_min = np.nanmax(head_fn_list), np.nanmin(head_fn_list)
+        head_max, head_min = np.nanmax(heads), np.nanmin(heads)
         if head_max < np.max(max_min_head_list):
             head_max = np.max(max_min_head_list)
         if head_min > np.min(max_min_head_list):
@@ -1156,27 +1151,24 @@ class DFN:
         # Plot the flow net for each fracture
         for i, f in enumerate(fracs):
             # plot the flow net using matplotlib
-            contours_re = plt.contour(x_array_list[i], y_array_list[i], head_fn_list[i], levels=lvs_re)
+            contours_re = plt.contour(x_arrays[i], y_arrays[i], heads[i], levels=lvs_re)
             # Plot the fractures
-            mean_head = np.nanmean(head_fn_list[i])
-            pos_frac, = np.where(np.abs(lvs_re - mean_head) == np.min(np.abs(lvs_re - mean_head)))[0]
+            mean_head = np.nanmean(heads[i])
+            pos_frac = np.where(np.abs(lvs_re - mean_head) == np.min(np.abs(lvs_re - mean_head)))[0][0]
             color_frac = colors[pos_frac]
-            #if np.nanmin(head_fn_list[i]) < 190 or np.nanmax(head_fn_list[i]) > 420:
-            #    print(f'\n{i}')
-            if i>-1:#==38:
-                self.plot_fractures(pl, filled=True, color=color_frac, opacity=opacity, show_edges=True, line_width=2.0,
-                                    fracs=[f])
-                # Extract the contour line and plot them in 3D, real and imaginary parts
-                for contour in contours_re.allsegs:
-                    for seg in contour:
-                        if len(seg) == 0:
-                            continue
-                        loc = int(len(seg)/2)
-                        head = f.head_from_phi(np.real(f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j]))))
-                        pos, = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0]
-                        color = colors[pos]
-                        plot_line_3d(seg, f, pl, color, line_width=line_width)
-                #self.plot_elements(pl, elements=f.elements)
+            self.plot_fractures(pl, filled=True, color=color_frac, opacity=opacity, show_edges=True, line_width=2.0,
+                                fracs=[f])
+            # Extract the contour line and plot them in 3D, real and imaginary parts
+            for contour in contours_re.allsegs:
+                for seg in contour:
+                    if len(seg) == 0:
+                        continue
+                    loc = int(len(seg)/2)
+                    head = f.head_from_phi(np.real(f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j]))))
+                    pos = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0][0]
+                    color = colors[pos]
+                    plot_line_3d(seg, f, pl, color, line_width=line_width)
+            print(f'\rPlotting hydraulic head: {i + 1} / {len(fracs)}', end='')
 
         # Add the color bar
         # Create a sample mesh
