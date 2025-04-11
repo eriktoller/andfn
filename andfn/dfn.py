@@ -921,7 +921,12 @@ class DFN(Constants):
         self.get_elements()
         self.consolidate_dfn(hpc=True)
         self.build_discharge_matrix()
+        print('\n')
+        print('---------------------------------------')
+        print('Starting HPC solve...')
+        print('---------------------------------------')
         print(f'Number of elements: {len(self.elements)} \nNumber of fractures: {len(self.fractures)} \nNumber of entries in discharge matrix: {self.discharge_matrix.getnnz()}')
+        self.print_solver_constants()
         self.elements_struc_array = hpc_solve(self.fractures_struc_array_hpc, self.elements_struc_array_hpc,
                                                     self.discharge_matrix, self.discharge_int, self.constants)
         self.unconsolidate_dfn(hpc=True)
