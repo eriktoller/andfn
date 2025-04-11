@@ -8,17 +8,16 @@ import numpy as np
 import numba as nb
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
-from andfn.hpc import hpc_fracture, NO_PYTHON
 
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def z_array(self_, n, frac_is):
     if frac_is == self_['frac0']:
         return np.linspace(self_['endpoints0'][0], self_['endpoints0'][1], n)
     return np.linspace(self_['endpoints1'][0], self_['endpoints1'][1], n)
 
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def solve(self_, fracture_struc_array, element_struc_array, work_array):
     """
     Solves the intersection element.
@@ -57,7 +56,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     self_['error'] = mf.calc_error(work_array['coef'][:self_['ncoef']], work_array['old_coef'][:self_['ncoef']])
 
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit(inline='always')
 def calc_omega(self_, z, frac_is_id):
     """
     Function that calculates the omega function for a given point z and fracture.
@@ -114,7 +113,7 @@ def calc_w(self_, z, frac_is_id):
         w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self_['endpoints1'][1] - self_['endpoints1'][0])
     return w
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def z_array(self_, n, frac_is):
     """
     Returns an array of n points along the intersection.

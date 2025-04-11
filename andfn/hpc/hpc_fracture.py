@@ -6,11 +6,11 @@ This module contains the HPC fracture functions.
 
 import numpy as np
 import numba as nb
-from andfn.hpc import hpc_intersection, hpc_const_head_line, hpc_well, hpc_bounding_circle, NO_PYTHON
-from andfn.element import element_dtype, element_index_dtype, fracture_dtype, fracture_index_dtype
+from andfn.hpc import hpc_intersection, hpc_const_head_line, hpc_well, hpc_bounding_circle, hpc_imp_object
 
+CACHE = False
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def calc_omega(self_, z, element_struc_array, exclude=-1):
     """
     Calculates the omega for the fracture excluding element "exclude".
@@ -45,6 +45,8 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
                 omega += hpc_well.calc_omega(element, z)
             elif element['type_'] == 3:  # Constant head line
                 omega += hpc_const_head_line.calc_omega(element, z)
+            elif element['type_'] == 4:  # Impermeable object
+                omega += hpc_imp_object.calc_omega_circle(element, z)
 
     return omega
 
@@ -86,7 +88,7 @@ def calc_w(self_, z, element_struc_array, exclude=-1):
 
     return w
 
-@nb.jit(nopython=NO_PYTHON, cache=True)
+@nb.njit(cache=CACHE)
 def calc_flow_net(self_, n_points, margin, element_struc_array):
     """
     Calculates the flow net for the fracture.
@@ -144,7 +146,7 @@ def head_from_phi(self_, phi):
 
     return head
 
-@nb.jit(nopython=NO_PYTHON, cache=True)
+@nb.njit(cache=CACHE)
 def calc_heads(self_, n_points, margin, element_struc_array):
     """
     Calculates the head net for the fracture.
@@ -183,7 +185,7 @@ def calc_heads(self_, n_points, margin, element_struc_array):
 
     return heads, x_array, y_array
 
-@nb.jit(nopython=NO_PYTHON, cache=True, parallel=True)
+@nb.njit(cache=CACHE, parallel=True)
 def get_flow_nets(fracture_struc_array, n_points, margin, element_struc_array):
     """
     Get the flow nets for all fractures.
@@ -216,7 +218,7 @@ def get_flow_nets(fracture_struc_array, n_points, margin, element_struc_array):
 
     return flow_nets, x_arrays, y_arrays
 
-@nb.jit(nopython=NO_PYTHON, cache=True, parallel=True)
+@nb.njit(cache=CACHE, parallel=True)
 def get_heads(fracture_struc_array, n_points, margin, element_struc_array):
     """
     Get the heads for all fractures.

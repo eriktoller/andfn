@@ -9,7 +9,8 @@ import numpy as np
 import numba as nb
 import scipy as sp
 from andfn.hpc import hpc_math_functions as mf
-from andfn.hpc import hpc_intersection, hpc_fracture, hpc_const_head_line, hpc_well, hpc_bounding_circle, NO_PYTHON, PARALLEL
+from andfn.hpc import (hpc_intersection, hpc_fracture, hpc_const_head_line, hpc_well, hpc_bounding_circle,
+                       hpc_imp_object, PARALLEL)
 from andfn.element import MAX_NCOEF, MAX_ELEMENTS
 
 dtype_work = np.dtype([
@@ -37,10 +38,10 @@ dtype_z_arrays = np.dtype([
 MAX_COEF = 150
 COEF_INCREASE = 5
 
-CACHE = True
+CACHE = False
 
 
-def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge_int, max_error, max_iterations):
+def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge_int, constants):
     """
     Solves the DFN.
 
@@ -54,10 +55,8 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
         The discharge matrix
     discharge_int : int
         The number of integration points
-    max_error : np.float64
-        The maximum error allowed
-    max_iterations : int
-        The maximum number of iterations
+    constants : np.ndarray[constants_dtype]
+        The constants for the solver and dfn.
 
     Returns
     -------
@@ -65,6 +64,9 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
         The array of elements
 
     """
+    # Get the constants
+    max_error = constants['MAX_ERROR'][0]
+    max_iterations = constants['MAX_ITERATIONS'][0]
 
     # get the discharge elements
     print('Compiling HPC code...')
@@ -167,7 +169,7 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
 
     return element_struc_array
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def get_error(element_struc_array):
     """
     Get the maximum error from the elements and the element that it is associated with.
@@ -192,7 +194,7 @@ def get_error(element_struc_array):
             id_ = e['id_']
     return error, id_
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
+@nb.njit(parallel=PARALLEL, cache=CACHE)
 def get_discharge_elements(element_struc_array):
     """
     Get the discharge elements from the element array.
@@ -215,7 +217,7 @@ def get_discharge_elements(element_struc_array):
     discharge_elements = element_struc_array[el]
     return discharge_elements
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
+@nb.njit(parallel=PARALLEL, cache=CACHE)
 def element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error):
     cnt = 0
 
@@ -234,6 +236,8 @@ def element_solver(num_elements, element_struc_array, fracture_struc_array, work
             cnt += 1
         elif e['type_'] == 3:  # Constant head line
             hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[i])
+        elif e['type_'] == 4:  # Impermeable circle
+            hpc_imp_object.solve_circle(e, fracture_struc_array, element_struc_array, work_array[i])
 
     # Get the coefficients from the work array
     for i in nb.prange(num_elements):
@@ -242,7 +246,7 @@ def element_solver(num_elements, element_struc_array, fracture_struc_array, work
 
     return cnt
 
-@nb.jit(nopython=NO_PYTHON, parallel=False, cache=CACHE)
+@nb.njit( parallel=False, cache=CACHE)
 def element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error,
                     discharge_int, bnd_error, z_int):
     error = 1.0
@@ -287,6 +291,8 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                     e['error'] = 0.0
                 elif e['type_'] == 3:  # Constant head line
                     hpc_const_head_line.solve(e, fracture_struc_array, element_struc_array, work_array[i])
+                elif e['type_'] == 4:  # Impermeable circle
+                    hpc_imp_object.solve_circle(e, fracture_struc_array, element_struc_array, work_array[i])
                 #e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
                 cnt +=1
                 coefs = work_array[i]['coef'][:e['ncoef']]
@@ -356,7 +362,7 @@ def solve_discharge_matrix(fractures_struc_array, element_struc_array, discharge
     post_matrix_solve(fractures_struc_array, element_struc_array, discharge_elements, discharges)
     print(f'Post solve time: {time.time() - start0}')
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
+@nb.njit( parallel=PARALLEL, cache=CACHE)
 def pre_matrix_solve(fractures_struc_array, element_struc_array, discharge_elements,
                      discharge_int, head_matrix, z_int):
     """
@@ -399,7 +405,7 @@ def pre_matrix_solve(fractures_struc_array, element_struc_array, discharge_eleme
     build_head_matrix(fractures_struc_array, element_struc_array, discharge_elements, discharge_int, head_matrix, z_int)
 
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
+@nb.njit( parallel=PARALLEL, cache=CACHE)
 def post_matrix_solve(fractures_struc_array, element_struc_array, discharge_elements,
                         discharges):
     """
@@ -432,7 +438,7 @@ def post_matrix_solve(fractures_struc_array, element_struc_array, discharge_elem
     for i in nb.prange(len(fractures_struc_array)):
         fractures_struc_array[i]['constant'] = discharges[len(discharge_elements) + i]
 
-@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
+@nb.njit( parallel=PARALLEL, cache=CACHE)
 def build_head_matrix(fractures_struc_array, element_struc_array, discharge_elements, discharge_int, head_matrix, z_int):
     """
     Builds the head matrix for the DFN and stores it.
@@ -479,7 +485,7 @@ def build_head_matrix(fractures_struc_array, element_struc_array, discharge_elem
             head_matrix[j] = e['phi'] - np.real(omega)
 
 
-#@nb.jit(nopython=NO_PYTHON, parallel=PARALLEL, cache=CACHE)
+#@nb.njit( parallel=PARALLEL, cache=CACHE)
 def get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, discharge_int,
                   bnd_error, z_int, nit, max_error):
     """
@@ -711,7 +717,7 @@ def get_max_min_phi(element_struc_array, fracture_struc_array, ids, frac_id, z_i
 
     return max_phi, min_phi, z_max, z_min, l_min, l_max
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def get_z_int_array(z_int, elements, discharge_int):
     # Add the head for each discharge element
     for j in range(elements.size):
@@ -726,7 +732,7 @@ def get_z_int_array(z_int, elements, discharge_int):
         elif e['type_'] == 3:  # Constant head line
             z_int['z0'][j][:discharge_int] = hpc_const_head_line.z_array(e, discharge_int)
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def set_new_ncoef(self_, n, nint_mult=2):
     """
     Increase the number of coefficients in the asymptotic expansion.

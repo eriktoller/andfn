@@ -6,7 +6,7 @@ This module contains the DFN class.
 The DFN class is the main class for the AnDFN package. It contains the fractures and elements of the DFN and methods to
 solve the DFN.
 """
-import concurrent
+
 from datetime import datetime
 
 import numpy as np
@@ -14,15 +14,12 @@ import pyvista as pv
 import matplotlib.pyplot as plt
 import scipy as sp
 import h5py
-from concurrent.futures import ThreadPoolExecutor
-
-from matplotlib.pyplot import tight_layout
 
 from andfn import geometry_functions as gf
+from .constants import Constants, dtype_constants
 from .fracture import Fracture
 from .hpc.hpc_solve import solve as hpc_solve
-from .hpc.hpc_fracture import calc_flow_net as hpc_calc_flow_net, get_flow_nets as hpc_get_flow_nets, \
-    get_heads as hpc_get_heads
+from .hpc.hpc_fracture import get_flow_nets as hpc_get_flow_nets, get_heads as hpc_get_heads
 from .well import Well
 from .impermeable_object import ImpermeableCircle, ImpermeableLine
 from .const_head import ConstantHeadLine
@@ -130,7 +127,7 @@ def plot_line_3d(seg, f, pl, color, line_width):
     pl.add_mesh(pv.MultipleLines(line_3d), color=color, line_width=line_width)
 
 
-class DFN:
+class DFN(Constants):
     def __init__(self, label, discharge_int=10, **kwargs):
         """
         Initializes the DFN class.
@@ -143,6 +140,7 @@ class DFN:
             The number of points to use for the discharge integral.
 
         """
+        super().__init__()
         self.label = label
         self.discharge_int = discharge_int
         self.fractures = []
@@ -150,11 +148,9 @@ class DFN:
 
         # Initialize the discharge matrix
         self.discharge_matrix = None
-        self.discharge_matrix_sparse = None
         self.discharge_elements = None
         self.discharge_elements_index = None
         self.lup = None
-        self.rcm_order = None
         self.discharge_error = 1
 
         # Initialize the structure array
@@ -166,8 +162,7 @@ class DFN:
         self.fractures_struc_array_hpc = None
 
         # Set the kwargs
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        self.set_kwargs(**kwargs)
 
     def __str__(self):
         """
@@ -179,6 +174,22 @@ class DFN:
             The string representation of the DFN.
         """
         return f'DFN: {self.label}'
+
+    def set_kwargs(self, **kwargs):
+        """
+        Changes the attributes of the DFN.
+
+        Parameters
+        ----------
+        kwargs : dict
+            The attributes to change.
+        """
+        for key, value in kwargs.items():
+            if key in dtype_constants.names:
+                self.constants[key] = value
+                continue
+            setattr(self, key, value)
+
 
     ####################################################################################################################
     #                      Load and save                                                                               #
@@ -630,18 +641,13 @@ class DFN:
     #                      Solve functions                                                                             #
     ####################################################################################################################
 
-    def build_discharge_matrix(self, rcm):
+    def build_discharge_matrix(self):
         """
         Builds the discharge matrix for the DFN and adds it to the DFN.
 
-        Parameters
-        ----------
-        rcm : bool
-            If True, the reverse Cuthill-McKee algorithm is used to reorder the sparse matrix
         """
         self.get_discharge_elements()
         size = len(self.discharge_elements) + self.number_of_fractures()
-        matrix = np.zeros((size, size))
 
         # Create a sparse matrix
         # create the row, col and data arrays
@@ -662,12 +668,10 @@ class DFN:
                     # add the discharge term to the matrix for each element in the first fracture
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
-                        matrix[row, pos] = e.frac0.head_from_phi(ee.discharge_term(z0, e.frac0))
                         rows.append(row)
                         cols.append(pos)
                         data.append(e.frac0.head_from_phi(ee.discharge_term(z0, e.frac0)))
                     else:
-                        matrix[row, pos] = e.frac0.head_from_phi(ee.discharge_term(z0))
                         rows.append(row)
                         cols.append(pos)
                         data.append(e.frac0.head_from_phi(ee.discharge_term(z0)))
@@ -677,22 +681,18 @@ class DFN:
                     # add the discharge term to the matrix for each element in the second fracture
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
-                        matrix[row, pos] = e.frac1.head_from_phi(-ee.discharge_term(z1, e.frac1))
                         rows.append(row)
                         cols.append(pos)
                         data.append(e.frac1.head_from_phi(-ee.discharge_term(z1, e.frac1)))
                     else:
-                        matrix[row, pos] = e.frac1.head_from_phi(-ee.discharge_term(z1))
                         rows.append(row)
                         cols.append(pos)
                         data.append(e.frac1.head_from_phi(-ee.discharge_term(z1)))
                 pos_f0 = self.fractures.index(e.frac0)
-                matrix[row, len(self.discharge_elements) + pos_f0] = e.frac0.head_from_phi(1)
                 rows.append(row)
                 cols.append(len(self.discharge_elements) + pos_f0)
                 data.append(e.frac0.head_from_phi(1))
                 pos_f1 = self.fractures.index(e.frac1)
-                matrix[row, len(self.discharge_elements) + pos_f1] = e.frac1.head_from_phi(-1)
                 rows.append(row)
                 cols.append(len(self.discharge_elements) + pos_f1)
                 data.append(e.frac1.head_from_phi(-1))
@@ -704,17 +704,14 @@ class DFN:
                     # add the discharge term to the matrix for each element in the fracture
                     pos = self.discharge_elements.index(ee)
                     if isinstance(ee, Intersection):
-                        matrix[row, pos] = ee.discharge_term(z, e.frac0)
                         rows.append(row)
                         cols.append(pos)
                         data.append(ee.discharge_term(z, e.frac0))
                     else:
-                        matrix[row, pos] = ee.discharge_term(z)
                         rows.append(row)
                         cols.append(pos)
                         data.append(ee.discharge_term(z))
                 pos_f = self.fractures.index(e.frac0)
-                matrix[row, len(self.discharge_elements) + pos_f] = 1
                 rows.append(row)
                 cols.append(len(self.discharge_elements) + pos_f)
                 data.append(1)
@@ -729,31 +726,23 @@ class DFN:
                     pos = self.discharge_elements.index(e)
                     if isinstance(e, Intersection):
                         if e.frac0 == f:
-                            matrix[row, pos] = 1
                             rows.append(row)
                             cols.append(pos)
                             data.append(1)
                         else:
-                            matrix[row, pos] = -1
                             rows.append(row)
                             cols.append(pos)
                             data.append(-1)
                     else:
-                        matrix[row, pos] = 1
                         rows.append(row)
                         cols.append(pos)
                         data.append(1)
             row += 1
 
         # create the csr sparse matrix
-        matrix_sparse = sp.sparse.csc_matrix((data, (rows, cols)), shape=(size, size))
+        matrix = sp.sparse.csc_matrix((data, (rows, cols)), shape=(size, size))
 
         self.discharge_matrix = matrix
-        self.discharge_matrix_sparse = matrix_sparse
-        if rcm:
-            rcm_order = sp.sparse.csgraph.reverse_cuthill_mckee(self.discharge_matrix_sparse)
-            self.discharge_matrix_sparse = self.discharge_matrix_sparse[rcm_order, :][:, rcm_order]
-            self.rcm_order = rcm_order
 
     def lu_decomposition(self):
         """
@@ -807,7 +796,7 @@ class DFN:
         if lu_decomp:
             discharges = self.lup.solve(head_matrix)
         else:
-            discharges = sp.sparse.linalg.spsolve(self.discharge_matrix_sparse, head_matrix)
+            discharges = sp.sparse.linalg.spsolve(self.discharge_matrix, head_matrix)
             #discharges = np.linalg.solve(self.discharge_matrix, head_matrix)
 
         error_list = []
@@ -842,7 +831,7 @@ class DFN:
         return 0
 
     def solve(self, max_error=1e-5, max_iterations=50, boundary_check=False, tolerance=1e-2, n_boundary_check=100,
-              max_iteration_boundary=5, coef_increase=1.5, increase_check=True, lu_decomp=False, rcm=False):
+              max_iteration_boundary=5, coef_increase=1.5, increase_check=True, lu_decomp=False):
         """
         Solves the DFN and saves the coefficients to the elements.
         """
@@ -851,7 +840,7 @@ class DFN:
             self.get_elements()
         # Check if the discharge matrix has been built
         if self.discharge_matrix is None:
-            self.build_discharge_matrix(rcm)
+            self.build_discharge_matrix()
         if lu_decomp:
             self.lu_decomposition()
 
@@ -896,9 +885,9 @@ class DFN:
                 cnt_bc = 0
                 for ee in self.elements:
                     ee.error = max_error * 1.0001
-                    if ee.check_boundary_condition(n=n_boundary_check) > tolerance:
+                    if ee.check_boundary_condition(n=n_boundary_check) > tolerance and ee.ncoef < self.constants['MAX_COEF']:
                         cnt_bc += 1
-                        ee.set_new_ncoef(int(ee.ncoef*coef_increase))
+                        ee.set_new_ncoef(int(ee.ncoef+coef_increase))
                         ee.solve()
             if nit < 10:
                 print(
@@ -910,13 +899,13 @@ class DFN:
                 cnt_error = 0
                 cnt_bc = 0
                 nit_boundary += 1
-            if increase_check and error > error_old and nit > 3 and error > max_error:
+            if increase_check and error > error_old and nit > 3*100 and error > max_error:
                 """
                 Checks if the error is increasing and increases the number of coefficients for the element with the 
                 maximum error.
                 """
                 print(f', Error increased for element {element}.', end='')
-                element.set_new_ncoef(int(element.ncoef*coef_increase))
+                element.set_new_ncoef(int(element.ncoef+coef_increase))
                 element.solve()
                 cnt_error = 0
             print('')
@@ -925,16 +914,16 @@ class DFN:
 
         print(f'Solved DFN in {datetime.now() - start}.')
 
-    def hpc_solve(self, max_error=1e-5, max_iterations=20, rcm=False):
+    def hpc_solve(self):
         """
         Solves the DFN on a HPC.
         """
         self.get_elements()
         self.consolidate_dfn(hpc=True)
-        self.build_discharge_matrix(rcm)
-        print(f'Number of elements: {len(self.elements)} \nNumber of fractures: {len(self.fractures)} \nNumber of entries in discharge matrix: {self.discharge_matrix_sparse.getnnz()}')
+        self.build_discharge_matrix()
+        print(f'Number of elements: {len(self.elements)} \nNumber of fractures: {len(self.fractures)} \nNumber of entries in discharge matrix: {self.discharge_matrix.getnnz()}')
         self.elements_struc_array = hpc_solve(self.fractures_struc_array_hpc, self.elements_struc_array_hpc,
-                                                    self.discharge_matrix_sparse, self.discharge_int, max_error, max_iterations)
+                                                    self.discharge_matrix, self.discharge_int, self.constants)
         self.unconsolidate_dfn(hpc=True)
 
     ####################################################################################################################
@@ -1163,8 +1152,9 @@ class DFN:
                 for seg in contour:
                     if len(seg) == 0:
                         continue
-                    loc = int(len(seg)/2)
-                    head = f.head_from_phi(np.real(f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j]))))
+                    loc = int(len(seg)/4)
+                    oms = f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j, seg[loc*2][0] + seg[loc*2][1]*1j, seg[loc*3][0] + seg[loc*3][1]*1j]))
+                    head = f.head_from_phi(np.real(np.nanmean(oms)))
                     pos = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0][0]
                     color = colors[pos]
                     plot_line_3d(seg, f, pl, color, line_width=line_width)
@@ -1249,12 +1239,12 @@ class DFN:
         ax.title.set_color('white')
         for spine in ['top', 'left', 'right', 'bottom']:
             ax.spines[spine].set_color('white')
-        ax.spy( self.discharge_matrix_sparse, markersize=0.5, color='white')
+        ax.spy( self.discharge_matrix, markersize=0.5, color='white')
         # Equal axis
         ax.set_aspect('equal')
 
-        num_entries = self.discharge_matrix_sparse.nnz
-        num_zeros = self.discharge_matrix_sparse.shape[0] * self.discharge_matrix_sparse.shape[1]
+        num_entries = self.discharge_matrix.nnz
+        num_zeros = self.discharge_matrix.shape[0] * self.discharge_matrix.shape[1]
         # title
         ax.set_title(f'Sparse matrix of the DFN\nNumber of fractures: {self.number_of_fractures()}, Number of elements: {self.number_of_elements()}'
                      f'\nNumber of entries: {num_entries}, Number of zeros: '
@@ -1566,7 +1556,7 @@ class DFN:
         length : float
             The length of the streamline.
         """
-        if len(streamline) > 1:
+        if isinstance(streamline[0], list):
             streamline = np.concat(streamline)
             velocity = np.concatenate(velocity)
         if isinstance(streamline, list):

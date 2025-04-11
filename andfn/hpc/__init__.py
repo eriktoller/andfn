@@ -1,3 +1,2 @@
 
-NO_PYTHON = True
 PARALLEL = True

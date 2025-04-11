@@ -9,9 +9,8 @@ import numpy as np
 import numba as nb
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
-from andfn.hpc import NO_PYTHON
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit(inline='always')
 def calc_omega(self_, z):
     """
     Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
@@ -54,7 +53,7 @@ def calc_w(self_, z):
     w = - self_['q'] / (2 * np.pi * chi) / self_['radius']
     return w
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def z_array(self_, n):
     """
     Returns an array of n points on the well.

@@ -13,10 +13,9 @@ import andfn
 from andfn import fracture
 from andfn import intersection
 from andfn import const_head
-from . import NO_PYTHON
 
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit( inline='always')
 def map_z_line_to_chi(z, endpoints):
     """
     Function that maps the exterior of a line in the complex z-plane onto the exterior of the unit circle in the
@@ -38,7 +37,7 @@ def map_z_line_to_chi(z, endpoints):
     big_z = (2 * z - endpoints[0] - endpoints[1]) / (endpoints[1] - endpoints[0])
     return big_z + np.sqrt(big_z - 1) * np.sqrt(big_z + 1)
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit( inline='always')
 def map_chi_to_z_line(chi, endpoints):
     """
     Function that maps the exterior of the unit circle in the complex chi-plane onto the exterior of a line in the
@@ -61,7 +60,7 @@ def map_chi_to_z_line(chi, endpoints):
     z = 1 / 2 * (big_z * (endpoints[1] - endpoints[0]) + endpoints[0] + endpoints[1])
     return z
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit( inline='always')
 def map_z_circle_to_chi(z, r, center=0.0):
     """
     Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.
@@ -82,7 +81,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
     """
     return (z - center) / r
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit( inline='always')
 def map_chi_to_z_circle(chi, r, center=0.0):
     """
     Function that maps the unit circle in the complex chi-plane to a circle in the complex z-plane.

@@ -8,13 +8,10 @@ import numpy as np
 import numba as nb
 import math
 
-from docutils.nodes import inline
-
-from . import NO_PYTHON
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit(inline='always')
 def asym_expansion(chi, coef):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
@@ -67,7 +64,7 @@ def asym_expansion_d1(chi, coef):
 
     return res
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit(inline='always')
 def taylor_series(chi, coef):
     """
     Function that calculates the Taylor series starting from 0 for a given point chi and an array of
@@ -121,7 +118,7 @@ def taylor_series_d1(chi, coef):
 
     return res
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit(inline='always')
 def well_chi(chi, q):
     """
     Function that return the complex potential for a well as a function of chi.
@@ -143,7 +140,7 @@ def well_chi(chi, q):
     """
     return q / (2 * np.pi) * np.log(chi)
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, endpoints0, work_array, coef):
     """
     FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
@@ -164,6 +161,10 @@ def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, 
         Array of elements
     endpoints0 : np.ndarray[np.complex128]
         The endpoints of the constant head line
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
 
     Return
     ------
@@ -194,8 +195,8 @@ def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, 
         coef[ii] = 2 * work_array['integral'][ii] / n
     coef[0] = coef[0] / 2
 
-
-def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
+@nb.njit()
+def cauchy_integral_imag_circle(n, m, thetas, frac0, element_id_, element_struc_array, radius, center, work_array, coef):
     """
     FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
 
@@ -207,34 +208,58 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
         Number of coefficients
     thetas : np.ndarray
         Array with thetas along the unit circle
-    omega_func : function
-        The function for the complex potential
-    z_func : function
-        The function for the mapping of chi to z
+    frac0 : np.ndarray
+        The fracture
+    element_id_ : int
+        The element id
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    radius : np.float64
+        The radius of the circle
+    center : np.ndarray[np.complex128]
+        The center of the circle
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
 
     Return
     ------
     coef : np.ndarray
         Array of coefficients
     """
-    integral = np.zeros((n, m), dtype=complex)
-    coef = np.zeros(m, dtype=complex)
-
     for ii in range(n):
         chi = np.exp(1j * thetas[ii])
-        z = z_func(chi)
-        psi = np.imag(omega_func(z))
-        for jj in range(m):
-            integral[ii, jj] = psi * np.exp(-1j * jj * thetas[ii])
+        z = gf.map_chi_to_z_circle(chi, radius, center)
+        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
+        work_array['phi'][ii] = np.imag(omega)
+
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array['exp_array'][ii]
+            res_tmp += work_array['phi'][ii] * exp_val
+        work_array['integral'][jj] = res_tmp
 
     for ii in range(m):
-        coef[ii] = 2 * sum(integral[:, ii]) / n
+        coef[ii] = 2j * work_array['integral'][ii] / n
     coef[0] = coef[0] / 2
 
-    return coef
+    #for ii in range(n):
+    #    chi = np.exp(1j * thetas[ii])
+    #    z = z_func(chi)
+    #    psi = np.imag(omega_func(z))
+    #    for jj in range(m):
+    #        integral[ii, jj] = psi * np.exp(-1j * jj * thetas[ii])
+
+    #for ii in range(m):
+    #    coef[ii] = 2 * sum(integral[:, ii]) / n
+    #coef[0] = coef[0] / 2
 
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_struc_array, radius, work_array, coef):
     """
     FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
@@ -295,7 +320,7 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_
         coef[ii] = 2j * work_array['integral'][ii] / n
     coef[0] = work_array['coef'][0] / 2
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit(inline='always')
 def calc_error(coef, coef_ref):
     """
     Function that calculates the error between two sets of coefficients.
@@ -320,7 +345,7 @@ def calc_error(coef, coef_ref):
         error += np.abs((coef[i] - coef_ref[i]))
     return (error/len(coef))
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit(inline='always')
 def calc_thetas(n, type_):
     """
     Function that calculates the thetas for the unit circle.
@@ -348,7 +373,7 @@ def calc_thetas(n, type_):
         thetas[i] = start + i * del_theta
     return thetas
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def fill_exp_array(n, m, thetas, exp_array):
     for ii in range(n):
         exp_array[ii] = np.exp(-1j * thetas[ii])
@@ -357,7 +382,7 @@ def fill_exp_array(n, m, thetas, exp_array):
 # Functions NUMBA
 ########################################################################################################################
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def cut_trail(f_str):
     cut = 0
     for c in f_str[::-1]:
@@ -379,7 +404,7 @@ def cut_trail(f_str):
     return f_str
 
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def float2str(value):
     if math.isnan(value):
         return "nan"

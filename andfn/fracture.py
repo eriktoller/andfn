@@ -43,6 +43,7 @@ class Fracture:
         self.label = label
         self.id_ = 0
         self.t = t
+        self.aperture = 1e-6
         self.radius = radius
         self.center = center
         self.normal = normal / np.linalg.norm(normal)

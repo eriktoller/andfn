@@ -7,11 +7,11 @@ This module contains the HPC Constant head functions.
 import numpy as np
 import numba as nb
 
-from andfn.hpc import hpc_fracture, NO_PYTHON
+from andfn.hpc import hpc_fracture
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def solve(self_, fracture_struc_array, element_struc_array, work_array):
     """
     Solves the constant head line element.
@@ -46,7 +46,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
 
 
 
-@nb.jit(nopython=NO_PYTHON, inline='always')
+@nb.njit(inline='always')
 def calc_omega(self_, z):
     """
     Function that calculates the omega function for a given point z and fracture.
@@ -89,7 +89,7 @@ def calc_w(self_, z):
     w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self_['endpoints0'][1] - self_['endpoints0'][0])
     return w
 
-@nb.jit(nopython=NO_PYTHON)
+@nb.njit()
 def z_array(self_, n):
     """
     Returns an array of n points along the constant head line.
