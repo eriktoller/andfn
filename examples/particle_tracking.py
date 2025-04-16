@@ -28,7 +28,7 @@ if __name__ == '__main__':
     frac1 = andfn.fracture.Fracture('beta', 1, radius=1.0,
                                     center=np.array([-0.6, -0.61, -0.7]),
                                     normal=np.array([-0.6, -0.5,  0.6]),
-                                    ncoef=ncoef*30, nint=nint*30)
+                                    ncoef=ncoef, nint=nint)
     frac2 = andfn.fracture.Fracture('gamma', 1, radius=0.5,
                                     center=np.array([ 0.0, 0.0,  -0.1]),
                                     normal=np.array([ 0.3, -0.8, -0.4]),

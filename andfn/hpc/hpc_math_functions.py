@@ -374,7 +374,7 @@ def calc_thetas(n, type_):
     return thetas
 
 @nb.njit()
-def fill_exp_array(n, m, thetas, exp_array):
+def fill_exp_array(n, thetas, exp_array):
     for ii in range(n):
         exp_array[ii] = np.exp(-1j * thetas[ii])
 

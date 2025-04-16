@@ -6,9 +6,7 @@ This module contains the HPC fracture functions.
 
 import numpy as np
 import numba as nb
-from andfn.hpc import hpc_intersection, hpc_const_head_line, hpc_well, hpc_bounding_circle, hpc_imp_object
-
-CACHE = False
+from andfn.hpc import hpc_intersection, hpc_const_head_line, hpc_well, hpc_bounding_circle, hpc_imp_object, CACHE
 
 @nb.njit()
 def calc_omega(self_, z, element_struc_array, exclude=-1):

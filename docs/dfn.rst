@@ -9,4 +9,8 @@ This is the DFN module that contains the DFN class. The DFN class is used to cre
    :undoc-members:
    :show-inheritance:
 
-
+.. automodule:: andfn.constants
+   :members:
+   :special-members: __init__, __str__
+   :undoc-members:
+   :show-inheritance:

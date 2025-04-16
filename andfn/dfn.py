@@ -181,7 +181,7 @@ class DFN(Constants):
 
         Parameters
         ----------
-        kwargs : dict
+        kwargs : **kwargs
             The attributes to change.
         """
         for key, value in kwargs.items():
@@ -744,179 +744,11 @@ class DFN(Constants):
 
         self.discharge_matrix = matrix
 
-    def lu_decomposition(self):
-        """
-        LU decomposition of the discharge matrix.
-        """
-        if self.discharge_matrix is None:
-            self.build_discharge_matrix()
-        self.lup = sp.sparse.linalg.splu(self.discharge_matrix)
-
-    def build_head_matrix(self):
-        """
-        Builds the head matrix for the DFN and stores it.
-        """
-        # some function to build the head matrix
-        size = len(self.discharge_elements) + self.number_of_fractures()
-        matrix = np.zeros(size)
-
-        # Add the head for each discharge element
-        row = 0
-        for e in self.discharge_elements:
-            if isinstance(e, Intersection):
-                z0 = e.z_array(self.discharge_int, e.frac0)
-                z1 = e.z_array(self.discharge_int, e.frac1)
-                omega0 = e.frac0.calc_omega(z0, exclude=None)
-                omega1 = e.frac1.calc_omega(z1, exclude=None)
-                matrix[row] = e.frac1.head_from_phi(np.mean(np.real(omega1))) - e.frac0.head_from_phi(np.mean(np.real(omega0)))
-            else:
-                z = e.z_array(self.discharge_int)
-                omega = e.frac0.calc_omega(z, exclude=None)
-                matrix[row] = e.phi - np.mean(np.real(omega))
-            row += 1
-        return matrix
-
-    def solve_discharge_matrix(self, lu_decomp):
-        """
-        Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
-        """
-
-        # Set the discharges equal to zero
-        for e in self.discharge_elements:
-            e.q = 0.0
-
-        # Set the constants equal to zero
-        for f in self.fractures:
-            f.constant = 0.0
-
-        # Get the head matrix
-        head_matrix = self.build_head_matrix()
-
-        # Solve the discharge matrix
-        if lu_decomp:
-            discharges = self.lup.solve(head_matrix)
-        else:
-            discharges = sp.sparse.linalg.spsolve(self.discharge_matrix, head_matrix)
-            #discharges = np.linalg.solve(self.discharge_matrix, head_matrix)
-
-        error_list = []
-        # Set the discharges for each element
-        for i, e in enumerate(self.discharge_elements):
-            error_list.append(np.abs(discharges[i] - e.q))
-            e.q = discharges[i]
-
-        # Set the constants for each fracture
-        for i, f in enumerate(self.fractures):
-            error_list.append(np.abs(discharges[len(self.discharge_elements) + i] - f.constant))
-            f.constant = discharges[len(self.discharge_elements) + i]
-
-        self.discharge_error = max(error_list)
-
-    def get_error(self):
-        error_list = []
-        for e in self.elements:
-            error_list.append(e.error)
-        max_error = max(error_list)
-        element = self.elements[error_list.index(max_error)]
-        return max_error, element
-
-    @staticmethod
-    def solve_element(e, max_error, nit, cnt_error):
-        if isinstance(e, Well):
-            e.error = 0.0
-            return 1
-        if e.error < max_error and nit > 3 and cnt_error == 0:
-            return 1
-        e.solve()
-        return 0
-
-    def solve(self, max_error=1e-5, max_iterations=50, boundary_check=False, tolerance=1e-2, n_boundary_check=100,
-              max_iteration_boundary=5, coef_increase=1.5, increase_check=True, lu_decomp=False):
-        """
-        Solves the DFN and saves the coefficients to the elements.
-        """
-        # check if elements have been stored in the DFN
-        if self.elements is None:
-            self.get_elements()
-        # Check if the discharge matrix has been built
-        if self.discharge_matrix is None:
-            self.build_discharge_matrix()
-        if lu_decomp:
-            self.lu_decomposition()
-
-        start = datetime.now()
-
-        cnt_error = 0
-        cnt_bc = 0
-        nit = nit_boundary = 0
-        error = 1e3
-        while cnt_error < 2 and nit < max_iterations:
-            cnt = 0
-            nit += 1
-            self.solve_discharge_matrix(lu_decomp)
-            for i, e in enumerate(self.elements):
-                cnt += self.solve_element(e, max_error, nit, cnt_error)
-                """
-                if isinstance(e, Well):
-                    print(f'\rSolved elements: {i + 1} / {len(self.elements)}', end='')
-                    e.error = 0.0
-                    cnt += 1
-                    continue
-                # Skip solve if error is below max_error (after 3 iterations)
-                if e.error < max_error and nit > 3 and cnt_error == 0:
-                    cnt += 1
-                    continue
-                e.solve()
-                """
-                print(f'\rSolved elements: {i + 1} / {len(self.elements)}', end='')
-
-
-            error_old = error
-            error, element = self.get_error()
-
-            # I max error is reached, set all errors to a higher value (only once)
-            if error < max_error:
-                cnt_error += 1
-            if boundary_check and nit_boundary < max_iteration_boundary and nit > 3:
-                """
-                Checks if the elements meet the boundary condition tolerance and increases the number of coefficients 
-                if they do not.
-                """
-                cnt_bc = 0
-                for ee in self.elements:
-                    ee.error = max_error * 1.0001
-                    if ee.check_boundary_condition(n=n_boundary_check) > tolerance and ee.ncoef < self.constants['MAX_COEF']:
-                        cnt_bc += 1
-                        ee.set_new_ncoef(int(ee.ncoef+coef_increase))
-                        ee.solve()
-            if nit < 10:
-                print(
-                    f', Iteration: 0{nit}, Max error: {error:.4e}, Elements in solve loop: {len(self.elements) - cnt}', end='')
-            else:
-                print(f', Iteration: {nit}, Max error: {error:.4e}, Elements in solve loop: {len(self.elements) - cnt}', end='')
-            if cnt_bc > 0:
-                print(f', Elements BC error > tolerance: {cnt_bc}', end='')
-                cnt_error = 0
-                cnt_bc = 0
-                nit_boundary += 1
-            if increase_check and error > error_old and nit > 3*100 and error > max_error:
-                """
-                Checks if the error is increasing and increases the number of coefficients for the element with the 
-                maximum error.
-                """
-                print(f', Error increased for element {element}.', end='')
-                element.set_new_ncoef(int(element.ncoef+coef_increase))
-                element.solve()
-                cnt_error = 0
-            print('')
-        if boundary_check and cnt_bc == 0:
-            print('All element meet the boundary condition tolerance.')
-
-        print(f'Solved DFN in {datetime.now() - start}.')
-
-    def hpc_solve(self):
+    def solve(self):
         """
         Solves the DFN on a HPC.
+
+        To change the solver constants, use the set_kwargs method.
         """
         self.get_elements()
         self.consolidate_dfn(hpc=True)
@@ -964,6 +796,9 @@ class DFN(Constants):
         pl : pyvista.Plotter
             The plotter object.
         """
+        print('---------------------------------------')
+        print('Starting plotter...')
+        print('---------------------------------------')
         pl = pv.Plotter(window_size=window_size, lighting=lighting, off_screen=off_screen, notebook=notebook)
         if axis:
             _ = pl.add_axes(
@@ -1088,7 +923,7 @@ class DFN(Constants):
         print('')
 
     def plot_fractures_head(self, pl, lvs=20, n_points=100, line_width=2, margin=1e-3, opacity=1.0, only_flow=False,
-                            color_map='jet', limits=None):
+                            color_map='jet', limits=None, contour=True):
         """
         Plots the flow net for the fractures in the DFN.
 
@@ -1144,25 +979,28 @@ class DFN(Constants):
 
         # Plot the flow net for each fracture
         for i, f in enumerate(fracs):
-            # plot the flow net using matplotlib
-            contours_re = plt.contour(x_arrays[i], y_arrays[i], heads[i], levels=lvs_re)
             # Plot the fractures
             mean_head = np.nanmean(heads[i])
             pos_frac = np.where(np.abs(lvs_re - mean_head) == np.min(np.abs(lvs_re - mean_head)))[0][0]
             color_frac = colors[pos_frac]
             self.plot_fractures(pl, filled=True, color=color_frac, opacity=opacity, show_edges=True, line_width=2.0,
                                 fracs=[f])
-            # Extract the contour line and plot them in 3D, real and imaginary parts
-            for contour in contours_re.allsegs:
-                for seg in contour:
-                    if len(seg) == 0:
-                        continue
-                    loc = int(len(seg)/4)
-                    oms = f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j, seg[loc*2][0] + seg[loc*2][1]*1j, seg[loc*3][0] + seg[loc*3][1]*1j]))
-                    head = f.head_from_phi(np.real(np.nanmean(oms)))
-                    pos = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0][0]
-                    color = colors[pos]
-                    plot_line_3d(seg, f, pl, color, line_width=line_width)
+
+            if contour:
+                # plot the contour lines using matplotlib
+                contours_re = plt.contour(x_arrays[i], y_arrays[i], heads[i], levels=lvs_re)
+
+                # Extract the contour line and plot them in 3D, real and imaginary parts
+                for contour in contours_re.allsegs:
+                    for seg in contour:
+                        if len(seg) == 0:
+                            continue
+                        loc = int(len(seg)/4)
+                        oms = f.calc_omega(np.array([seg[loc][0] + seg[loc][1]*1j, seg[loc*2][0] + seg[loc*2][1]*1j, seg[loc*3][0] + seg[loc*3][1]*1j]))
+                        head = f.head_from_phi(np.real(np.nanmean(oms)))
+                        pos = np.where(np.abs(lvs_re-head) == np.min(np.abs(lvs_re-head)))[0][0]
+                        color = colors[pos]
+                        plot_line_3d(seg, f, pl, color, line_width=line_width)
             print(f'\rPlotting hydraulic head: {i + 1} / {len(fracs)}', end='')
 
         # Add the color bar
@@ -1497,10 +1335,10 @@ class DFN(Constants):
         # Check if elevation is below the divide
         if elevation < divide:
             elevation /= divide  # new elevation
-            return down, z, elevation
+            return down, z0, elevation
 
         elevation = (elevation - divide) / (1 - divide)
-        return up, z, elevation
+        return up, z0, elevation
 
     @staticmethod
     def runge_kutta(z0, frac,  ds, tolerance=1e-6, max_it=10):

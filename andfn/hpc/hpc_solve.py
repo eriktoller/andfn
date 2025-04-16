@@ -10,7 +10,7 @@ import numba as nb
 import scipy as sp
 from andfn.hpc import hpc_math_functions as mf
 from andfn.hpc import (hpc_intersection, hpc_fracture, hpc_const_head_line, hpc_well, hpc_bounding_circle,
-                       hpc_imp_object, PARALLEL)
+                       hpc_imp_object, PARALLEL, CACHE)
 from andfn.element import MAX_NCOEF, MAX_ELEMENTS
 
 dtype_work = np.dtype([
@@ -34,8 +34,6 @@ dtype_z_arrays = np.dtype([
         ('z0', complex, MAX_ELEMENTS),
         ('z1', complex, MAX_ELEMENTS)
     ])
-
-CACHE = False
 
 
 def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge_int, constants):
@@ -97,9 +95,8 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
     # fill work array ex_array
     for i, e in enumerate(element_struc_array):
         n = e['nint']
-        m = e['ncoef']
         thetas = e['thetas']
-        mf.fill_exp_array(n, m, thetas, work_array[i]['exp_array'])
+        mf.fill_exp_array(n, thetas, work_array[i]['exp_array'])
 
     # solve once to get the initial discharges
     t = mf.calc_thetas(element_struc_array[0]['nint'], element_struc_array[0]['type_'])
@@ -116,32 +113,30 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
     while cnt_error < 2 and nit < max_iterations:
         nit += 1
         # Solve the discharge matrix
-        startQ = time.time()
+        startq = time.time()
         if error_q > max_error or cnt_error > 0:
             discharges_old[:] = discharges[:]
             solve_discharge_matrix(fracture_struc_array, element_struc_array,discharge_matrix, discharge_elements,
                                    discharge_int, head_matrix, discharges, z_int, lu_matrix)
             error_q = np.max(np.abs(discharges - discharges_old))
             error_q = np.mean(np.abs(discharges - discharges_old))
-        print(f'Solve Q time: {time.time() - startQ}')
-
-
+        timeq = time.time() - startq
 
         # Solve the elements
-        StartE = time.time()
+        starte = time.time()
         cnt = element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit,
                               cnt_error, constants)
-        print(f'Solve E time: {time.time() - StartE}')
+        timee = time.time() - starte
 
         error, id_ = get_error(element_struc_array)
 
         # print progress
         if nit < 10:
-            print(f'Iteration: 0{nit}, Max error: {mf.float2str(error)}, Error Q: {mf.float2str(error_q)}, '
-                  f'Elements in solve loop: {len(element_struc_array) - cnt}')
+            print(f'Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}, '
+                  f'Solve time {(timee+timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})')
         else:
-            print(f'Iteration: {nit}, Max error: {mf.float2str(error)}, Error Q: {mf.float2str(error_q)}, '
-                  f'Elements in solve loop: {len(element_struc_array) - cnt}')
+            print(f'Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, '
+                  f'Solve time {(timee+timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})')
 
         #cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array,
         #                        discharge_int, bnd_error, z_int_error, nit, max_error)
@@ -158,11 +153,17 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
             cnt_error += 1
             error = 1.0
 
+    # Print the solver results
+    print('---------------------------------------')
+    print('Solver results')
+    print('---------------------------------------')
+    print(f'Iterations: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, ')
     solve_time = time.time() - start
     days, rem = divmod(solve_time, 86400)
     hours, rem = divmod(rem, 3600)
     minutes, seconds = divmod(rem, 60)
-    print(f'Solve time: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds')
+    print(f'Solve time: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds\n')
+
 
     return element_struc_array
 
@@ -273,12 +274,12 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
             if np.max(np.abs(coefs[1:2])) < max_error/100000:
                 coef_ratio = 0.0
             cnt = 0
-            while coef_ratio > 0.05 and e['ncoef'] < constants['MAX_COEF'] and cnt < 5 and nit > 1:
+            while coef_ratio > constants['COEF_RATIO'] and e['ncoef'] < constants['MAX_COEF'] and cnt < 5 and nit > 1:
                 e['ncoef'] = int(e['ncoef'] + constants['COEF_INCREASE'])
                 e['nint'] = e['ncoef'] * 2
                 e['thetas'][:e['nint']] = mf.calc_thetas(e['nint'], e['type_'])
                 work_array[i]['len_discharge_element'] = 0
-                mf.fill_exp_array(e['nint'], e['ncoef'], e['thetas'], work_array[i]['exp_array'])
+                mf.fill_exp_array(e['nint'], e['thetas'], work_array[i]['exp_array'])
                 #e['coef'][:e['ncoef']] = 0.0
                 if e['type_'] == 0:  # Intersection
                     hpc_intersection.solve(e, fracture_struc_array, element_struc_array, work_array[i])
@@ -301,17 +302,6 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
             e = element_struc_array[i]
             e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
 
-
-        #print(f'Error: {mf.float2str(error)}, Element id: {id_} [type: {element_struc_array[id_]["type_"]}, '
-        #      f'ncoef: {element_struc_array[id_]["ncoef"]}]')
-        #print(f'Max ncoef: {np.max([e["ncoef"] for e in element_struc_array])}')
-
-        #get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array, discharge_int,
-        #              bnd_error, z_int, nit, max_error)
-
-    # Solve the elements one more time before exiting
-    #cnt = element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit,
-    #                     cnt_error)
     return cnt
 
 
