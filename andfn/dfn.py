@@ -10,6 +10,7 @@ solve the DFN.
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import pyvista as pv
 import matplotlib.pyplot as plt
 import scipy as sp
@@ -562,6 +563,74 @@ class DFN(Constants):
         self.discharge_matrix = None
         self.elements = None
         self.discharge_elements = None
+
+    def import_fractures_from_file(self, path, radius_str, x_str, y_str, z_str, t_str, e_str=None, strike_str=None, dip_str=None,
+                         trend_str=None, plunge_str=None, starting_frac=None):
+        """
+        Imports fractures from a csv file. More formatting options can be added later.
+
+        Parameters
+        ----------
+        path : str
+            The path to the file containing the fractures.
+        radius_str : str
+            The name of the column containing the radius of the fractures.
+        x_str : str
+            The name of the column containing the x coordinate of the center of the fractures.
+        y_str : str
+            The name of the column containing the y coordinate of the center of the fractures.
+        z_str : str
+            The name of the column containing the z coordinate of the center of the fractures.
+        t_str : str
+            The name of the column containing the transmissivity of the fractures.
+        e_str : str, optional
+            The name of the column containing the aperture of the fractures. The default is None.
+        strike_str : str, optional
+            The name of the column containing the strike of the fractures. The default is None.
+        dip_str : str, optional
+            The name of the column containing the dip of the fractures. The default is None.
+        trend_str : str, optional
+            The name of the column containing the trend of the fractures. The default is None.
+        plunge_str : str, optional
+            The name of the column containing the plunge of the fractures. The default is None.
+        starting_frac : Fracture, optional
+            The fracture to use as the starting point for the connected fractures. The default is None.
+
+        Returns
+        -------
+        None
+            The fractures are added to the DFN.
+        """
+
+        data_file = pd.read_csv(path)
+        frac = []
+        for i in range(len(data_file)):
+            radius = data_file[radius_str][i]
+            if strike_str is not None and dip_str is not None:
+                normal = gf.convert_strike_dip_to_normal(data_file[strike_str][i], data_file[dip_str][i])
+            elif trend_str is not None and plunge_str is not None:
+                normal= gf.convert_trend_plunge_to_normal(data_file[trend_str][i], data_file[plunge_str][i])
+            else:
+                raise ValueError('Either strike/dip or trend/plunge must be provided.')
+            normal = normal / np.linalg.norm(normal)
+            center = np.array([data_file[x_str][i], data_file[y_str][i], data_file[z_str][i]])
+            transmissivity = data_file[t_str][i]
+            if e_str is None:
+                frac.append(Fracture(f'{i}', transmissivity, radius, center, normal,
+                                     ncoef=self.constants['NCOEF'], nint=self.constants['NINT']))
+            else:
+                aperture = data_file[e_str][i]
+                frac.append(Fracture(f'{i}', transmissivity, radius, center, normal, aperture,
+                                     ncoef=self.constants['NCOEF'], nint=self.constants['NINT']))
+
+
+        if starting_frac is not None:
+            fracs = gf.get_connected_fractures(frac, ncoef=self.constants['NCOEF'], nint=self.constants['NINT'],
+                                               fracture_surface=starting_frac)
+        else:
+            fracs = gf.get_connected_fractures(frac, ncoef=self.constants['NCOEF'], nint=self.constants['NINT'])
+
+        self.add_fracture(fracs)
 
     def generate_connected_dfn(self, num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b, nint_b, frac_surface=None):
         """

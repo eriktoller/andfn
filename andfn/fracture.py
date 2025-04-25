@@ -14,7 +14,7 @@ from .hpc.hpc_fracture import calc_omega as hpc_calc_omega
 
 
 class Fracture:
-    def __init__(self, label, t, radius, center, normal, ncoef=5, nint=10, elements=None, **kwargs):
+    def __init__(self, label, t, radius, center, normal, aperture=1e-6, ncoef=5, nint=10, elements=None, **kwargs):
         """
         Initializes the fracture class.
 
@@ -43,7 +43,7 @@ class Fracture:
         self.label = label
         self.id_ = 0
         self.t = t
-        self.aperture = 1e-6
+        self.aperture = aperture
         self.radius = radius
         self.center = center
         self.normal = normal / np.linalg.norm(normal)
