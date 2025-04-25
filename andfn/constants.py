@@ -78,11 +78,7 @@ class Constants:
         """
         Change the constants
 
-        Parameters
-        ----------
-        **kwargs : dict
-            The constants to change. The keys should be the names of the constants and the values should be the new values.
-            The following constants can be changed:
+        The following constants can be changed:
             - RHO: Density of water in kg/m^3
             - G: Gravitational acceleration in m/s^2
             - PI: Pi
@@ -95,6 +91,12 @@ class Constants:
             - NCOEF: Number of coefficients
             - NINT: Number of integration points
             - NUM_THREADS: Number of threads to use for Numba (default -1 = use all available threads)
+
+        Parameters
+        ----------
+        **kwargs : dict
+            The constants to change. The keys should be the names of the constants and the values should be the new values.
+
         """
         for key, value in kwargs.items():
             if key in self.constants.dtype.names:
