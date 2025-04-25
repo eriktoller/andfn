@@ -38,10 +38,12 @@ class Well(Element):
         self.phi = frac0.phi_from_head(head)
         self.q = 0.0
 
-
         # Set the kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        # Assign to the fracture
+        self.frac0.add_element(self)
 
     def discharge_term(self, z):
         """

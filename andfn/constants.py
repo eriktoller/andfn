@@ -5,6 +5,7 @@ This module contains the constants used in the AnDFN model as a class.
 """
 
 import numpy as np
+from numba import set_num_threads
 
 dtype_constants = np.dtype([
     ('RHO', np.float64),
@@ -17,7 +18,8 @@ dtype_constants = np.dtype([
     ('COEF_RATIO', np.float64),
     ('MAX_ELEMENTS', np.int32),
     ('NCOEF', np.int32),
-    ('NINT', np.int32)
+    ('NINT', np.int32),
+    ('NUM_THREADS', np.int32),
 ])
 
 class Constants:
@@ -37,7 +39,8 @@ class Constants:
             0.05,    # Coefficient ratio
             150,    # Maximum number of elements
             5,      # Number of coefficients (default)
-            10      # Number of integration points (default)
+            10,      # Number of integration points (default)
+            -1      # Number of threads (default -1 = use all available threads)
         ), dtype=dtype_constants)
 
 
@@ -68,13 +71,37 @@ class Constants:
         print(f"       MAX_COEF: {self.constants['MAX_COEF']}")
         print(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
         print(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
+        print(f"    NUM_THREADS: {'all' if self.constants['NUM_THREADS'] == -1 else self.constants['NUM_THREADS']}")
+
 
     def change_constants(self, **kwargs):
         """
         Change the constants
+
+        Parameters
+        ----------
+        **kwargs : dict
+            The constants to change. The keys should be the names of the constants and the values should be the new values.
+            The following constants can be changed:
+            - RHO: Density of water in kg/m^3
+            - G: Gravitational acceleration in m/s^2
+            - PI: Pi
+            - MAX_ITERATIONS: Maximum number of iterations
+            - MAX_ERROR: Maximum error
+            - MAX_COEF: Maximum number of coefficients
+            - COEF_INCREASE: Coefficient increase factor
+            - COEF_RATIO: Coefficient ratio
+            - MAX_ELEMENTS: Maximum number of elements
+            - NCOEF: Number of coefficients
+            - NINT: Number of integration points
+            - NUM_THREADS: Number of threads to use for Numba (default -1 = use all available threads)
         """
         for key, value in kwargs.items():
             if key in self.constants.dtype.names:
+                if key == 'NUM_THREADS':
+                    # Set the number of threads for Numba
+                    assert value > 0, "Number of threads must be greater than 0"
+                    set_num_threads(value)
                 self.constants[key] = value
             else:
                 raise ValueError(f"Invalid constant name: {key}")

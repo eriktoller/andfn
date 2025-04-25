@@ -30,6 +30,8 @@ def calc_omega(self_, z):
     """
     chi = gf.map_z_circle_to_chi(z, self_['radius'], self_['center'])
     omega = mf.well_chi(chi, self_['q'])
+    if np.abs(chi) < 1-1e-12:
+        omega = np.nan + np.nan * 1j
     return omega
 
 def calc_w(self_, z):

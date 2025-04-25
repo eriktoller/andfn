@@ -26,7 +26,30 @@ from .const_head import ConstantHeadLine
 from .intersection import Intersection
 from .bounding import BoundingCircle
 from .element import element_dtype, fracture_dtype, element_index_dtype, fracture_index_dtype, element_dtype_hpc, \
-    fracture_dtype_hpc, MAX_NCOEF, MAX_ELEMENTS
+    fracture_dtype_hpc
+
+# Custom colormaps
+from matplotlib.colors import LinearSegmentedColormap
+def _constant_cmap(name, color, n_bin):
+    """
+    Creates a red colormap.
+
+    Parameters
+    ----------
+    name : str
+        The name of the colormap.
+    color : str
+        The color of the colormap.
+    n_bin : int
+        The number of bins in the colormap.
+
+    Returns
+    -------
+    cmap : LinearSegmentedColormap
+        The colormap.
+    """
+    # Create a red colormap
+    return LinearSegmentedColormap.from_list(name, [color,color], N=n_bin)
 
 
 def generate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_i, nint_i, ncoef_b, nint_b, frac_surface=None):
@@ -186,7 +209,7 @@ class DFN(Constants):
         """
         for key, value in kwargs.items():
             if key in dtype_constants.names:
-                self.constants[key] = value
+                self.change_constants(**{key: value})
                 continue
             setattr(self, key, value)
 
@@ -923,7 +946,7 @@ class DFN(Constants):
         print('')
 
     def plot_fractures_head(self, pl, lvs=20, n_points=100, line_width=2, margin=1e-3, opacity=1.0, only_flow=False,
-                            color_map='jet', limits=None, contour=True):
+                            color_map='jet', limits=None, color_fracs=True, contour=True, colorbar=True):
         """
         Plots the flow net for the fractures in the DFN.
 
@@ -944,9 +967,15 @@ class DFN(Constants):
         only_flow : bool
             Whether to plot only the fractures with flow.
         color_map : str
-            The color map to use for the flow net.
+            The color map to use for the flow net. For a constant color, use a string with the same value for the color.
         limits : list | tuple
             Custom limits for the flow net, overwrites the calculated limits.
+        color_fracs : bool
+            Whether to color the fractures according to their mean head.
+        contour : bool
+            Whether to plot the contour lines.
+        colorbar : bool
+            Whether to plot the color bar.
         """
         if self.fractures_struc_array_hpc is None:
             self.consolidate_dfn(hpc=True)
@@ -974,17 +1003,21 @@ class DFN(Constants):
         # Create the levels for the equipotential contours
         lvs_re = np.linspace(head_min, head_max, lvs)
 
-        cmap = plt.colormaps[color_map]
+        if color_map in plt.colormaps():
+            cmap = plt.colormaps[color_map]
+        else:
+            cmap = _constant_cmap(color_map, color_map, 256)
         colors = cmap(np.linspace(0, 1, lvs))
 
         # Plot the flow net for each fracture
         for i, f in enumerate(fracs):
             # Plot the fractures
-            mean_head = np.nanmean(heads[i])
-            pos_frac = np.where(np.abs(lvs_re - mean_head) == np.min(np.abs(lvs_re - mean_head)))[0][0]
-            color_frac = colors[pos_frac]
-            self.plot_fractures(pl, filled=True, color=color_frac, opacity=opacity, show_edges=True, line_width=2.0,
-                                fracs=[f])
+            if color_fracs:
+                mean_head = np.nanmean(heads[i])
+                pos_frac = np.where(np.abs(lvs_re - mean_head) == np.min(np.abs(lvs_re - mean_head)))[0][0]
+                color_frac = colors[pos_frac]
+                self.plot_fractures(pl, filled=True, color=color_frac, opacity=opacity, show_edges=True, line_width=2.0,
+                                    fracs=[f])
 
             if contour:
                 # plot the contour lines using matplotlib
@@ -1004,26 +1037,27 @@ class DFN(Constants):
             print(f'\rPlotting hydraulic head: {i + 1} / {len(fracs)}', end='')
 
         # Add the color bar
-        # Create a sample mesh
-        mesh = pv.Sphere(radius=0.001, center=self.get_dfn_center())
-        # Create a scalar array ranging from 10 to 20
-        scalars = np.linspace(np.floor(head_min), np.ceil(head_max), mesh.n_points)
-        # Add the scalar array to the mesh
-        mesh.point_data['Hydraulic head'] = scalars
-        # Add the mesh to the plotter
-        _ = pl.add_mesh(mesh, opacity=0.0, show_scalar_bar=False, cmap=cmap)
-        _ = pl.add_scalar_bar(
-            'Hydraulic head',
-            interactive=True,
-            vertical=False,
-            fmt='%10.1f',
-        )
+        if colorbar:
+            # Create a sample mesh
+            mesh = pv.Sphere(radius=0.001, center=self.get_dfn_center())
+            # Create a scalar array ranging from 10 to 20
+            scalars = np.linspace(np.floor(head_min), np.ceil(head_max), mesh.n_points)
+            # Add the scalar array to the mesh
+            mesh.point_data['Hydraulic head'] = scalars
+            # Add the mesh to the plotter
+            _ = pl.add_mesh(mesh, opacity=0.0, show_scalar_bar=False, cmap=cmap)
+            _ = pl.add_scalar_bar(
+                'Hydraulic head',
+                interactive=True,
+                vertical=False,
+                fmt='%10.1f'
+            )
         plt.close()
         print('')
 
 
 
-    def plot_elements(self, pl, elements=None):
+    def plot_elements(self, pl, elements=None, line_width=3.0):
         """
         Plots the elements in the DFN.
 
@@ -1031,6 +1065,10 @@ class DFN(Constants):
         ----------
         pl : pyvista.Plotter
             The plotter object.
+        elements : list
+            The list of elements to plot. If None, all elements are plotted.
+        line_width : float
+            The line width of the elements.
         """
         # Check if the elements have been stored in the DFN
         assert self.elements is not None and len(
@@ -1038,17 +1076,19 @@ class DFN(Constants):
         # Plot the elements
         if elements is None:
             elements = self.elements
+        if not isinstance(elements, list):
+            elements = [elements]
         for i, e in enumerate(elements):
             if isinstance(e, Intersection):
                 line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
-                pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=3)
+                pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=line_width)
             if isinstance(e, (ConstantHeadLine, ImpermeableLine)):
                 line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
-                pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=3)
+                pl.add_mesh(pv.Line(line[0], line[1]), color='#000000', line_width=line_width)
             if isinstance(e, (Well, ImpermeableCircle)):
                 point = gf.map_2d_to_3d(e.center, e.frac0)
                 pl.add_mesh(pv.Polygon(point, e.radius, normal=e.frac0.normal, n_sides=50, fill=False),
-                            color='#000000', line_width=3)
+                    color='#000000', line_width=line_width)
             print(f'\rPlotting elements: {i + 1} / {len(self.elements)}', end='')
         print('')
 

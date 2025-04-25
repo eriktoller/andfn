@@ -98,13 +98,7 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
         thetas = e['thetas']
         mf.fill_exp_array(n, thetas, work_array[i]['exp_array'])
 
-    # solve once to get the initial discharges
-    t = mf.calc_thetas(element_struc_array[0]['nint'], element_struc_array[0]['type_'])
-    #solve_discharge_matrix(fracture_struc_array, element_struc_array, discharge_matrix, discharge_elements,
-    #                               discharge_int, head_matrix, discharges, z_int, lu_matrix)
-    #cnt = element_solver(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, 0, 0)
-
-    error = error_old = np.float64(1.0)
+    error = np.float64(1.0)
     nit = 0
     cnt_error = 0
     cnt_bnd = 0
@@ -151,7 +145,7 @@ def solve(fracture_struc_array, element_struc_array, discharge_matrix, discharge
 
         if error < max_error and error_q < max_error:
             cnt_error += 1
-            error = 1.0
+            #error = 1.0
 
     # Print the solver results
     print('---------------------------------------')
