@@ -2,6 +2,7 @@ sphinx
 sphinx-book-theme
 ghp-import
 numpy
+pandas
 matplotlib
 pyvista
 scipy

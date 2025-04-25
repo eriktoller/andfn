@@ -3,6 +3,25 @@ Release notes
 
 This is the release notes page.
 
+Version 0.1.7
+-------------
+
+Date: 2025-04-25
+
+
+
+Features
+~~~~~~~~
+- text
+
+Enhancements
+~~~~~~~~~~~~
+- text
+
+Bug fixes
+~~~~~~~~~
+- Added pandas as a dependency.
+
 Version 0.1.6
 -------------
 

@@ -14,11 +14,12 @@ maintainers = [
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">= 3.10"
 keywords = ["hydrology", "groundwater", "model", "analytic element method", "discrete fracture network", "dfn"]
 
 dependencies = [
     "numpy",
+    "pandas",
     "matplotlib",
     "pyvista",
     "scipy",

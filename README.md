@@ -26,6 +26,7 @@ pip uninstall andfn
 ### Dependencies
 `andfn` has the following required dependencies:
 - `numpy`
+- `pandas`
 - `scipy`
 - `pyvista`
 - `matplotlib`
