@@ -238,7 +238,7 @@ def element_solver(num_elements, element_struc_array, fracture_struc_array, work
 
     return cnt
 
-@nb.njit( parallel=False, cache=CACHE)
+@nb.njit(parallel=PARALLEL, cache=CACHE)
 def element_solver2(num_elements, element_struc_array, fracture_struc_array, work_array, max_error, nit, cnt_error,
                     constants):
     error = 1.0
@@ -265,7 +265,7 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                 coef_ratio = 0.0
             else:
                 coef_ratio = coef1 / coef0
-            if np.max(np.abs(coefs[1:2])) < max_error/100000:
+            if np.max(np.abs(coefs[1:2])) < max_error/1e10:
                 coef_ratio = 0.0
             cnt = 0
             while coef_ratio > constants['COEF_RATIO'] and e['ncoef'] < constants['MAX_COEF'] and cnt < 5 and nit > 1:
@@ -292,7 +292,7 @@ def element_solver2(num_elements, element_struc_array, fracture_struc_array, wor
                 coef1 = np.max(np.abs(coefs[-2:]))
                 coef_ratio = coef1 / coef0
 
-        for i in range(num_elements):
+        for i in nb.prange(num_elements):
             e = element_struc_array[i]
             e['coef'][:e['ncoef']] = work_array[i]['coef'][:e['ncoef']]
 

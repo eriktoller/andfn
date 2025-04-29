@@ -224,7 +224,7 @@ class ConstantHeadLine(Element):
 
         return np.mean(np.abs(self.phi - np.real(omega0))) / np.abs(self.phi)
 
-    def check_chi_crossing(self, z0, z1, atol=1e-10):
+    def check_chi_crossing(self, z0, z1, atol=1e-12):
         """
         Check the line between two points crosses the constant head line.
 

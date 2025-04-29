@@ -70,9 +70,9 @@ class BoundingCircle(Element):
         """
         chi = gf.map_z_circle_to_chi(z, self.radius)
         if isinstance(chi, np.ndarray) and len(chi) > 1:
-            chi[np.abs(chi) > 1.0 + 1e-10] = np.nan + 1j * np.nan
+            chi[np.abs(chi) > 1.0 + 1e-8] = np.nan + 1j * np.nan
         else:
-            if np.abs(chi) > 1.0 + 1e-10:
+            if np.abs(chi) > 1.0 + 1e-8:
                 chi = np.nan + 1j * np.nan
         return chi
 

@@ -225,7 +225,7 @@ class Intersection(Element):
 
         return (np.max(dhead) - np.min(dhead)) / np.abs(np.mean(head0))
 
-    def check_chi_crossing(self, z0, z1, frac, atol=1e-10):
+    def check_chi_crossing(self, z0, z1, frac, atol=1e-12):
         """
         Check if the line between two points crosses the intersection.
 

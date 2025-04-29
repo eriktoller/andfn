@@ -14,17 +14,17 @@ maintainers = [
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 keywords = ["hydrology", "groundwater", "model", "analytic element method", "discrete fracture network", "dfn"]
 
 dependencies = [
     "numpy",
     "pandas",
-    "matplotlib",
-    "pyvista",
+    "matplotlib~=3.10.1",
+    "pyvista~=0.44.2",
     "scipy",
-    "numba",
-    "h5py"
+    "numba~=0.61.2",
+    "h5py~=3.13.0"
 ]
 
 classifiers = [

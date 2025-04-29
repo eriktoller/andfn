@@ -1126,7 +1126,7 @@ class DFN(Constants):
 
 
 
-    def plot_elements(self, pl, elements=None, line_width=3.0):
+    def plot_elements(self, pl, elements=None, line_width=3.0, const_elements=False):
         """
         Plots the elements in the DFN.
 
@@ -1147,6 +1147,8 @@ class DFN(Constants):
             elements = self.elements
         if not isinstance(elements, list):
             elements = [elements]
+        if const_elements:
+            elements = [e for e in elements if isinstance(e, (ConstantHeadLine, Well))]
         for i, e in enumerate(elements):
             if isinstance(e, Intersection):
                 line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
@@ -1239,7 +1241,7 @@ class DFN(Constants):
     #                    Streamline tracking functions                                                                 #
     ####################################################################################################################
     def plot_streamline_tracking(self, pl, z0, frac, ds=1e-2, max_length=1000, line_width=2.0, elevation=0.0,
-                                 remove_false=True, color='black'):
+                                 remove_false=True, color='black', backward=False):
         """
         Plots the streamline tracking for a given fracture.
 
@@ -1274,12 +1276,12 @@ class DFN(Constants):
         elements = []
         for i, z in enumerate(z0): # type: int, complex
             for j, e in enumerate(elevation):
-                streamline, streamline_frac, velocity, element = self.streamline_tracking(z, frac, e, ds, max_length)
+                print(f'\rTracing streamline: {i + 1} / {len(z0)}', end='')
+                streamline, streamline_frac, velocity, element = self.streamline_tracking(z, frac, e, ds, max_length, backward)
                 streamlines.append(streamline)
                 streamlines_frac.append(streamline_frac)
                 velocities.append(velocity)
                 elements.append(element)
-                print(f'\rTracing streamline: {i + 1} / {len(z0)}', end='')
 
         # Concatenate streamlines list to ndarray
         for i, s in enumerate(streamlines):
@@ -1296,7 +1298,7 @@ class DFN(Constants):
 
         return streamlines, streamlines_frac, velocities, elements
 
-    def streamline_tracking(self, z0, frac, elevation, ds, max_length):
+    def streamline_tracking(self, z0, frac, elevation, ds, max_length, backward):
         """
         Function that tracks the streamlines in a fracture.
 
@@ -1312,6 +1314,8 @@ class DFN(Constants):
             Step size for the streamline tracking
         max_length : int
             Maximum length of the streamline
+        backward : bool
+            Whether to track the streamline backward or forward
 
         Returns
         -------
@@ -1330,6 +1334,8 @@ class DFN(Constants):
         z_start = z0  # set the start of the streamline on the element, while the computations for this point is made
         # just outside the boundary of the element
         while cond:
+            # set the ds proportional to the fracture size
+            ds_frac = frac.radius / ds
             # get the current number of points
             length = sum([len(s) for s in streamline])
             # Start the tracking process
@@ -1338,19 +1344,19 @@ class DFN(Constants):
             discharge_elements = frac.get_discharge_elements()
 
             # get the next points
-            z1 = self.runge_kutta(z0, frac, ds)
+            z1 = self.runge_kutta(z0, frac, ds_frac, backward)
             if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
                 break
-            z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
+            z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac, backward)
             while z3 is False:
                 psi.append(z1)
                 w.append(np.abs(frac.calc_w(z1)))
                 z0 = z1
-                z1 = self.runge_kutta(z0, frac, ds)
+                z1 = self.runge_kutta(z0, frac, ds_frac, backward)
                 if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
                     z3 = z0
                     break
-                z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac)
+                z3, element = self.check_streamline_exit(z0, z1, discharge_elements, frac, backward)
                 if len(psi) > max_length - length:
                     z3 = z1
                     break
@@ -1377,14 +1383,18 @@ class DFN(Constants):
         return streamline, streamline_frac, velocity, element
 
     @staticmethod
-    def check_streamline_exit(z0, z1, discharge_elements, frac):
+    def check_streamline_exit(z0, z1, discharge_elements, frac, backward):
         """
         Function that checks if the streamline has exited the DFN
         """
         for e in discharge_elements:
             if isinstance(e, Intersection):
+                #if ((e.q < 0 and e.frac0 == frac) or (e.q > 0 and e.frac1 == frac)) ^ backward:
+                #    continue
                 z2 = e.check_chi_crossing(z0, z1, frac)
             else:
+                #if (e.q < 0) ^ backward:
+                #    continue
                 z2 = e.check_chi_crossing(z0, z1)
             if np.isnan(np.real(z2)):
                 return z1, False
@@ -1393,7 +1403,7 @@ class DFN(Constants):
         return False, False
 
     @staticmethod
-    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-4):
+    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-6):
 
         if frac == element.frac0:
             endpoints = element.endpoints0
@@ -1444,13 +1454,13 @@ class DFN(Constants):
         # Check if elevation is below the divide
         if elevation < divide:
             elevation /= divide  # new elevation
-            return down, z0, elevation
+            return down, z0, elevation*0+.5
 
         elevation = (elevation - divide) / (1 - divide)
-        return up, z0, elevation
+        return up, z0, elevation*0+.5
 
     @staticmethod
-    def runge_kutta(z0, frac,  ds, tolerance=1e-6, max_it=10):
+    def runge_kutta(z0, frac,  ds, backward, tolerance=1e-6, max_it=10):
         """
         Runge-Kutta method for streamline tracing.
 
@@ -1460,18 +1470,21 @@ class DFN(Constants):
             The initial point.
         ds : float
             The step size.
+        backward : bool
+            Whether to trace the streamline backward.
         tolerance : float
             The tolerance for the error.
         max_it : int
             The maximum number of iterations.
-        frac : Fracture
-            The fracture to trace the streamline on.
+
 
         Returns
         -------
         z1 : complex
             The point at the end of the streamline.
         """
+        if backward:
+            ds = -ds
         w0 = frac.calc_w(z0)
         if np.isnan(np.real(w0)):
             return np.nan + np.nan*1j

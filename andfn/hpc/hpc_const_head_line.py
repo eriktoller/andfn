@@ -7,7 +7,6 @@ This module contains the HPC Constant head functions.
 import numpy as np
 import numba as nb
 
-from andfn.hpc import hpc_fracture
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
 

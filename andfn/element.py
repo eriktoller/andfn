@@ -6,7 +6,7 @@ This module contains the element class that is a parent class to all elements.
 """
 
 import numpy as np
-MAX_NCOEF = 400
+MAX_NCOEF = 500
 MAX_ELEMENTS = 600
 
 element_dtype = np.dtype([

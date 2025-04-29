@@ -78,6 +78,24 @@ class Well(Element):
         """
         return self.radius * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) + self.center
 
+    def z_array_tracking(self, n, offset=1e-2):
+        """
+        Returns an array of n points on the well for tracking.
+
+        Parameters
+        ----------
+        n : int
+            The number of points to return.
+        offset : float
+            The offset for the tracking.
+
+        Returns
+        -------
+        z : ndarray
+            An array of n points on the well.
+        """
+        return self.radius * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False))*(1 + offset) + self.center
+
     def calc_omega(self, z):
         """
         Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
