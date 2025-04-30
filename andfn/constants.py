@@ -11,6 +11,7 @@ dtype_constants = np.dtype([
     ('RHO', np.float64),
     ('G', np.float64),
     ('PI', np.float64),
+    ('SE_FACTOR', np.float64),
     ('MAX_ITERATIONS', np.int32),
     ('MAX_ERROR', np.float64),
     ('MAX_COEF', np.int32),
@@ -32,6 +33,7 @@ class Constants:
             1000.0, # Density of water in kg/m^3
             9.81,   # Gravitational acceleration in m/s^2
             np.pi,  # Pi
+            1.0,    # SE factor (shortening element length)
             50,     # Maximum number of iterations
             1e-6,   # Maximum error
             150,    # Maximum number of coefficients
@@ -53,6 +55,7 @@ class Constants:
         print(f"            RHO: {self.constants['RHO']}")
         print(f"              G: {self.constants['G']}")
         print(f"             PI: {self.constants['PI']}")
+        print(f"      SE_FACTOR: {self.constants['SE_FACTOR']}")
         print(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
         print(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
         print(f"       MAX_COEF: {self.constants['MAX_COEF']}")
@@ -82,6 +85,7 @@ class Constants:
             - RHO: Density of water in kg/m^3
             - G: Gravitational acceleration in m/s^2
             - PI: Pi
+            - SE_FACTOR: Shortening element length factor
             - MAX_ITERATIONS: Maximum number of iterations
             - MAX_ERROR: Maximum error
             - MAX_COEF: Maximum number of coefficients

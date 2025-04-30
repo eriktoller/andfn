@@ -14,8 +14,6 @@ from . import fracture
 from . import intersection
 from . import const_head
 
-AMOUNT = 0.9*0+1
-
 
 
 def map_z_line_to_chi(z, endpoints):
@@ -386,7 +384,7 @@ def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0, ncoef
     return fractures
 
 
-def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
+def get_connected_fractures(fractures, se_factor, ncoef=5, nint=10, fracture_surface=None):
     """
     Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
     a given fracture, the function iterates through the list of fractures and finds all connected fractures.
@@ -395,6 +393,8 @@ def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
     ----------
     fractures : list
         A list of fractures.
+    se_factor : float
+        The shortening element factor. This is used to shorten the intersection line between two fractures.
     ncoef : int
         The number of coefficients for the intersection elements.
     nint : int
@@ -431,8 +431,8 @@ def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
                         #length = np.linalg.norm(endpoints0[0] - endpoints0[1])
                         #if length < 1e-1*fr.radius or length < 1e-1*fr2.radius:
                         #    continue
-                        endpoints01 = shorten_line(endpoints0[0], endpoints0[1], AMOUNT)
-                        endpoints11 = shorten_line(endpoints1[0], endpoints1[1], AMOUNT)
+                        endpoints01 = shorten_line(endpoints0[0], endpoints0[1], se_factor)
+                        endpoints11 = shorten_line(endpoints1[0], endpoints1[1], se_factor)
                         intersections = intersection.Intersection(f'{fr.label}_{fr2.label}', endpoints01, endpoints11, fr, fr2, ncoef, nint)
                         fr.add_element(intersections)
                         fr2.add_element(intersections)
@@ -450,7 +450,7 @@ def get_connected_fractures(fractures, ncoef=5, nint=10, fracture_surface=None):
     return connected_fractures
 
 
-def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, label):
+def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, label, se_factor):
     """
     Function that sets a constant head boundary condition on the intersection line between a fracture and a defined
     fracture. The constant head lines are added to the fractures in the list.
@@ -473,6 +473,8 @@ def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, labe
         The normal vector of the constant head fracture plane.
     label : str
         The label of the constant head fracture plane.
+    se_factor : float
+        The shortening element factor. This is used to shorten the constant head line.
 
     Returns
     -------
@@ -487,26 +489,26 @@ def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, labe
             continue
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
-            endpoints = shorten_line(endpoints1[0], endpoints1[1], AMOUNT)
+            endpoints = shorten_line(endpoints1[0], endpoints1[1], se_factor)
             const_head.ConstantHeadLine(f'{label}_{fr2.label}', endpoints, head, fr2, ncoef, nint)
 
-def shorten_line(z0, z1, amount):
+def shorten_line(z0, z1, se_factor):
     """
-    Function that shortens a line segment by a given amount and keeps the same center point.
+    Function that shortens a line segment by a given se_factor and keeps the same center point.
 
     Parameters
     ----------
     z0 : complex
     z1 : complex
-    amount : float
+    se_factor : float
 
     Returns
     -------
     np.ndarray
     """
     center = (z0 + z1) / 2
-    z0 = center + (z0 - center) * amount
-    z1 = center + (z1 - center) * amount
+    z0 = center + (z0 - center) * se_factor
+    z1 = center + (z1 - center) * se_factor
     return np.array([z0, z1])
 
 

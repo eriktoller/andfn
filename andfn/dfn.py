@@ -87,7 +87,7 @@ def generate_connected_fractures(num_fracs, radius_factor, center_factor, ncoef_
                                   nint=nint_b)
 
     print('Analyzing intersections...')
-    frac_list = gf.get_connected_fractures(fracs, ncoef_i, nint_i, frac_surface)
+    frac_list = gf.get_connected_fractures(fracs, self.constants['SE_FACTOR'], ncoef_i, nint_i, frac_surface)
 
     return frac_list
 
@@ -625,10 +625,10 @@ class DFN(Constants):
 
 
         if starting_frac is not None:
-            fracs = gf.get_connected_fractures(frac, ncoef=self.constants['NCOEF'], nint=self.constants['NINT'],
+            fracs = gf.get_connected_fractures(frac, self.constants['SE_FACTOR'], ncoef=self.constants['NCOEF'], nint=self.constants['NINT'],
                                                fracture_surface=starting_frac)
         else:
-            fracs = gf.get_connected_fractures(frac, ncoef=self.constants['NCOEF'], nint=self.constants['NINT'])
+            fracs = gf.get_connected_fractures(frac, self.constants['SE_FACTOR'], ncoef=self.constants['NCOEF'], nint=self.constants['NINT'])
 
         self.add_fracture(fracs)
 
@@ -727,7 +727,8 @@ class DFN(Constants):
         label : str
             The label of the constant head boundary.
         """
-        gf.set_head_boundary(self.fractures, ncoef, nint, head, center, radius, normal, label)
+        gf.set_head_boundary(self.fractures, ncoef, nint, head, center, radius, normal, label,
+                             self.constants['SE_FACTOR'])
 
     ####################################################################################################################
     #                      Solve functions                                                                             #
