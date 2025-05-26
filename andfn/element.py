@@ -179,8 +179,12 @@ def initiate_elements_array_hpc():
             elements[name][0] = np.nan
         elif np.issubdtype(element_dtype_hpc[name], np.complex128):
             elements[name][0] = np.nan + 1j * np.nan
-        elif np.issubdtype(element_dtype_hpc[name], np.ndarray):
-            elements[name][0] = np.array([np.nan])
+        elif name == 'thetas' or name == 'dpsi_corr':
+            elements[name][0] = np.zeros(MAX_NCOEF*2, dtype=np.float64)
+        elif name == 'coef' or name == 'old_coef':
+            elements[name][0] = np.zeros(MAX_NCOEF, dtype=np.complex128)
+        elif name == 'endpoints0' or name == 'endpoints1':
+            elements[name][0] = np.full(2, np.nan + 1j * np.nan, dtype=np.complex128)
 
     return elements
 

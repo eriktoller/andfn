@@ -7,7 +7,6 @@ The DFN class is the main class for the AnDFN package. It contains the fractures
 solve the DFN.
 """
 
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -1013,6 +1012,8 @@ class DFN(Constants):
                     if len(seg) == 0:
                         continue
                     plot_line_3d(seg, f, pl, 'blue', line_width=line_width)
+
+        plt.close()
         print('')
 
     def plot_fractures_head(self, pl, lvs=20, n_points=100, line_width=2, margin=1e-3, opacity=1.0, only_flow=False,
@@ -1417,31 +1418,15 @@ class DFN(Constants):
         z1 = gf.map_chi_to_z_line(chi1*(1+dchi), endpoints)
         w0 = frac.calc_w(z0)
         w1 = frac.calc_w(z1)
-        z01 = z0 + np.conj(w0) / np.abs(w0) * dchi
-        z11 = z1 + np.conj(w1) / np.abs(w1) * dchi
-        chi01 = gf.map_z_line_to_chi(z01, endpoints)
-        chi11 = gf.map_z_line_to_chi(z11, endpoints)
 
         # Magnitude
         abs_w0 = np.abs(w0)
         abs_w1 = np.abs(w1)
 
         # check angles between w0, w1 and z-z0, z-z1, using the dot product
-        diff0 = np.arccos(np.real(np.vdot(np.conj(w0) , (z0 - z))) / (abs_w0 * np.abs(z0 - z)))
-        diff1 = np.arccos(np.real(np.vdot(np.conj(w1) , (z1 - z))) / (abs_w1 * np.abs(z1 - z)))
-        """
-        if diff0 > np.pi / 2 and diff1 > np.pi / 2:
-            return z1, z, elevation
-
-        if diff0 > np.pi / 2:
-            return z1, z, elevation
-
-        if diff1 > np.pi / 2:
-            return z0, z, elevation
-        """
         divide = abs_w0 / (abs_w0 + abs_w1)
         pointz0 = gf.map_2d_to_3d(z0, frac)
-        pointz1 = gf.map_2d_to_3d(z1, frac)
+
         # map on direction of normal
         nz0 = np.dot((pointz0 - z3d), frac_old.normal)
         if nz0 < 0:

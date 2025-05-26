@@ -7,7 +7,6 @@ The geometrical functions are used by the element classes and to create the DFN 
 """
 
 import numpy as np
-import numba as nb
 
 import andfn
 from . import fracture

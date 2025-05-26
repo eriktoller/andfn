@@ -10,7 +10,6 @@ from andfn.const_head import ConstantHeadLine
 from andfn.well import Well
 import andfn.bounding
 from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
-from .hpc.hpc_fracture import calc_omega as hpc_calc_omega
 
 
 class Fracture:
@@ -401,12 +400,10 @@ class Fracture:
         omega_fn = np.zeros((n_points,n_points), dtype=complex)
         x_array = np.linspace(-radius_margin, radius_margin, n_points)
         y_array = np.linspace(-radius_margin, radius_margin, n_points)
-        z_array = (x_array[:,np.newaxis] + 1j * y_array).T
 
         # Calculate the omega for each point in the flow net
         for i, x in enumerate(x_array):
             z = x + 1j * y_array
             omega_fn[:, i] = self.calc_omega(z)
-        #omega_fn = self.calc_omega(z_array)
 
         return omega_fn, x_array, y_array

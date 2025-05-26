@@ -229,11 +229,5 @@ class BoundingCircle(Element):
         omega0 = self.frac0.calc_omega(z0, exclude=None)
         psi = np.imag(omega0)
         dpsi = np.diff(psi)
-        q = np.sum(np.abs(self.dpsi_corr))
         mean_dpsi = np.abs(np.max(dpsi) - np.min(dpsi))
-        #if mean_dpsi > q/2:
-        #    mean_dpsi = np.abs(np.abs(np.max(dpsi) - np.min(dpsi)) - q)
-        #if q < 1e-10:
-        #    return np.abs(np.max(psi) - np.min(psi))
-        #return mean_dpsi / q
         return mean_dpsi / np.max(dpsi)

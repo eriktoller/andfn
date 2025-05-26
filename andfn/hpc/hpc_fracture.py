@@ -43,8 +43,10 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
                 omega += hpc_well.calc_omega(element, z)
             elif element['type_'] == 3:  # Constant head line
                 omega += hpc_const_head_line.calc_omega(element, z)
-            elif element['type_'] == 4:  # Impermeable object
+            elif element['type_'] == 4:  # Impermeable circle
                 omega += hpc_imp_object.calc_omega_circle(element, z)
+            elif element['type_'] == 5:  # Impermeable line
+                omega += hpc_imp_object.calc_omega_line(element, z)
 
     return omega
 

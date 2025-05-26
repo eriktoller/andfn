@@ -7,7 +7,6 @@ The mathematical functions are used by the element classes in the andfn module.
 """
 
 import numpy as np
-import numba as nb
 
 def asym_expansion(chi, coef):
     """

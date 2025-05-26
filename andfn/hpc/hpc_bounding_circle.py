@@ -43,7 +43,8 @@ def z_array(self_, n):
     z : np.ndarray[complex]
         The array of points in the complex z plane.
     """
-    theta = mf.calc_thetas(n, self_['type_'])
+    theta = np.zeros(n, dtype=np.float64)
+    mf.calc_thetas(n, self_['type_'], theta)
     chi = np.exp(1j * theta)
     z = gf.map_chi_to_z_circle(chi, self_['radius'])
     return z

@@ -29,13 +29,10 @@ def asym_expansion(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    #res = chi*0
-    #for n in range(len(coef)):
-    #    res += coef[n] * chi ** -n
     res = 0.0 + 0.0j
-    l = len(coef)
-    for n in range(l - 1):
-        res += coef[l - n - 1]
+    length = len(coef)
+    for n in range(length - 1):
+        res += coef[length - n - 1]
         res /= chi
     res += coef[0]
     return res
@@ -82,13 +79,10 @@ def taylor_series(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    #res = chi*0
-    #for n, c in enumerate(coef):
-    #    res += c * chi ** n
     res = 0.0 + 0.0j
-    nn = len(coef)
-    for n in range(nn - 1):
-        res += coef[nn - n - 1]
+    length = len(coef)
+    for n in range(length - 1):
+        res += coef[length - n - 1]
         res *= chi
     res += coef[0]
 
@@ -175,19 +169,17 @@ def cauchy_integral_real(n, m, thetas, frac0, element_id_, element_struc_array, 
     work_array['integral'][:] = 0.0
 
     for ii in range(n):
-        chi = np.exp(1j * thetas[ii])
+        #chi = np.exp(1j * thetas[ii])
+        chi = work_array['exp_array_p'][ii]
         z = gf.map_chi_to_z_line(chi, endpoints0)
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array['phi'][ii] = np.real(omega)
     for jj in range(m):
-        #for ii in range(n):
-            #work_array['integral'][jj] += work_array['phi'][ii] * np.exp(-1j * jj * thetas[ii])
-            #work_array['integral'][jj] += work_array['phi'][ii] * work_array['exp_array'][jj, ii]
         res_tmp = 0.0 + 0.0j
         for ii in range(n):
             exp_val = 1.0 + 0.0j
             for _ in range(jj):
-                exp_val *= work_array['exp_array'][ii]
+                exp_val *= work_array['exp_array_m'][ii]
             res_tmp += work_array['phi'][ii] * exp_val
         work_array['integral'][jj] = res_tmp
 
@@ -229,7 +221,8 @@ def cauchy_integral_imag_circle(n, m, thetas, frac0, element_id_, element_struc_
         Array of coefficients
     """
     for ii in range(n):
-        chi = np.exp(1j * thetas[ii])
+        #chi = np.exp(1j * thetas[ii])
+        chi = work_array['exp_array_p'][ii]
         z = gf.map_chi_to_z_circle(chi, radius, center)
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array['phi'][ii] = np.imag(omega)
@@ -239,7 +232,7 @@ def cauchy_integral_imag_circle(n, m, thetas, frac0, element_id_, element_struc_
         for ii in range(n):
             exp_val = 1.0 + 0.0j
             for _ in range(jj):
-                exp_val *= work_array['exp_array'][ii]
+                exp_val *= work_array['exp_array_m'][ii]
             res_tmp += work_array['phi'][ii] * exp_val
         work_array['integral'][jj] = res_tmp
 
@@ -247,16 +240,57 @@ def cauchy_integral_imag_circle(n, m, thetas, frac0, element_id_, element_struc_
         coef[ii] = 2j * work_array['integral'][ii] / n
     coef[0] = coef[0] / 2
 
-    #for ii in range(n):
-    #    chi = np.exp(1j * thetas[ii])
-    #    z = z_func(chi)
-    #    psi = np.imag(omega_func(z))
-    #    for jj in range(m):
-    #        integral[ii, jj] = psi * np.exp(-1j * jj * thetas[ii])
 
-    #for ii in range(m):
-    #    coef[ii] = 2 * sum(integral[:, ii]) / n
-    #coef[0] = coef[0] / 2
+@nb.njit()
+def cauchy_integral_imag_line(n, m, thetas, frac0, element_id_, element_struc_array, endpoints0, work_array, coef):
+    """
+    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
+
+    Parameters
+    ----------
+    n : int
+        Number of integration points
+    m : int
+        Number of coefficients
+    thetas : np.ndarray
+        Array with thetas along the unit circle
+    frac0 : np.ndarray
+        The fracture
+    element_id_ : int
+        The element id
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    endpoints0 : np.ndarray[np.complex128]
+        The endpoints of the line
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
+
+    Return
+    ------
+    coef : np.ndarray
+        Array of coefficients
+    """
+    for ii in range(n):
+        #chi = np.exp(1j * thetas[ii])
+        chi = work_array['exp_array_p'][ii]
+        z = gf.map_chi_to_z_line(chi, endpoints0)
+        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
+        work_array['phi'][ii] = np.imag(omega)
+
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array['exp_array_m'][ii]
+            res_tmp += work_array['phi'][ii] * exp_val
+        work_array['integral'][jj] = res_tmp
+
+    for ii in range(m):
+        coef[ii] = 2j * work_array['integral'][ii] / n
+    coef[0] = coef[0] / 2
 
 
 @nb.njit()
@@ -289,7 +323,8 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_
         Array of coefficients
     """
     for ii in range(n):
-        chi = np.exp(1j * thetas[ii])
+        #chi = np.exp(1j * thetas[ii])
+        chi = work_array['exp_array_p'][ii]
         z = gf.map_chi_to_z_circle(chi, radius)
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array['psi'][ii] = np.imag(omega)
@@ -305,14 +340,11 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, frac0, element_id_, element_
         psi0 = psi1
 
     for jj in range(m):
-        #for ii in range(n):
-            #work_array['integral'][jj] += work_array['psi'][ii] * np.exp(-1j * jj * thetas[ii])
-            #work_array['integral'][jj] += work_array['psi'][ii] * work_array['exp_array'][jj, ii]
         res_tmp = 0.0 + 0.0j
         for ii in range(n):
             exp_val = 1.0 + 0.0j
             for _ in range(jj):
-                exp_val *= work_array['exp_array'][ii]
+                exp_val *= work_array['exp_array_m'][ii]
             res_tmp += work_array['psi'][ii] * exp_val
         work_array['integral'][jj] = res_tmp
 
@@ -343,10 +375,10 @@ def calc_error(coef, coef_ref):
         max_coef = 1
     for i in range(len(coef)):
         error += np.abs((coef[i] - coef_ref[i]))
-    return (error/len(coef))
+    return error/len(coef)
 
-@nb.njit(inline='always')
-def calc_thetas(n, type_):
+@nb.njit()
+def calc_thetas(n, type_, thetas):
     """
     Function that calculates the thetas for the unit circle.
 
@@ -356,13 +388,14 @@ def calc_thetas(n, type_):
         The number of thetas to calculate
     type_ : int
         The element type. 0 for bounding circle, 1 for constant head line, 3 for intersection.
+    thetas : np.ndarray
+        The array to fill with the thetas
 
     Return
     ------
-    thetas : np.ndarray
-        The thetas
+    None
+        Fills the thetas array with the values of thetas
     """
-    thetas = np.zeros(n, dtype=np.float64)
     # if type_ is 0 or 3
     del_theta = np.pi / n
     start = del_theta / 2
@@ -371,12 +404,29 @@ def calc_thetas(n, type_):
         start = 0.0
     for i in range(n):
         thetas[i] = start + i * del_theta
-    return thetas
 
-@nb.njit()
-def fill_exp_array(n, thetas, exp_array):
+@nb.njit(inline='always')
+def fill_exp_array(n, thetas, exp_array, sign):
+    """
+    Function that fills the exp_array with the values of exp(-1j * thetas).
+    Parameters
+    ----------
+    n : int
+        The number of thetas to calculate
+    thetas : np.ndarray
+        The thetas
+    exp_array : np.ndarray
+        The array to fill with the values of exp(sign * 1j * thetas)
+    sign : int
+        The sign of the exponent. 1 for positive, -1 for negative.
+
+    Returns
+    -------
+    None
+        Fills the exp_array with the values of exp(-1j * thetas)
+    """
     for ii in range(n):
-        exp_array[ii] = np.exp(-1j * thetas[ii])
+        exp_array[ii] = np.exp(sign * 1j * thetas[ii])
 
 ########################################################################################################################
 # Functions NUMBA
@@ -426,7 +476,6 @@ def float2str(value):
             return i_str + "." + f_str
         else:
             m10 = value / 10.0 ** e10
-            exp_str_len = 4
             i_part = math.floor(m10)
             f_part = math.floor((1 + m10 % 1) * 10.0 ** max_digits)
             i_str = str(i_part)

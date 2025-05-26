@@ -4,7 +4,6 @@ Notes
 This module contains the underground structures classes.
 """
 
-import numpy as np
 
 class UndergroundStructure:
     """
@@ -33,7 +32,7 @@ class Tunnel(UndergroundStructure):
     """
     Class for tunnels.
     """
-    def __init__(self, label, radius, start, end, n_sides=-1):
+    def __init__(self, label, radius, start, end, n_sides=-1, **kwargs):
         """
         Initializes the tunnel class.
 

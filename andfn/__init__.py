@@ -18,8 +18,6 @@ from andfn.fracture import Fracture
 from andfn.intersection import Intersection
 from andfn.well import Well
 from andfn.impermeable_object import ImpermeableCircle
-import andfn.geometry_functions
-import andfn.math_functions
 
 __all__ = [
     'BoundingCircle',
@@ -27,5 +25,6 @@ __all__ = [
     'DFN',
     'Fracture',
     'Intersection',
-    'Well'
+    'Well',
+    'ImpermeableCircle',
 ]
