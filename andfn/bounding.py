@@ -4,7 +4,6 @@ Notes
 This module contains the bounding classes.
 """
 
-
 import andfn.math_functions as mf
 import andfn.geometry_functions as gf
 import numpy as np
@@ -125,14 +124,17 @@ class BoundingCircle(Element):
         discharge_element = []
         sign_array = []
 
-        #for e in self.frac0.elements:
+        # for e in self.frac0.elements:
         for ii in range(self.nint - 1):
             for e in self.frac0.elements:
                 if isinstance(e, Well):
                     # Find the branch cut for the well
                     chi0 = gf.map_z_circle_to_chi(z_pos[ii], e.radius, e.center)
                     chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e.radius, e.center)
-                    if np.sign(np.imag(chi0)) != np.sign(np.imag(chi1)) and np.real(chi0) < 0:
+                    if (
+                        np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
+                        and np.real(chi0) < 0
+                    ):
                         self.dpsi_corr[ii] -= e.q
                         element_pos.append(ii)
                         discharge_element.append(e)
@@ -141,7 +143,10 @@ class BoundingCircle(Element):
                     # Find the branch cut for the constant head line
                     chi0 = gf.map_z_line_to_chi(z_pos[ii], e.endpoints0)
                     chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints0)
-                    if np.sign(np.imag(chi0)) != np.sign(np.imag(chi1)) and np.real(chi0) < 0:
+                    if (
+                        np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
+                        and np.real(chi0) < 0
+                    ):
                         self.dpsi_corr[ii] -= e.q
                         element_pos.append(ii)
                         discharge_element.append(e)
@@ -153,7 +158,10 @@ class BoundingCircle(Element):
                         chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints0)
                         ln0 = np.imag(np.log(chi0))
                         ln1 = np.imag(np.log(chi1))
-                        if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
+                        if (
+                            np.sign(ln0) != np.sign(ln1)
+                            and np.abs(ln0) + np.abs(ln1) > np.pi
+                        ):
                             self.dpsi_corr[ii] -= e.q
                             element_pos.append(ii)
                             discharge_element.append(e)
@@ -163,7 +171,10 @@ class BoundingCircle(Element):
                         chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e.endpoints1)
                         ln0 = np.imag(np.log(chi0))
                         ln1 = np.imag(np.log(chi1))
-                        if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
+                        if (
+                            np.sign(ln0) != np.sign(ln1)
+                            and np.abs(ln0) + np.abs(ln1) > np.pi
+                        ):
                             self.dpsi_corr[ii] += e.q
                             element_pos.append(ii)
                             discharge_element.append(e)
@@ -173,11 +184,9 @@ class BoundingCircle(Element):
         self.discharge_element = discharge_element
         self.element_pos = element_pos
 
-
         dpsi_corr2 = np.zeros(self.nint - 1, dtype=float)
         for i, e in enumerate(discharge_element):
-                dpsi_corr2[element_pos[i]] += e.q*sign_array[i]
-
+            dpsi_corr2[element_pos[i]] += e.q * sign_array[i]
 
     def get_dpsi_corr(self):
         """
@@ -199,11 +208,16 @@ class BoundingCircle(Element):
         """
         Solve the coefficients of the bounding circle.
         """
-        #self.find_branch_cuts()  # Find the branch cuts
+        # self.find_branch_cuts()  # Find the branch cuts
         self.get_dpsi_corr()  # Get the correction to the stream function
-        s = mf.cauchy_integral_domega(self.nint, self.ncoef, self.thetas, self.dpsi_corr,
-                                      lambda z: self.frac0.calc_omega(z, exclude=self),
-                                      lambda chi: gf.map_chi_to_z_circle(chi, self.radius))
+        s = mf.cauchy_integral_domega(
+            self.nint,
+            self.ncoef,
+            self.thetas,
+            self.dpsi_corr,
+            lambda z: self.frac0.calc_omega(z, exclude=self),
+            lambda chi: gf.map_chi_to_z_circle(chi, self.radius),
+        )
 
         self.error = np.max(np.abs(s + self.coef))
         self.coef = -s

@@ -3,6 +3,7 @@ Notes
 -----
 This module contains the well classes.
 """
+
 from . import math_functions as mf
 from . import geometry_functions as gf
 import numpy as np
@@ -76,7 +77,10 @@ class Well(Element):
         z : ndarray
             An array of n points on the well.
         """
-        return self.radius * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) + self.center
+        return (
+            self.radius * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False))
+            + self.center
+        )
 
     def z_array_tracking(self, n, offset=1e-2):
         """
@@ -94,7 +98,12 @@ class Well(Element):
         z : ndarray
             An array of n points on the well.
         """
-        return self.radius * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False))*(1 + offset) + self.center
+        return (
+            self.radius
+            * np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False))
+            * (1 + offset)
+            + self.center
+        )
 
     def calc_omega(self, z):
         """
@@ -104,7 +113,7 @@ class Well(Element):
         ----------
         z : complex | ndarray
             A point in the complex z plane.
-        
+
 
         Returns
         -------
@@ -115,10 +124,10 @@ class Well(Element):
         if isinstance(chi, np.complex128):
             omega = mf.well_chi(chi, self.q)
             if np.abs(chi) < 1.0 - 1e-10:
-                omega = self.head*self.frac0.t + 0*1j
+                omega = self.head * self.frac0.t + 0 * 1j
         else:
             omega = mf.well_chi(chi, self.q)
-            omega[np.abs(chi) < 1.0 - 1e-10] = self.head*self.frac0.t + 0*1j
+            omega[np.abs(chi) < 1.0 - 1e-10] = self.head * self.frac0.t + 0 * 1j
         return omega
 
     def calc_w(self, z):
@@ -180,14 +189,13 @@ class Well(Element):
         if chi2 is None:
             return False
 
-        diff0 = np.abs(np.abs(chi2 - chi0) + np.abs(chi2-chi1) - np.abs(chi1 - chi0))
-        diff1 = np.abs(np.abs(chi3 - chi0) + np.abs(chi3-chi1) - np.abs(chi1 - chi0))
+        diff0 = np.abs(np.abs(chi2 - chi0) + np.abs(chi2 - chi1) - np.abs(chi1 - chi0))
+        diff1 = np.abs(np.abs(chi3 - chi0) + np.abs(chi3 - chi1) - np.abs(chi1 - chi0))
         if diff0 > atol and diff1 > atol:
             return False
 
-
-        chi2 *= (1+atol)
-        chi3 *= (1+atol)
+        chi2 *= 1 + atol
+        chi3 *= 1 + atol
 
         z2 = gf.map_chi_to_z_circle(chi2, self.radius, self.center)
         z3 = gf.map_chi_to_z_circle(chi3, self.radius, self.center)

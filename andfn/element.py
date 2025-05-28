@@ -6,51 +6,56 @@ This module contains the element class that is a parent class to all elements.
 """
 
 import numpy as np
+
 MAX_NCOEF = 500
 MAX_ELEMENTS = 600
 
-element_dtype = np.dtype([
-        ('id_', np.int_),
-        ('type_', np.int_),
-        ('frac0', np.int_),
-        ('frac1', np.int_),
-        ('endpoints0', np.complex128, 2),
-        ('endpoints1', np.complex128, 2),
-        ('radius', np.float64),
-        ('center', np.complex128),
-        ('head', np.float64),
-        ('phi', np.float64),
-        ('ncoef', np.int_),
-        ('nint', np.int_),
-        ('q', np.float64),
-        ('thetas', np.ndarray),
-        ('coef', np.ndarray),
-        ('old_coef', np.ndarray),
-        ('dpsi_corr', np.ndarray),
-        ('error', np.float64)
-])
+element_dtype = np.dtype(
+    [
+        ("id_", np.int_),
+        ("type_", np.int_),
+        ("frac0", np.int_),
+        ("frac1", np.int_),
+        ("endpoints0", np.complex128, 2),
+        ("endpoints1", np.complex128, 2),
+        ("radius", np.float64),
+        ("center", np.complex128),
+        ("head", np.float64),
+        ("phi", np.float64),
+        ("ncoef", np.int_),
+        ("nint", np.int_),
+        ("q", np.float64),
+        ("thetas", np.ndarray),
+        ("coef", np.ndarray),
+        ("old_coef", np.ndarray),
+        ("dpsi_corr", np.ndarray),
+        ("error", np.float64),
+    ]
+)
 
-element_dtype_hpc = np.dtype([
-        ('id_', np.int_),
-        ('type_', np.int_),
-        ('frac0', np.int_),
-        ('frac1', np.int_),
-        ('endpoints0', np.complex128, 2),
-        ('endpoints1', np.complex128, 2),
-        ('radius', np.float64),
-        ('center', np.complex128),
-        ('head', np.float64),
-        ('phi', np.float64),
-        ('ncoef', np.int_),
-        ('nint', np.int_),
-        ('q', np.float64),
-        ('thetas', np.float64, MAX_NCOEF*2),
-        ('coef', np.complex128, MAX_NCOEF),
-        ('old_coef', np.complex128, MAX_NCOEF),
-        ('dpsi_corr', np.float64, MAX_NCOEF*2),
-        ('error', np.float64),
-        ('error_old', np.float64)
-])
+element_dtype_hpc = np.dtype(
+    [
+        ("id_", np.int_),
+        ("type_", np.int_),
+        ("frac0", np.int_),
+        ("frac1", np.int_),
+        ("endpoints0", np.complex128, 2),
+        ("endpoints1", np.complex128, 2),
+        ("radius", np.float64),
+        ("center", np.complex128),
+        ("head", np.float64),
+        ("phi", np.float64),
+        ("ncoef", np.int_),
+        ("nint", np.int_),
+        ("q", np.float64),
+        ("thetas", np.float64, MAX_NCOEF * 2),
+        ("coef", np.complex128, MAX_NCOEF),
+        ("old_coef", np.complex128, MAX_NCOEF),
+        ("dpsi_corr", np.float64, MAX_NCOEF * 2),
+        ("error", np.float64),
+        ("error_old", np.float64),
+    ]
+)
 """
 The element data type for the HPC solver. Note that not all elements have all properties.
 
@@ -103,42 +108,46 @@ error : float
     
 
 """
-element_index_dtype = np.dtype([
-        ('label', np.str_,100),
-        ('id_', np.int_),
-        ('type_', np.int_),
-])
+element_index_dtype = np.dtype(
+    [
+        ("label", np.str_, 100),
+        ("id_", np.int_),
+        ("type_", np.int_),
+    ]
+)
 
 
-fracture_dtype = np.dtype([
-        ('id_', np.int_),
-        ('t', np.float64),
-        ('radius', np.float64),
-        ('center', np.float64, 3),
-        ('normal', np.float64, 3),
-        ('x_vector', np.float64, 3),
-        ('y_vector', np.float64, 3),
-        ('elements', np.ndarray),
-        ('constant', np.float64),
-])
+fracture_dtype = np.dtype(
+    [
+        ("id_", np.int_),
+        ("t", np.float64),
+        ("radius", np.float64),
+        ("center", np.float64, 3),
+        ("normal", np.float64, 3),
+        ("x_vector", np.float64, 3),
+        ("y_vector", np.float64, 3),
+        ("elements", np.ndarray),
+        ("constant", np.float64),
+    ]
+)
 
-fracture_dtype_hpc = np.dtype([
-        ('id_', np.int_),
-        ('t', np.float64),
-        ('radius', np.float64),
-        ('center', np.float64, 3),
-        ('normal', np.float64, 3),
-        ('x_vector', np.float64, 3),
-        ('y_vector', np.float64, 3),
-        ('elements', np.int_, MAX_ELEMENTS),
-        ('nelements', np.int_),
-        ('constant', np.float64),
-])
+fracture_dtype_hpc = np.dtype(
+    [
+        ("id_", np.int_),
+        ("t", np.float64),
+        ("radius", np.float64),
+        ("center", np.float64, 3),
+        ("normal", np.float64, 3),
+        ("x_vector", np.float64, 3),
+        ("y_vector", np.float64, 3),
+        ("elements", np.int_, MAX_ELEMENTS),
+        ("nelements", np.int_),
+        ("constant", np.float64),
+    ]
+)
 
-fracture_index_dtype = np.dtype([
-        ('label', np.str_,100),
-        ('id_', np.int_)
-])
+fracture_index_dtype = np.dtype([("label", np.str_, 100), ("id_", np.int_)])
+
 
 def initiate_elements_array():
     """
@@ -162,6 +171,7 @@ def initiate_elements_array():
 
     return elements
 
+
 def initiate_elements_array_hpc():
     """
     Function that initiates the elements array for HPC.
@@ -179,19 +189,21 @@ def initiate_elements_array_hpc():
             elements[name][0] = np.nan
         elif np.issubdtype(element_dtype_hpc[name], np.complex128):
             elements[name][0] = np.nan + 1j * np.nan
-        elif name == 'thetas' or name == 'dpsi_corr':
-            elements[name][0] = np.zeros(MAX_NCOEF*2, dtype=np.float64)
-        elif name == 'coef' or name == 'old_coef':
+        elif name == "thetas" or name == "dpsi_corr":
+            elements[name][0] = np.zeros(MAX_NCOEF * 2, dtype=np.float64)
+        elif name == "coef" or name == "old_coef":
             elements[name][0] = np.zeros(MAX_NCOEF, dtype=np.complex128)
-        elif name == 'endpoints0' or name == 'endpoints1':
+        elif name == "endpoints0" or name == "endpoints1":
             elements[name][0] = np.full(2, np.nan + 1j * np.nan, dtype=np.complex128)
 
     return elements
+
 
 class Element:
     """
     The parent class for all elements in the andfn model.
     """
+
     def __init__(self, label, id_, type_):
         """
         Initialize the element.
@@ -219,7 +231,9 @@ class Element:
         self.ncoef = 5
         self.nint = 10
         self.coef = np.zeros(self.ncoef, dtype=complex)
-        self.thetas = np.linspace(start=0, stop=2 * np.pi, num=self.nint, endpoint=False)
+        self.thetas = np.linspace(
+            start=0, stop=2 * np.pi, num=self.nint, endpoint=False
+        )
 
     def __str__(self):
         """
@@ -230,7 +244,7 @@ class Element:
         str
             The string representation of the element.
         """
-        return f'{self.__class__.__name__}: {self.label}'
+        return f"{self.__class__.__name__}: {self.label}"
 
     def set_id(self, id_):
         """
@@ -260,8 +274,12 @@ class Element:
         -------
         None. The element is updated in place.
         """
-        assert all(key in element_dtype.names for key in kwargs.keys()), 'Invalid property name.'
-        assert all(key in element_index_dtype.names for key in kwargs.keys()), 'Invalid property name.'
+        assert all(key in element_dtype.names for key in kwargs.keys()), (
+            "Invalid property name."
+        )
+        assert all(key in element_index_dtype.names for key in kwargs.keys()), (
+            "Invalid property name."
+        )
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -281,16 +299,14 @@ class Element:
 
         for key in self.__dict__.keys():
             if key in element_dtype.names:
-                if key in ['frac0', 'frac1']:
+                if key in ["frac0", "frac1"]:
                     struc_array[key][0] = self.__dict__[key].id_
                 else:
                     struc_array[key][0] = self.__dict__[key]
 
-        index_array = np.array([(
-            self.label,
-            self.id_,
-            self.type_
-        )], dtype=element_index_dtype)
+        index_array = np.array(
+            [(self.label, self.id_, self.type_)], dtype=element_index_dtype
+        )
 
         return struc_array, index_array
 
@@ -309,18 +325,16 @@ class Element:
 
         for key in self.__dict__.keys():
             if key in element_dtype.names:
-                if key in ['frac0', 'frac1']:
+                if key in ["frac0", "frac1"]:
                     struc_array[key][0] = self.__dict__[key].id_
-                elif key in ['thetas', 'coef', 'old_coef', 'dpsi_corr']:
-                    struc_array[key][0][:self.__dict__[key].size] = self.__dict__[key]
+                elif key in ["thetas", "coef", "old_coef", "dpsi_corr"]:
+                    struc_array[key][0][: self.__dict__[key].size] = self.__dict__[key]
                 else:
                     struc_array[key][0] = self.__dict__[key]
 
-        index_array = np.array([(
-            self.label,
-            self.id_,
-            self.type_
-        )], dtype=element_index_dtype)
+        index_array = np.array(
+            [(self.label, self.id_, self.type_)], dtype=element_index_dtype
+        )
 
         return struc_array, index_array
 
@@ -334,8 +348,10 @@ class Element:
         """
         for key in self.__dict__.keys():
             if key in element_dtype.names:
-                if key == 'frac0' or key == 'frac1':
-                    self.__dict__[key] = next(frac for frac in fracs if frac.id_ == struc_array[key])
+                if key == "frac0" or key == "frac1":
+                    self.__dict__[key] = next(
+                        frac for frac in fracs if frac.id_ == struc_array[key]
+                    )
                     continue
                 self.__dict__[key] = struc_array[key]
 
@@ -352,14 +368,16 @@ class Element:
         """
         for key in self.__dict__.keys():
             if key in element_dtype.names:
-                if key == 'frac0' or key == 'frac1':
-                    self.__dict__[key] = next(frac for frac in fracs if frac.id_ == struc_array[key])
+                if key == "frac0" or key == "frac1":
+                    self.__dict__[key] = next(
+                        frac for frac in fracs if frac.id_ == struc_array[key]
+                    )
                     continue
-                if key == 'coef' or key == 'old_coef':
-                    self.__dict__[key] = struc_array[key][:struc_array['ncoef']]
+                if key == "coef" or key == "old_coef":
+                    self.__dict__[key] = struc_array[key][: struc_array["ncoef"]]
                     continue
-                if key == 'thetas' or key == 'dpsi_corr':
-                    self.__dict__[key] = struc_array[key][:struc_array['nint']]
+                if key == "thetas" or key == "dpsi_corr":
+                    self.__dict__[key] = struc_array[key][: struc_array["nint"]]
                     continue
                 self.__dict__[key] = struc_array[key]
 
@@ -379,12 +397,22 @@ class Element:
         """
         if self.type_ in [0, 3]:  # Intersection, Constant Head Line
             self.ncoef = n
-            self.coef = np.append(self.coef, np.zeros(n-self.coef.size, dtype=complex))
+            self.coef = np.append(
+                self.coef, np.zeros(n - self.coef.size, dtype=complex)
+            )
             self.nint = n * nint_mult
-            self.thetas = np.linspace(start=np.pi / (2 * self.nint), stop=np.pi + np.pi / (2 * self.nint),
-                                      num=self.nint, endpoint=False)
+            self.thetas = np.linspace(
+                start=np.pi / (2 * self.nint),
+                stop=np.pi + np.pi / (2 * self.nint),
+                num=self.nint,
+                endpoint=False,
+            )
         elif self.type_ == 1:  # Bounding Circle
             self.ncoef = n
-            self.coef = np.append(self.coef, np.zeros(n-self.coef.size, dtype=complex))
+            self.coef = np.append(
+                self.coef, np.zeros(n - self.coef.size, dtype=complex)
+            )
             self.nint = n * nint_mult
-            self.thetas = np.linspace(start=0, stop=2 * np.pi, num=self.nint, endpoint=False)
+            self.thetas = np.linspace(
+                start=0, stop=2 * np.pi, num=self.nint, endpoint=False
+            )

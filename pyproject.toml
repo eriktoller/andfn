@@ -27,6 +27,10 @@ dependencies = [
     "h5py~=3.13.0"
 ]
 
+optional-dependencies = [
+    "pyyaml"
+]
+
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",

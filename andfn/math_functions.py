@@ -8,6 +8,7 @@ The mathematical functions are used by the element classes in the andfn module.
 
 import numpy as np
 
+
 def asym_expansion(chi, coef):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
@@ -28,8 +29,8 @@ def asym_expansion(chi, coef):
     res : complex | np.ndarray
         The resulting value for the asymptotic expansion
     """
-    #res = 0.0
-    #for n, c in enumerate(coef):
+    # res = 0.0
+    # for n, c in enumerate(coef):
     #    res += c * chi ** (-n)
     res = np.sum(coef * chi[:, np.newaxis] ** (-np.arange(len(coef))), axis=1)
 
@@ -83,8 +84,8 @@ def taylor_series(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    #res = 0.0 + 0.0j
-    #for n, c in enumerate(coef):
+    # res = 0.0 + 0.0j
+    # for n, c in enumerate(coef):
     #    res += c * chi ** n
     res = np.sum(coef * chi[:, np.newaxis] ** np.arange(len(coef)), axis=1)
 
@@ -113,9 +114,10 @@ def taylor_series_d1(chi, coef):
     """
     res = 0.0 + 0.0j
     for n, c in enumerate(coef[1:], start=1):
-        res += c * n * chi ** (n-1)
+        res += c * n * chi ** (n - 1)
 
     return res
+
 
 def well_chi(chi, q):
     r"""
@@ -161,14 +163,16 @@ def cauchy_integral_real(n, m, thetas, omega_func, z_func):
     coef : np.ndarray
         Array of coefficients
     """
-    #integral = np.zeros((n, m), dtype=complex)
+    # integral = np.zeros((n, m), dtype=complex)
 
-    #chi = np.exp(1j * thetas)
-    #z = z_func(chi)
-    #phi = np.real(omega_func(z))
-    #integral[:, :m] = phi[:, np.newaxis] * np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
-    integral = np.exp(-1j * np.arange(m) * thetas[:, np.newaxis]) * np.real(omega_func(z_func(np.exp(1j * thetas))))[:,
-                                                                    np.newaxis]
+    # chi = np.exp(1j * thetas)
+    # z = z_func(chi)
+    # phi = np.real(omega_func(z))
+    # integral[:, :m] = phi[:, np.newaxis] * np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
+    integral = (
+        np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
+        * np.real(omega_func(z_func(np.exp(1j * thetas))))[:, np.newaxis]
+    )
 
     coef = 2 * np.sum(integral, axis=0) / n
     coef[0] = coef[0] / 2
@@ -203,7 +207,9 @@ def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
     chi = np.exp(1j * thetas)
     z = z_func(chi)
     psi = np.imag(omega_func(z))
-    integral[:, :m] = psi[:, np.newaxis] * np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
+    integral[:, :m] = psi[:, np.newaxis] * np.exp(
+        -1j * np.arange(m) * thetas[:, np.newaxis]
+    )
 
     coef = 2j * np.sum(integral, axis=0) / n
     coef[0] = coef[0] / 2
@@ -244,7 +250,9 @@ def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
     dpsi = np.hstack([0, np.add(dpsi, -dpsi_corr)])
 
     psi1 = np.cumsum(dpsi) + psi[0]
-    integral[:, :m] = psi1[:, np.newaxis] * np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
+    integral[:, :m] = psi1[:, np.newaxis] * np.exp(
+        -1j * np.arange(m) * thetas[:, np.newaxis]
+    )
 
     coef = 2j * np.sum(integral, axis=0) / n
     coef[0] = coef[0] / 2

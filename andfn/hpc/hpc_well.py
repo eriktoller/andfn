@@ -10,7 +10,8 @@ import numba as nb
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
 
-@nb.njit(inline='always')
+
+@nb.njit(inline="always")
 def calc_omega(self_, z):
     """
     Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
@@ -28,11 +29,12 @@ def calc_omega(self_, z):
     omega : complex
         The complex potential for the well.
     """
-    chi = gf.map_z_circle_to_chi(z, self_['radius'], self_['center'])
-    omega = mf.well_chi(chi, self_['q'])
-    if np.abs(chi) < 1-1e-12:
+    chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
+    omega = mf.well_chi(chi, self_["q"])
+    if np.abs(chi) < 1 - 1e-12:
         omega = np.nan + np.nan * 1j
     return omega
+
 
 def calc_w(self_, z):
     """
@@ -51,9 +53,10 @@ def calc_w(self_, z):
     omega : complex
         The complex potential for the well.
     """
-    chi = gf.map_z_circle_to_chi(z, self_['radius'], self_['center'])
-    w = - self_['q'] / (2 * np.pi * chi) / self_['radius']
+    chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
+    w = -self_["q"] / (2 * np.pi * chi) / self_["radius"]
     return w
+
 
 @nb.njit()
 def z_array(self_, n):
@@ -73,5 +76,5 @@ def z_array(self_, n):
         An array of n points on the well.
     """
     theta = np.linspace(0.0, 2.0 * np.pi - 2 * np.pi / n, n)
-    z = self_['radius'] * np.exp(1j * theta) + self_['center']
+    z = self_["radius"] * np.exp(1j * theta) + self_["center"]
     return z

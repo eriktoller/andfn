@@ -9,6 +9,7 @@ class UndergroundStructure:
     """
     Base class for underground structures.
     """
+
     def __init__(self, label, **kwargs):
         """
         Initializes the underground structure class.
@@ -32,6 +33,7 @@ class Tunnel(UndergroundStructure):
     """
     Class for tunnels.
     """
+
     def __init__(self, label, radius, start, end, n_sides=-1, **kwargs):
         """
         Initializes the tunnel class.

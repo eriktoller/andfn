@@ -3,6 +3,7 @@ Notes
 -----
 This module contains the fracture class.
 """
+
 import numpy as np
 
 from andfn.intersection import Intersection
@@ -13,7 +14,19 @@ from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
 
 
 class Fracture:
-    def __init__(self, label, t, radius, center, normal, aperture=1e-6, ncoef=5, nint=10, elements=None, **kwargs):
+    def __init__(
+        self,
+        label,
+        t,
+        radius,
+        center,
+        normal,
+        aperture=1e-6,
+        ncoef=5,
+        nint=10,
+        elements=None,
+        **kwargs,
+    ):
         """
         Initializes the fracture class.
 
@@ -57,7 +70,9 @@ class Fracture:
         elif elements is not None:
             self.elements.append(elements)
         else:
-            self.elements = [andfn.bounding.BoundingCircle(label, radius, self, ncoef, nint)]
+            self.elements = [
+                andfn.bounding.BoundingCircle(label, radius, self, ncoef, nint)
+            ]
         self.constant = 0.0
 
         # Set the kwargs
@@ -73,7 +88,7 @@ class Fracture:
         str
             The string representation of the fracture.
         """
-        return f'Fracture {self.label}'
+        return f"Fracture {self.label}"
 
     def set_id(self, id_):
         """
@@ -99,20 +114,19 @@ class Fracture:
         """
         fracture_struc_array = np.empty(1, dtype=fracture_dtype)
 
-        fracture_struc_array['id_'][0] = self.id_
-        fracture_struc_array['t'][0] = self.t
-        fracture_struc_array['radius'][0] = self.radius
-        fracture_struc_array['center'][0] = self.center
-        fracture_struc_array['normal'][0] = self.normal
-        fracture_struc_array['x_vector'][0] = self.x_vector
-        fracture_struc_array['y_vector'][0] = self.y_vector
-        fracture_struc_array['elements'][0] = np.array([e.id_ for e in self.elements])
-        fracture_struc_array['constant'][0] = self.constant
+        fracture_struc_array["id_"][0] = self.id_
+        fracture_struc_array["t"][0] = self.t
+        fracture_struc_array["radius"][0] = self.radius
+        fracture_struc_array["center"][0] = self.center
+        fracture_struc_array["normal"][0] = self.normal
+        fracture_struc_array["x_vector"][0] = self.x_vector
+        fracture_struc_array["y_vector"][0] = self.y_vector
+        fracture_struc_array["elements"][0] = np.array([e.id_ for e in self.elements])
+        fracture_struc_array["constant"][0] = self.constant
 
-        fracture_index_array = np.array([(
-            self.label,
-            self.id_
-        )], dtype=fracture_index_dtype)
+        fracture_index_array = np.array(
+            [(self.label, self.id_)], dtype=fracture_index_dtype
+        )
 
         return fracture_struc_array, fracture_index_array
 
@@ -129,22 +143,21 @@ class Fracture:
         """
         fracture_struc_array = np.empty(1, dtype=fracture_dtype_hpc)
 
-        fracture_struc_array['id_'][0] = self.id_
-        fracture_struc_array['t'][0] = self.t
-        fracture_struc_array['radius'][0] = self.radius
-        fracture_struc_array['center'][0] = self.center
-        fracture_struc_array['normal'][0] = self.normal
-        fracture_struc_array['x_vector'][0] = self.x_vector
-        fracture_struc_array['y_vector'][0] = self.y_vector
+        fracture_struc_array["id_"][0] = self.id_
+        fracture_struc_array["t"][0] = self.t
+        fracture_struc_array["radius"][0] = self.radius
+        fracture_struc_array["center"][0] = self.center
+        fracture_struc_array["normal"][0] = self.normal
+        fracture_struc_array["x_vector"][0] = self.x_vector
+        fracture_struc_array["y_vector"][0] = self.y_vector
         elements = np.array([e.id_ for e in self.elements])
-        fracture_struc_array['elements'][0][:elements.size] = elements
-        fracture_struc_array['nelements'][0] = elements.size
-        fracture_struc_array['constant'][0] = self.constant
+        fracture_struc_array["elements"][0][: elements.size] = elements
+        fracture_struc_array["nelements"][0] = elements.size
+        fracture_struc_array["constant"][0] = self.constant
 
-        fracture_index_array = np.array([(
-            self.label,
-            self.id_
-        )], dtype=fracture_index_dtype)
+        fracture_index_array = np.array(
+            [(self.label, self.id_)], dtype=fracture_index_dtype
+        )
 
         return fracture_struc_array, fracture_index_array
 
@@ -158,17 +171,22 @@ class Fracture:
             The structured array for the fracture.
         fracture_index_array : np.ndarray
         """
-        self.id_ = fracture_struc_array['id_']
-        self.t = fracture_struc_array['t']
-        self.radius = fracture_struc_array['radius']
-        self.center = fracture_struc_array['center']
-        self.normal = fracture_struc_array['normal']
-        self.x_vector = fracture_struc_array['x_vector']
-        self.y_vector = fracture_struc_array['y_vector']
-        self.elements = [e for e in self.elements if e.id_ in fracture_struc_array['elements'][:fracture_struc_array['nelements']]]
-        self.constant = fracture_struc_array['constant']
+        self.id_ = fracture_struc_array["id_"]
+        self.t = fracture_struc_array["t"]
+        self.radius = fracture_struc_array["radius"]
+        self.center = fracture_struc_array["center"]
+        self.normal = fracture_struc_array["normal"]
+        self.x_vector = fracture_struc_array["x_vector"]
+        self.y_vector = fracture_struc_array["y_vector"]
+        self.elements = [
+            e
+            for e in self.elements
+            if e.id_
+            in fracture_struc_array["elements"][: fracture_struc_array["nelements"]]
+        ]
+        self.constant = fracture_struc_array["constant"]
 
-        self.label = fracture_index_array['label']
+        self.label = fracture_index_array["label"]
 
     def unconsolidate_hpc(self, fracture_struc_array, fracture_index_array):
         """
@@ -181,17 +199,19 @@ class Fracture:
         fracture_index_array : np.ndarray
             The structured array for the fracture index.
         """
-        self.id_ = fracture_struc_array['id_']
-        self.t = fracture_struc_array['t']
-        self.radius = fracture_struc_array['radius']
-        self.center = fracture_struc_array['center']
-        self.normal = fracture_struc_array['normal']
-        self.x_vector = fracture_struc_array['x_vector']
-        self.y_vector = fracture_struc_array['y_vector']
-        self.elements = [e for e in self.elements if e.id_ in fracture_struc_array['elements']]
-        self.constant = fracture_struc_array['constant']
+        self.id_ = fracture_struc_array["id_"]
+        self.t = fracture_struc_array["t"]
+        self.radius = fracture_struc_array["radius"]
+        self.center = fracture_struc_array["center"]
+        self.normal = fracture_struc_array["normal"]
+        self.x_vector = fracture_struc_array["x_vector"]
+        self.y_vector = fracture_struc_array["y_vector"]
+        self.elements = [
+            e for e in self.elements if e.id_ in fracture_struc_array["elements"]
+        ]
+        self.constant = fracture_struc_array["constant"]
 
-        self.label = fracture_index_array['label']
+        self.label = fracture_index_array["label"]
 
     def add_element(self, new_element):
         """
@@ -203,7 +223,7 @@ class Fracture:
             The element to add to the fracture.
         """
         if new_element in self.elements:
-            print('Element already in fracture.')
+            print("Element already in fracture.")
         else:
             self.elements.append(new_element)
 
@@ -216,10 +236,13 @@ class Fracture:
         list
             A list of elements in the fracture that have a discharge.
         """
-        return [e for e in self.elements
-                if isinstance(e, Intersection)
-                or isinstance(e, ConstantHeadLine)
-                or isinstance(e, Well)]
+        return [
+            e
+            for e in self.elements
+            if isinstance(e, Intersection)
+            or isinstance(e, ConstantHeadLine)
+            or isinstance(e, Well)
+        ]
 
     def get_discharge_entries(self):
         """
@@ -232,7 +255,7 @@ class Fracture:
         """
         el = self.get_discharge_elements()
         len_el = len(el)
-        cnt = (len_el -1) * len_el + len_el
+        cnt = (len_el - 1) * len_el + len_el
         for e in el:
             if isinstance(e, Intersection):
                 cnt += 1
@@ -397,7 +420,7 @@ class Fracture:
         """
         # Create the arrays for the flow net
         radius_margin = self.radius * (1 + margin)
-        omega_fn = np.zeros((n_points,n_points), dtype=complex)
+        omega_fn = np.zeros((n_points, n_points), dtype=complex)
         x_array = np.linspace(-radius_margin, radius_margin, n_points)
         y_array = np.linspace(-radius_margin, radius_margin, n_points)
 

@@ -3,6 +3,7 @@ Notes
 -----
 This module contains the constant head classes.
 """
+
 from . import math_functions as mf
 from . import geometry_functions as gf
 import numpy as np
@@ -41,7 +42,12 @@ class ConstantHeadLine(Element):
         self.frac0 = frac0
 
         # Create the pre-calculation variables
-        self.thetas = np.linspace(start=np.pi/(2*nint), stop=np.pi + np.pi/(2*nint), num=nint, endpoint=False)
+        self.thetas = np.linspace(
+            start=np.pi / (2 * nint),
+            stop=np.pi + np.pi / (2 * nint),
+            num=nint,
+            endpoint=False,
+        )
         self.coef = np.zeros(ncoef, dtype=complex)
         self.phi = frac0.phi_from_head(head)
 
@@ -106,7 +112,7 @@ class ConstantHeadLine(Element):
         np.ndarray
             The array of z points
         """
-        return np.linspace(self.endpoints0[0], self.endpoints0[1], n+2)[1:n+1]
+        return np.linspace(self.endpoints0[0], self.endpoints0[1], n + 2)[1 : n + 1]
 
     def omega_along_element(self, n, frac_is):
         """
@@ -144,9 +150,8 @@ class ConstantHeadLine(Element):
         np.ndarray
             The array of z points
         """
-        chi = np.exp(1j * np.linspace(0, 2*np.pi, n, endpoint=False))*(1+offset)
+        chi = np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) * (1 + offset)
         return gf.map_chi_to_z_line(chi, self.endpoints0)
-
 
     def calc_omega(self, z):
         """
@@ -186,19 +191,25 @@ class ConstantHeadLine(Element):
         chi = gf.map_z_line_to_chi(z, self.endpoints0)
         # Calculate w
         w = -mf.asym_expansion_d1(chi, self.coef) - self.q / (2 * np.pi * chi)
-        w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self.endpoints0[1] - self.endpoints0[0])
+        w *= 2 * chi**2 / (chi**2 - 1) * 2 / (self.endpoints0[1] - self.endpoints0[0])
         return w
 
     def solve(self):
         """
         Solve the coefficients of the constant head line.
         """
-        s = mf.cauchy_integral_real(self.nint, self.ncoef, self.thetas,
-                                    lambda z: self.frac0.calc_omega(z, exclude=self),
-                                    lambda chi: gf.map_chi_to_z_line(chi, self.endpoints0))
+        s = mf.cauchy_integral_real(
+            self.nint,
+            self.ncoef,
+            self.thetas,
+            lambda z: self.frac0.calc_omega(z, exclude=self),
+            lambda chi: gf.map_chi_to_z_line(chi, self.endpoints0),
+        )
 
         s = np.real(s)
-        s[0] = 0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+        s[0] = (
+            0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+        )
 
         self.error = np.max(np.abs(s + self.coef))
         self.coef = -s
@@ -250,7 +261,14 @@ class ConstantHeadLine(Element):
         if np.abs(np.abs(z - z0) + np.abs(z1 - z) - np.abs(z0 - z1)) > atol:
             return False
 
-        if np.abs(np.abs(z - self.endpoints0[0]) + np.abs(z - self.endpoints0[1]) - np.abs(self.endpoints0[0] - self.endpoints0[1])) > atol:
+        if (
+            np.abs(
+                np.abs(z - self.endpoints0[0])
+                + np.abs(z - self.endpoints0[1])
+                - np.abs(self.endpoints0[0] - self.endpoints0[1])
+            )
+            > atol
+        ):
             return False
 
         return z

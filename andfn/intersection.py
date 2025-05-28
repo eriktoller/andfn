@@ -3,13 +3,17 @@ Notes
 -----
 This module contains the intersection class.
 """
+
 from . import math_functions as mf
 from . import geometry_functions as gf
 import numpy as np
 from .element import Element
 
+
 class Intersection(Element):
-    def __init__(self, label, endpoints0, endpoints1, frac0, frac1, ncoef=5, nint=10, **kwargs):
+    def __init__(
+        self, label, endpoints0, endpoints1, frac0, frac1, ncoef=5, nint=10, **kwargs
+    ):
         """
         Constructor for the intersection element.
 
@@ -43,7 +47,12 @@ class Intersection(Element):
         self.frac1 = frac1
 
         # Create the pre-calculation variables
-        self.thetas = np.linspace(start=np.pi/(2*nint), stop=np.pi + np.pi/(2*nint), num=nint, endpoint=False)
+        self.thetas = np.linspace(
+            start=np.pi / (2 * nint),
+            stop=np.pi + np.pi / (2 * nint),
+            num=nint,
+            endpoint=False,
+        )
         self.coef = np.zeros(ncoef, dtype=complex)
 
         # Set the kwargs
@@ -102,8 +111,8 @@ class Intersection(Element):
             The array of z points
         """
         if frac_is == self.frac0:
-            return np.linspace(self.endpoints0[0], self.endpoints0[1], n+2)[1:n+1]
-        return np.linspace(self.endpoints1[0], self.endpoints1[1], n+2)[1:n+1]
+            return np.linspace(self.endpoints0[0], self.endpoints0[1], n + 2)[1 : n + 1]
+        return np.linspace(self.endpoints1[0], self.endpoints1[1], n + 2)[1 : n + 1]
 
     def omega_along_element(self, n, frac_is):
         """
@@ -169,31 +178,54 @@ class Intersection(Element):
         # Se if function is in the first or second fracture that the intersection is associated with
         if frac_is == self.frac0:
             chi = gf.map_z_line_to_chi(z, self.endpoints0)
-            w = -mf.asym_expansion_d1(chi, self.coef)  - self.q / (2 * np.pi * chi)
-            w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self.endpoints0[1] - self.endpoints0[0])
+            w = -mf.asym_expansion_d1(chi, self.coef) - self.q / (2 * np.pi * chi)
+            w *= (
+                2
+                * chi**2
+                / (chi**2 - 1)
+                * 2
+                / (self.endpoints0[1] - self.endpoints0[0])
+            )
         else:
             chi = gf.map_z_line_to_chi(z, self.endpoints1)
             w = -mf.asym_expansion_d1(chi, -self.coef) + self.q / (2 * np.pi * chi)
-            w *= 2 * chi ** 2 / (chi ** 2 - 1) * 2 / (self.endpoints1[1] - self.endpoints1[0])
+            w *= (
+                2
+                * chi**2
+                / (chi**2 - 1)
+                * 2
+                / (self.endpoints1[1] - self.endpoints1[0])
+            )
         return w
 
     def solve(self):
         """
         Solve the intersection.
         """
-        s0 = mf.cauchy_integral_real(self.nint, self.ncoef, self.thetas,
-                                     lambda z: self.frac0.calc_omega(z, exclude=self),
-                                     lambda chi: gf.map_chi_to_z_line(chi, self.endpoints0))
-        s1 = mf.cauchy_integral_real(self.nint, self.ncoef, self.thetas,
-                                     lambda z: self.frac1.calc_omega(z, exclude=self),
-                                     lambda chi: gf.map_chi_to_z_line(chi, self.endpoints1))
+        s0 = mf.cauchy_integral_real(
+            self.nint,
+            self.ncoef,
+            self.thetas,
+            lambda z: self.frac0.calc_omega(z, exclude=self),
+            lambda chi: gf.map_chi_to_z_line(chi, self.endpoints0),
+        )
+        s1 = mf.cauchy_integral_real(
+            self.nint,
+            self.ncoef,
+            self.thetas,
+            lambda z: self.frac1.calc_omega(z, exclude=self),
+            lambda chi: gf.map_chi_to_z_line(chi, self.endpoints1),
+        )
 
-        s = np.real((self.frac0.t * s1 - self.frac1.t * s0) / (self.frac0.t + self.frac1.t))
-        s[0] = 0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+        s = np.real(
+            (self.frac0.t * s1 - self.frac1.t * s0) / (self.frac0.t + self.frac1.t)
+        )
+        s[0] = (
+            0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+        )
 
         self.error = np.max(np.abs(s - self.coef))
         self.coef = s
-
 
     def check_boundary_condition(self, n=10):
         """
@@ -213,15 +245,15 @@ class Intersection(Element):
         # Calculate the head in fracture 0
         z0 = gf.map_chi_to_z_line(chi, self.endpoints0)
         omega0 = self.frac0.calc_omega(z0, exclude=None)
-        head0 = np.real(omega0)/self.frac0.t
+        head0 = np.real(omega0) / self.frac0.t
         # Calculate the head in fracture 1
         z1 = gf.map_chi_to_z_line(chi, self.endpoints1)
         omega1 = self.frac1.calc_omega(z1, exclude=None)
-        head1 = np.real(omega1)/self.frac1.t
+        head1 = np.real(omega1) / self.frac1.t
         dhead = np.abs(head0 - head1)
 
         # Calculate the difference in head in the intersection
-        #return np.mean(np.abs(head0 - head1)) / np.abs(np.mean(head0))
+        # return np.mean(np.abs(head0 - head1)) / np.abs(np.mean(head0))
 
         return (np.max(dhead) - np.min(dhead)) / np.abs(np.mean(head0))
 
@@ -259,7 +291,14 @@ class Intersection(Element):
         if np.abs(np.abs(z - z0) + np.abs(z1 - z) - np.abs(z0 - z1)) > atol:
             return False
 
-        if np.abs(np.abs(z - endpoints[0]) + np.abs(z - endpoints[1]) - np.abs(endpoints[0] - endpoints[1])) > atol:
+        if (
+            np.abs(
+                np.abs(z - endpoints[0])
+                + np.abs(z - endpoints[1])
+                - np.abs(endpoints[0] - endpoints[1])
+            )
+            > atol
+        ):
             return False
 
         return z

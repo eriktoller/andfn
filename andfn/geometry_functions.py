@@ -14,7 +14,6 @@ from . import intersection
 from . import const_head
 
 
-
 def map_z_line_to_chi(z, endpoints):
     """
     Function that maps the exterior of a line in the complex z-plane onto the exterior of the unit circle in the
@@ -39,7 +38,10 @@ def map_z_line_to_chi(z, endpoints):
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
-    big_z = np.vectorize(lambda zz: (2 * zz - endpoints[0] - endpoints[1]) / (endpoints[1] - endpoints[0]))(z)
+    big_z = np.vectorize(
+        lambda zz: (2 * zz - endpoints[0] - endpoints[1])
+        / (endpoints[1] - endpoints[0])
+    )(z)
     return big_z + np.sqrt(big_z - 1) * np.sqrt(big_z + 1)
 
 
@@ -70,7 +72,8 @@ def map_chi_to_z_line(chi, endpoints):
     big_z = 1 / 2 * (chi + 1 / chi)
     return 1 / 2 * (big_z * (endpoints[1] - endpoints[0]) + endpoints[0] + endpoints[1])
 
-#@nb.jit(nopython=NO_PYTHON)
+
+# @nb.jit(nopython=NO_PYTHON)
 def map_z_circle_to_chi(z, r, center=0.0):
     r"""
     Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.
@@ -102,16 +105,16 @@ def map_chi_to_z_circle(chi, r, center=0.0):
 
     .. math::
             z = \chi r + \text{center}
-    
+
     Parameters
     ----------
     chi : complex | np.ndarray
-        A point in the complex chi-plane 
+        A point in the complex chi-plane
     r : float
-        Radius of the circle 
+        Radius of the circle
     center : complex or np.ndarray
-        Center point of the circle 
-    
+        Center point of the circle
+
     Return
     ------
     z : complex | np.ndarray
@@ -165,9 +168,17 @@ def map_2d_to_3d(z, fractures):
     point : np.ndarray
         The corresponding point in the 3D plane
     """
-    if np.isscalar(z): # or z.size == 1:
-        return np.real(z) * fractures.x_vector + np.imag(z) * fractures.y_vector + fractures.center
-    return np.real(z)[:, np.newaxis] * fractures.x_vector + np.imag(z)[:, np.newaxis] * fractures.y_vector + fractures.center
+    if np.isscalar(z):  # or z.size == 1:
+        return (
+            np.real(z) * fractures.x_vector
+            + np.imag(z) * fractures.y_vector
+            + fractures.center
+        )
+    return (
+        np.real(z)[:, np.newaxis] * fractures.x_vector
+        + np.imag(z)[:, np.newaxis] * fractures.y_vector
+        + fractures.center
+    )
 
 
 def map_3d_to_2d(point, fractures):
@@ -199,6 +210,7 @@ def map_3d_to_2d(point, fractures):
     y = np.dot((point - fractures.center), fractures.y_vector)
     return x + 1j * y
 
+
 def fracture_intersection(frac0, frac1):
     """
     Function that calculates the intersection between two fractures.
@@ -226,14 +238,22 @@ def fracture_intersection(frac0, frac1):
     # Calculate a point on the line of intersection
     n_1, n_2 = frac0.normal, frac1.normal
     p_1, p_2 = frac0.center, frac1.center
-    a = np.matrix(np.array([[2, 0, 0, n_1[0], n_2[0]],
-                            [0, 2, 0, n_1[1], n_2[1]],
-                            [0, 0, 2, n_1[2], n_2[2]],
-                            [n_1[0], n_1[1], n_1[2], 0, 0],
-                            [n_2[0], n_2[1], n_2[2], 0, 0]]))
+    a = np.matrix(
+        np.array(
+            [
+                [2, 0, 0, n_1[0], n_2[0]],
+                [0, 2, 0, n_1[1], n_2[1]],
+                [0, 0, 2, n_1[2], n_2[2]],
+                [n_1[0], n_1[1], n_1[2], 0, 0],
+                [n_2[0], n_2[1], n_2[2], 0, 0],
+            ]
+        )
+    )
     b4 = p_1[0] * n_1[0] + p_1[1] * n_1[1] + p_1[2] * n_1[2]
     b5 = p_2[0] * n_2[0] + p_2[1] * n_2[1] + p_2[2] * n_2[2]
-    b = np.matrix(np.array([[2.0 * p_1[0]], [2.0 * p_1[1]], [2.0 * p_1[2]], [b4], [b5]]))
+    b = np.matrix(
+        np.array([[2.0 * p_1[0]], [2.0 * p_1[1]], [2.0 * p_1[2]], [b4], [b5]])
+    )
 
     x = np.linalg.solve(a, b)
     xi_a = np.squeeze(np.asarray(x[0:3]))
@@ -256,8 +276,12 @@ def fracture_intersection(frac0, frac1):
     xi0_0, xi0_1 = map_2d_to_3d(z0_0, frac0), map_2d_to_3d(z0_1, frac0)
     xi1_0, xi1_1 = map_2d_to_3d(z1_0, frac1), map_2d_to_3d(z1_1, frac1)
     xis = [xi0_0, xi0_1, xi1_0, xi1_1]
-    pos = [i for i, xi in enumerate(xis) if np.linalg.norm(xi - frac0.center) < frac0.radius + 1e-10 and np.linalg.norm(
-        xi - frac1.center) < frac1.radius + 1e-10]
+    pos = [
+        i
+        for i, xi in enumerate(xis)
+        if np.linalg.norm(xi - frac0.center) < frac0.radius + 1e-10
+        and np.linalg.norm(xi - frac1.center) < frac1.radius + 1e-10
+    ]
     if not pos:
         return None, None
 
@@ -296,16 +320,16 @@ def line_circle_intersection(z0, z1, radius):
     dy = np.imag(z1 - z0)
     if dx == 0:
         x = np.real(z0)
-        y1 = np.sqrt(radius ** 2 - x ** 2)
+        y1 = np.sqrt(radius**2 - x**2)
         y2 = -y1
         return x + 1j * y1, x + 1j * y2
 
     m = dy / dx
     x0 = np.imag(z0) - m * np.real(z0)
-    a = 1 + m ** 2
+    a = 1 + m**2
     b = 2 * x0 * m
-    c = x0 ** 2 - radius ** 2
-    discriminant = b ** 2 - 4 * a * c
+    c = x0**2 - radius**2
+    discriminant = b**2 - 4 * a * c
     if discriminant < 0:
         return None, None
     sqrt_discriminant = np.sqrt(discriminant)
@@ -338,19 +362,24 @@ def line_line_intersection(z0, z1, z2, z3):
         The intersection point. If no intersection is found, None is returned.
     """
 
-    determinant = ((np.conj(z1) - np.conj(z0))*(z3 - z2) - (z1 - z0)*(np.conj(z3) - np.conj(z2)))
+    determinant = (np.conj(z1) - np.conj(z0)) * (z3 - z2) - (z1 - z0) * (
+        np.conj(z3) - np.conj(z2)
+    )
 
     if determinant == 0:
         return None
 
-    z = (np.conj(z1)*z0 - z1*np.conj(z0))*(z3 - z2) - (z1 - z0)*((np.conj(z3))*z2 - z3*np.conj(z2))
+    z = (np.conj(z1) * z0 - z1 * np.conj(z0)) * (z3 - z2) - (z1 - z0) * (
+        (np.conj(z3)) * z2 - z3 * np.conj(z2)
+    )
     z /= determinant
 
     return z
 
 
-
-def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0, ncoef=10, nint=20):
+def generate_fractures(
+    n_fractures, radius_factor=1.0, center_factor=10.0, ncoef=10, nint=20
+):
     """
     Function that generates a number of fractures with random radii, centers and normals.
 
@@ -377,13 +406,19 @@ def generate_fractures(n_fractures, radius_factor=1.0, center_factor=10.0, ncoef
     centers = np.random.rand(n_fractures, 3) * center_factor
     normals = np.random.rand(n_fractures, 3)
     for i in range(n_fractures):
-        fractures.append(fracture.Fracture(f'{i + 1}', 1, radii[i], centers[i], normals[i], ncoef, nint))
-        print(f'\r{i + 1} / {n_fractures}', end='')
-    print('')
+        fractures.append(
+            fracture.Fracture(
+                f"{i + 1}", 1, radii[i], centers[i], normals[i], ncoef, nint
+            )
+        )
+        print(f"\r{i + 1} / {n_fractures}", end="")
+    print("")
     return fractures
 
 
-def get_connected_fractures(fractures, se_factor, ncoef=5, nint=10, fracture_surface=None):
+def get_connected_fractures(
+    fractures, se_factor, ncoef=5, nint=10, fracture_surface=None
+):
     """
     Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
     a given fracture, the function iterates through the list of fractures and finds all connected fractures.
@@ -427,29 +462,46 @@ def get_connected_fractures(fractures, se_factor, ncoef=5, nint=10, fracture_sur
                 endpoints0, endpoints1 = fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
                     if fr2 not in []:
-                        #length = np.linalg.norm(endpoints0[0] - endpoints0[1])
-                        #if length < 1e-1*fr.radius or length < 1e-1*fr2.radius:
+                        # length = np.linalg.norm(endpoints0[0] - endpoints0[1])
+                        # if length < 1e-1*fr.radius or length < 1e-1*fr2.radius:
                         #    continue
-                        endpoints01 = shorten_line(endpoints0[0], endpoints0[1], se_factor)
-                        endpoints11 = shorten_line(endpoints1[0], endpoints1[1], se_factor)
-                        intersections = intersection.Intersection(f'{fr.label}_{fr2.label}', endpoints01, endpoints11, fr, fr2, ncoef, nint)
+                        endpoints01 = shorten_line(
+                            endpoints0[0], endpoints0[1], se_factor
+                        )
+                        endpoints11 = shorten_line(
+                            endpoints1[0], endpoints1[1], se_factor
+                        )
+                        intersections = intersection.Intersection(
+                            f"{fr.label}_{fr2.label}",
+                            endpoints01,
+                            endpoints11,
+                            fr,
+                            fr2,
+                            ncoef,
+                            nint,
+                        )
                         fr.add_element(intersections)
                         fr2.add_element(intersections)
                         if fr2 not in connected_fractures:
                             connected_fractures.append(fr2)
                             fracture_list_it_temp.append(fr2)
             print(
-                f'\r{i + 1} / {len(fracture_list_it)}, iteration {cnt}, {len(fracture_list)} potential fractures left to analyze, {len(connected_fractures)} added to the DFN',
-                end='')
+                f"\r{i + 1} / {len(fracture_list_it)}, iteration {cnt}, {len(fracture_list)} potential fractures left to analyze, {len(connected_fractures)} added to the DFN",
+                end="",
+            )
         fracture_list_it = fracture_list_it_temp
         fracture_list_it_temp = []
         fracture_list = [f for f in fractures if f not in connected_fractures]
         cnt += 1
-    print(f'\r{len(connected_fractures)} connected fractures found out of {len(fractures)} and took {cnt} iterations')
+    print(
+        f"\r{len(connected_fractures)} connected fractures found out of {len(fractures)} and took {cnt} iterations"
+    )
     return connected_fractures
 
 
-def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, label, se_factor):
+def set_head_boundary(
+    fractures, ncoef, nint, head, center, radius, normal, label, se_factor
+):
     """
     Function that sets a constant head boundary condition on the intersection line between a fracture and a defined
     fracture. The constant head lines are added to the fractures in the list.
@@ -489,7 +541,10 @@ def set_head_boundary(fractures, ncoef, nint, head, center, radius, normal, labe
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
             endpoints = shorten_line(endpoints1[0], endpoints1[1], se_factor)
-            const_head.ConstantHeadLine(f'{label}_{fr2.label}', endpoints, head, fr2, ncoef, nint)
+            const_head.ConstantHeadLine(
+                f"{label}_{fr2.label}", endpoints, head, fr2, ncoef, nint
+            )
+
 
 def shorten_line(z0, z1, se_factor):
     """
@@ -511,7 +566,6 @@ def shorten_line(z0, z1, se_factor):
     return np.array([z0, z1])
 
 
-
 def convert_trend_plunge_to_normal(trend, plunge):
     """
     Function that converts a trend and plunge to a normal vector
@@ -528,9 +582,15 @@ def convert_trend_plunge_to_normal(trend, plunge):
     normal : np.ndarray
         The normal vector of the fracture plane.
     """
-    trend_rad = np.deg2rad(trend+90)
-    plunge_rad = np.deg2rad(90-plunge)
-    return np.array([-np.sin(plunge_rad)*np.cos(trend_rad), np.sin(plunge_rad)*np.sin(trend_rad), -np.cos(plunge_rad)])
+    trend_rad = np.deg2rad(trend + 90)
+    plunge_rad = np.deg2rad(90 - plunge)
+    return np.array(
+        [
+            -np.sin(plunge_rad) * np.cos(trend_rad),
+            np.sin(plunge_rad) * np.sin(trend_rad),
+            -np.cos(plunge_rad),
+        ]
+    )
 
 
 def convert_strike_dip_to_normal(strike, dip):
@@ -550,10 +610,16 @@ def convert_strike_dip_to_normal(strike, dip):
         The normal vector of the fracture plane.
     """
     if strike > 90:
-        strike = 360 - (180 -strike)-90+90
-    strike_rad = np.deg2rad(strike-90)
+        strike = 360 - (180 - strike) - 90 + 90
+    strike_rad = np.deg2rad(strike - 90)
     dip_rad = np.deg2rad(dip)
-    return np.array([-np.sin(dip_rad)*np.sin(strike_rad), np.cos(strike_rad)*np.sin(dip_rad), -np.cos(dip_rad)])
+    return np.array(
+        [
+            -np.sin(dip_rad) * np.sin(strike_rad),
+            np.cos(strike_rad) * np.sin(dip_rad),
+            -np.cos(dip_rad),
+        ]
+    )
 
 
 def convert_normal_to_strike_dip(normal):
