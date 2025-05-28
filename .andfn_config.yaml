@@ -1,6 +1,0 @@
-# CONSTATNS
-
-# Logging
-LOG_LEVEL: PROGRESS
-LOG_FILE: .andfn.log
-LOG_FILE_LEVEL: DEBUG
