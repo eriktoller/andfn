@@ -79,7 +79,7 @@ class Constants:
 
         # Configure the logging
         logging.basicConfig(
-            level=logging.PROGRESS, format="%(message)s", stream=sys.stdout
+            level='PROGRESS', format="%(message)s", stream=sys.stdout
         )
         # logging.basicConfig(level=logging.DEBUG, format="%(message)s [Module: %(module)s] [Package: %(name)s]", stream=sys.stdout)
 
