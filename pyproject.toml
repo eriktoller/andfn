@@ -26,11 +26,6 @@ dependencies = [
     "h5py~=3.13.0"
 ]
 
-optional-dependencies = [
-    "pyyaml",
-    "pandas"
-]
-
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -39,6 +34,9 @@ classifiers = [
     "Programming Language :: Python",
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
+
+[project.optional-dependencies]
+all = ["pyyaml", "pandas"]
 
 [project.urls]
 Homepage = "https://eriktoller.github.io/andfn/n"
