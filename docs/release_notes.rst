@@ -6,21 +6,23 @@ This is the release notes page.
 Version 0.1.7
 -------------
 
-Date: 2025-04-25
+Date: 2025-06-02
 
-
+Version 0.1.7 is a minor release of the AnDFN software. It includes some enhancements and bug fixes.
 
 Features
 ~~~~~~~~
-- text
+- Possibility to manipulate constants and setting from a YAML file.
+- Added impermeable line to HPC module.
 
 Enhancements
 ~~~~~~~~~~~~
-- text
+- Changed print to logging to enable better control over the output.
+- Coed is checked and formated using ruff.
 
 Bug fixes
 ~~~~~~~~~
-- Added pandas as a dependency.
+- Added pandas as an optional dependency.
 
 Version 0.1.6
 -------------
