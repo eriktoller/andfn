@@ -8,7 +8,6 @@ solve the DFN.
 """
 
 import numpy as np
-import pandas as pd
 import pyvista as pv
 import matplotlib.pyplot as plt
 import scipy as sp
@@ -667,6 +666,16 @@ class DFN(Constants):
         None
             The fractures are added to the DFN.
         """
+
+        # Check if pandas is installed
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError("Pandas is required to import fractures from a file. Please install pandas.")
+
+        # Check if the file exists
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"The file {path} does not exist.")
 
         data_file = pd.read_csv(path)
         frac = []
