@@ -11,3 +11,4 @@ This page contains the API reference for the andfn package.
     elements
     math_geometry
     hpc
+    configuration

@@ -3,6 +3,25 @@ Release notes
 
 This is the release notes page.
 
+Version 0.1.8
+-------------
+
+Date: 2025-06-02
+
+Version 0.1.8 is ...
+
+Features
+~~~~~~~~
+-
+
+Enhancements
+~~~~~~~~~~~~
+- Added the description for the configuration file in the documentation.
+
+Bug fixes
+~~~~~~~~~
+- Fixed an import error in the DFN module.
+
 Version 0.1.7
 -------------
 
@@ -18,11 +37,11 @@ Features
 Enhancements
 ~~~~~~~~~~~~
 - Changed print to logging to enable better control over the output.
-- Coed is checked and formated using ruff.
+- Code is checked and formated using ruff.
 
 Bug fixes
 ~~~~~~~~~
-- Added pandas as an optional dependency.
+- Moved pandas to an optional dependency.
 
 Version 0.1.6
 -------------
