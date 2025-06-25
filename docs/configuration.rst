@@ -63,7 +63,3 @@ This sets the logging level for the `andfn` package. Possible values are DEBUG, 
 ``LOG_FILE:``
 
 This sets the file where logs will be written. If not set, logs will be written to the console.
-
-``LOG_FILE_LEVEL:``
-
-This sets the logging level for the log file. It can be set to the same values as LOG_LEVEL.

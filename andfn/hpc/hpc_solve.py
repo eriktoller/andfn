@@ -3,7 +3,7 @@ Notes
 -----
 This module contains the HPC solve functions.
 """
-
+import logging
 import time
 
 import numpy as np
@@ -46,14 +46,14 @@ dtype_z_arrays = np.dtype(
     [("z0", complex, MAX_ELEMENTS), ("z1", complex, MAX_ELEMENTS)]
 )
 
+logger = logging.getLogger('andfn')
 
 def solve(
     fracture_struc_array,
     element_struc_array,
     discharge_matrix,
     discharge_int,
-    constants,
-    logger,
+    constants
 ):
     """
     Solves the DFN.
@@ -70,8 +70,6 @@ def solve(
         The number of integration points
     constants : np.ndarray[constants_dtype]
         The constants for the solver and dfn.
-    logger : Logger
-        The logger to use for logging.
 
     Returns
     -------
@@ -139,8 +137,7 @@ def solve(
                 head_matrix,
                 discharges,
                 z_int,
-                lu_matrix,
-                logger,
+                lu_matrix
             )
             error_q = np.max(np.abs(discharges - discharges_old))
             error_q = np.mean(np.abs(discharges - discharges_old))
@@ -164,16 +161,16 @@ def solve(
 
         error, id_ = get_error(element_struc_array)
 
-        # print progress
+        # print info
         if nit < 10:
-            logger.progress(
+            logger.info(
                 f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}"
             )
             logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
             )
         else:
-            logger.progress(
+            logger.info(
                 f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}"
             )
             logger.debug(
@@ -484,8 +481,7 @@ def solve_discharge_matrix(
     head_matrix,
     discharges,
     z_int,
-    lu_matrix,
-    logger,
+    lu_matrix
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -510,8 +506,6 @@ def solve_discharge_matrix(
         The z arrays for the discharge elements
     lu_matrix : scipy.sparse.linalg.splu
         The LU factorization of the discharge matrix
-    logger : Logger
-        The logger to use for logging.
 
     Returns
     -------
@@ -704,8 +698,7 @@ def get_bnd_error(
     z_int,
     nit,
     max_error,
-    constants,
-    logger,
+    constants
 ):
     """
     Builds the head matrix for the DFN and stores it.
@@ -732,8 +725,6 @@ def get_bnd_error(
         The maximum error
     constants : np.ndarray[constants_dtype]
         The constants for the solver and dfn.
-    logger : Logger
-        The logger to use for logging.
 
     Returns
     -------

@@ -39,6 +39,8 @@ from .element import (
 # Custom colormaps
 from matplotlib.colors import LinearSegmentedColormap
 
+import logging
+logger = logging.getLogger("andfn")
 
 def _constant_cmap(name, color, n_bin):
     """
@@ -293,7 +295,7 @@ class DFN(Constants):
                         continue
                     grp[j].create_dataset(name, data=array[name])
 
-        self.logger.info(f"Saved DFN to {filename}.h5")
+        logger.info(f"Saved DFN to {filename}.h5")
 
     def load_dfn(self, filename):
         """
@@ -544,7 +546,7 @@ class DFN(Constants):
                 if e not in elements:
                     elements.append(e)
         self.elements = elements
-        self.logger.info(f"Added {len(self.elements)} elements to the DFN.")
+        logger.info(f"Added {len(self.elements)} elements to the DFN.")
 
         for e in self.elements:
             e.set_id(self.elements.index(e))
@@ -590,13 +592,13 @@ class DFN(Constants):
         if isinstance(new_fracture, list):
             if len(new_fracture) == 1:
                 self.fractures.append(new_fracture[0])
-                self.logger.info(f"Added {new_fracture[0]} fracture to the DFN.")
+                logger.info(f"Added {new_fracture[0]} fracture to the DFN.")
             else:
                 self.fractures.extend(new_fracture)
-                self.logger.info(f"Added {len(new_fracture)} fractures to the DFN.")
+                logger.info(f"Added {len(new_fracture)} fractures to the DFN.")
         else:
             self.fractures.append(new_fracture)
-            self.logger.info(f"Added {new_fracture} fracture to the DFN.")
+            logger.info(f"Added {new_fracture} fracture to the DFN.")
         # reset the discharge matrix and elements
         self.discharge_matrix = None
         self.elements = None
@@ -1015,21 +1017,20 @@ class DFN(Constants):
         self.get_elements()
         self.consolidate_dfn(hpc=True)
         self.build_discharge_matrix()
-        self.logger.info("\n")
-        self.logger.info("---------------------------------------")
-        self.logger.info("Starting HPC solve...")
-        self.logger.info("---------------------------------------")
-        self.logger.info(f"Number of elements: {len(self.elements)}")
-        self.logger.info(f"Number of fractures: {len(self.fractures)}")
-        self.logger.info(f"Number of entries in discharge matrix: {self.discharge_matrix.getnnz()}")
+        logger.info("\n")
+        logger.info("---------------------------------------")
+        logger.info("Starting HPC solve...")
+        logger.info("---------------------------------------")
+        logger.info(f"Number of elements: {len(self.elements)}")
+        logger.info(f"Number of fractures: {len(self.fractures)}")
+        logger.info(f"Number of entries in discharge matrix: {self.discharge_matrix.getnnz()}")
         self.print_solver_constants()
         self.elements_struc_array = hpc_solve(
             self.fractures_struc_array_hpc,
             self.elements_struc_array_hpc,
             self.discharge_matrix,
             self.discharge_int,
-            self.constants,
-            self.logger,
+            self.constants
         )
         self.unconsolidate_dfn(hpc=True)
 
@@ -1075,9 +1076,9 @@ class DFN(Constants):
         pl : pyvista.Plotter
             The plotter object.
         """
-        self.logger.info("---------------------------------------")
-        self.logger.info("Starting plotter...")
-        self.logger.info("---------------------------------------")
+        logger.info("---------------------------------------")
+        logger.info("Starting plotter...")
+        logger.info("---------------------------------------")
         pl = pv.Plotter(
             window_size=window_size,
             lighting=lighting,
@@ -1180,7 +1181,7 @@ class DFN(Constants):
                 line_width=line_width,
             )
             if print_prog:
-                self.logger.progress(
+                logger.info(
                     f"Plotting fractures: {i + 1} / {len(self.fractures)}"
                 )
 
@@ -1226,7 +1227,7 @@ class DFN(Constants):
 
         # Plot the flow net for each fracture
         for i, f in enumerate(fracs):
-            self.logger.progress(f"Plotting flow net: {i + 1} / {len(fracs)}")
+            logger.info(f"Plotting flow net: {i + 1} / {len(fracs)}")
             # plot the flow net using matplotlib
             contours_re = plt.contour(
                 x_arrays[i], y_arrays[i], np.real(omegas[i]), levels=lvs_re
@@ -1247,7 +1248,7 @@ class DFN(Constants):
                     plot_line_3d(seg, f, pl, "blue", line_width=line_width)
 
         plt.close()
-        self.logger.progress("")
+        logger.info("")
 
     def plot_fractures_head(
         self,
@@ -1380,7 +1381,7 @@ class DFN(Constants):
                         )[0][0]
                         color = colors[pos]
                         plot_line_3d(seg, f, pl, color, line_width=line_width)
-            self.logger.progress(f"Plotting hydraulic head: {i + 1} / {len(fracs)}")
+            logger.info(f"Plotting hydraulic head: {i + 1} / {len(fracs)}")
 
         # Add the color bar
         if colorbar:
@@ -1396,7 +1397,7 @@ class DFN(Constants):
                 "Hydraulic head", interactive=True, vertical=False, fmt="%10.1f"
             )
         plt.close()
-        self.logger.progress("")
+        logger.info("")
 
     def plot_elements(self, pl, elements=None, line_width=3.0, const_elements=False):
         """
@@ -1442,8 +1443,8 @@ class DFN(Constants):
                     color="#000000",
                     line_width=line_width,
                 )
-            self.logger.progress(f"Plotting elements: {i + 1} / {len(self.elements)}")
-        self.logger.progress("")
+            logger.info(f"Plotting elements: {i + 1} / {len(self.elements)}")
+        logger.info("")
 
     def plot_sparse_matrix(self, save=False, name="sparse_matrix.png"):
         """
@@ -1573,7 +1574,7 @@ class DFN(Constants):
         elements = []
         for i, z in enumerate(z0):  # type: int, complex
             for j, e in enumerate(elevation):
-                self.logger.progress(
+                logger.info(
                     f"Tracing streamline: {i + 1} / {len(z0)}"
                 )
                 streamline, streamline_frac, velocity, element = (

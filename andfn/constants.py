@@ -27,21 +27,6 @@ dtype_constants = np.dtype(
     ]
 )
 
-# Crete the project logger with a custom logging level
-progress_level = 15  # Custom level between INFO (20) and DEBUG (10)
-logging.addLevelName(progress_level, "PROGRESS")
-
-# set the packages to WARNING level to avoid too much output
-logging.getLogger("matplotlib").propagate = False
-logging.getLogger("numba").propagate = False
-logging.getLogger("PIL").propagate = False
-
-
-def progress(self, message, *args, **kwargs):
-    if self.isEnabledFor(progress_level):
-        self._log(progress_level, message, args, **kwargs)
-
-
 def load_yaml_config():
     """
     Load the constants from a YAML configuration file.
@@ -63,6 +48,28 @@ def load_yaml_config():
         config = yaml.safe_load(file)
 
     return config
+
+# set the packages to WARNING level to avoid too much output
+logging.getLogger("matplotlib").propagate = False
+logging.getLogger("numba").propagate = False
+logging.getLogger("PIL").propagate = False
+
+# Configure the logging
+logging.basicConfig(
+    level='INFO', format="%(message)s", stream=sys.stdout
+)
+
+# Set up the logger
+logger = logging.getLogger('andfn')
+if os.path.exists(".andfn_config.yaml"):
+    config = load_yaml_config()
+    if config.get("LOG_LEVEL"):
+        logger.setLevel(config["LOG_LEVEL"])
+    if config.get("LOG_FILE"):
+        file_handler = logging.FileHandler(config["LOG_FILE"], mode="w")
+        formatter = logging.Formatter("%(asctime)s [%(module)s] %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
 
 class Constants:
@@ -92,48 +99,35 @@ class Constants:
         # Load the YAML configuration if available
         self.configure_constants()
 
-        # Set up the logger
-        # Add the custom level to the logging.Logger class
-        logging.Logger.progress = progress
-
-        # Configure the logging
-        logging.basicConfig(
-            level='PROGRESS', format="%(message)s", stream=sys.stdout
-        )
-        # logging.basicConfig(level=logging.DEBUG, format="%(message)s [Module: %(module)s] [Package: %(name)s]", stream=sys.stdout)
-
-        # Create a logger for the project
-        self.logger = logging.getLogger("andfn")
-        self.configure_logging()
 
     def print_constants(self):
         """
         Print the constants
         """
-        self.logger.info("Constants:")
-        self.logger.info(f"            RHO: {self.constants['RHO']}")
-        self.logger.info(f"              G: {self.constants['G']}")
-        self.logger.info(f"      SE_FACTOR: {self.constants['SE_FACTOR']}")
-        self.logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
-        self.logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
-        self.logger.info(f"       MAX_COEF: {self.constants['MAX_COEF']}")
-        self.logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
-        self.logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
-        self.logger.info(f"   MAX_ELEMENTS: {self.constants['MAX_ELEMENTS']}")
-        self.logger.info(f"          NCOEF: {self.constants['NCOEF']}")
-        self.logger.info(f"           NINT: {self.constants['NINT']}")
+        logger.info("Constants:")
+        logger.info(f"            RHO: {self.constants['RHO']}")
+        logger.info(f"              G: {self.constants['G']}")
+        logger.info(f"      SE_FACTOR: {self.constants['SE_FACTOR']}")
+        logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
+        logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
+        logger.info(f"       MAX_COEF: {self.constants['MAX_COEF']}")
+        logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
+        logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
+        logger.info(f"   MAX_ELEMENTS: {self.constants['MAX_ELEMENTS']}")
+        logger.info(f"          NCOEF: {self.constants['NCOEF']}")
+        logger.info(f"           NINT: {self.constants['NINT']}")
 
     def print_solver_constants(self):
         """
         Print the solver constants
         """
-        self.logger.info("Solver Constants:")
-        self.logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
-        self.logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
-        self.logger.info(f"       MAX_COEF: {self.constants['MAX_COEF']}")
-        self.logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
-        self.logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
-        self.logger.info(
+        logger.info("Solver Constants:")
+        logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
+        logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
+        logger.info(f"       MAX_COEF: {self.constants['MAX_COEF']}")
+        logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
+        logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
+        logger.info(
             f"    NUM_THREADS: {'all' if self.constants['NUM_THREADS'] == -1 else self.constants['NUM_THREADS']}"
         )
 
@@ -176,22 +170,6 @@ class Constants:
                     if value > MAX_NCOEF:
                         raise ValueError(f"MAX_COEF cannot be greater than {MAX_NCOEF}. I you need a higher value set the MAX_NCOEF using the .andfn_config.yaml file instead.")
                 self.constants[key] = value
-
-    def configure_logging(self):
-        if os.path.exists(".andfn_config.yaml"):
-            config = load_yaml_config()
-            if config.get("LOG_LEVEL"):
-                self.logger.setLevel(config["LOG_LEVEL"])
-            if config.get("LOG_FILE"):
-                file_handler = logging.FileHandler(config["LOG_FILE"], mode="w")
-                if config.get("LOG_FILE_LEVEL"):
-                    file_handler.setLevel(config["LOG_FILE_LEVEL"])
-                else:
-                    file_handler.setLevel(logging.DEBUG)
-                formatter = logging.Formatter("%(asctime)s %(levelname)s - %(message)s")
-                file_handler.setFormatter(formatter)
-                self.logger.addHandler(file_handler)
-
 
     def configure_constants(self):
         if os.path.exists(".andfn_config.yaml"):
