@@ -37,8 +37,8 @@ dtype_work = np.dtype(
         ("discharge_element", np.int64, MAX_ELEMENTS),
         ("element_pos", np.int64, MAX_ELEMENTS),
         ("len_discharge_element", np.int64),
-        ("exp_array_m", np.complex128, (MAX_NCOEF)),
-        ("exp_array_p", np.complex128, (MAX_NCOEF)),
+        ("exp_array_m", np.complex128, MAX_NCOEF),
+        ("exp_array_p", np.complex128, MAX_NCOEF * 2),
     ]
 )
 
@@ -134,7 +134,6 @@ def solve(
             solve_discharge_matrix(
                 fracture_struc_array,
                 element_struc_array,
-                discharge_matrix,
                 discharge_elements,
                 discharge_int,
                 head_matrix,
@@ -168,20 +167,19 @@ def solve(
         # print progress
         if nit < 10:
             logger.progress(
-                f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}, "
+                f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}"
+            )
+            logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
             )
         else:
             logger.progress(
-                f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, "
+                f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}"
+            )
+            logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
             )
 
-        # cnt_bnd = get_bnd_error(num_elements, fracture_struc_array, element_struc_array, work_array,
-        #                        discharge_int, bnd_error, z_int_error, nit, max_error)
-
-        # logger.progress(f'Max boundary error: {np.max(bnd_error):.4e}, Element id: {np.argmax(bnd_error)} [type: '
-        #      f'{element_struc_array[np.argmax(bnd_error)]["type_"]}, ncoef: {element_struc_array[np.argmax(bnd_error)]["ncoef"]}]')
 
         if cnt_bnd > 1:
             element_solver(
@@ -280,6 +278,32 @@ def element_solver(
     cnt_error,
 ):
     cnt = 0
+    """
+    Solves the elements and updates the coefficients in the work array.
+    
+    Parameters
+    ----------
+    num_elements : int
+        The number of elements
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    fracture_struc_array : np.ndarray[fracture_dtype]
+        Array of fractures
+    work_array : np.ndarray[dtype_work]
+        The work array
+    max_error : float
+        The maximum error
+    nit : int
+        The number of iterations
+    cnt_error : int
+        The number of completed iterations
+        
+    Returns
+    -------
+    cnt : int
+        The number of elements that were solved    
+    
+    """
 
     # Solve the elements
     for i in nb.prange(num_elements):
@@ -455,7 +479,6 @@ def element_solver2(
 def solve_discharge_matrix(
     fractures_struc_array,
     element_struc_array,
-    discharge_matrix,
     discharge_elements,
     discharge_int,
     head_matrix,

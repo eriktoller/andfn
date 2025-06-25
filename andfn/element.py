@@ -6,9 +6,11 @@ This module contains the element class that is a parent class to all elements.
 """
 
 import numpy as np
+from .constants import load_yaml_config
 
-MAX_NCOEF = 500
-MAX_ELEMENTS = 600
+config = load_yaml_config()
+MAX_NCOEF = config.get('MAX_NCOEF', 200)
+MAX_ELEMENTS = config.get('MAX_ELEMENTS', 300)
 
 element_dtype = np.dtype(
     [

@@ -8,6 +8,7 @@ solve the DFN.
 """
 
 import numpy as np
+import os
 import pyvista as pv
 import matplotlib.pyplot as plt
 import scipy as sp
@@ -306,6 +307,10 @@ class DFN(Constants):
 
         if filename[-3:] == ".h5":
             filename = filename[:-3]
+
+        # Check if the file exists
+        if not os.path.exists(f"{filename}.h5"):
+            raise FileNotFoundError(f"The file {filename}.h5 does not exist.")
 
         with h5py.File(f"{filename}.h5", "r") as hf:
             # Load the fractures
@@ -1366,7 +1371,10 @@ class DFN(Constants):
                                 ]
                             )
                         )
-                        head = f.head_from_phi(np.real(np.nanmean(oms)))
+                        mean_omega = np.real(np.nanmean(oms))
+                        if np.isnan(mean_omega):
+                            continue
+                        head = f.head_from_phi(mean_omega)
                         pos = np.where(
                             np.abs(lvs_re - head) == np.min(np.abs(lvs_re - head))
                         )[0][0]
@@ -1566,7 +1574,7 @@ class DFN(Constants):
         for i, z in enumerate(z0):  # type: int, complex
             for j, e in enumerate(elevation):
                 self.logger.progress(
-                    f"\rTracing streamline: {i + 1} / {len(z0)}", end=""
+                    f"\rTracing streamline: {i + 1} / {len(z0)}"
                 )
                 streamline, streamline_frac, velocity, element = (
                     self.streamline_tracking(z, frac, e, ds, max_length, backward)

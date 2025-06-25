@@ -28,7 +28,7 @@ dtype_constants = np.dtype(
 )
 
 # Crete the project logger with a custom logging level
-progress_level = 15  # Custom level between WARNING (30) and INFO (20)
+progress_level = 15  # Custom level between INFO (20) and DEBUG (10)
 logging.addLevelName(progress_level, "PROGRESS")
 
 # set the packages to WARNING level to avoid too much output
@@ -40,6 +40,29 @@ logging.getLogger("PIL").propagate = False
 def progress(self, message, *args, **kwargs):
     if self.isEnabledFor(progress_level):
         self._log(progress_level, message, args, **kwargs)
+
+
+def load_yaml_config():
+    """
+    Load the constants from a YAML configuration file.
+    """
+    # Check if the yaml package is installed
+    try:
+        import yaml
+    except ImportError:
+        yaml = None
+
+    # If yaml is not installed, raise an ImportError
+    if yaml is None:
+        raise ImportError(
+            "The 'pyyaml' package is required to read the .andfn_config.yaml file. Install it with `pip install pyyaml`."
+        )
+
+    # Load the configuration from the YAML file
+    with open(".andfn_config.yaml", "r") as file:
+        config = yaml.safe_load(file)
+
+    return config
 
 
 class Constants:
@@ -67,9 +90,7 @@ class Constants:
         )
 
         # Load the YAML configuration if available
-        # Check if the file exist
-        if os.path.exists(".andfn_config.yaml"):
-            self.load_yaml_config()
+        self.configure_constants()
 
         # Set up the logger
         # Add the custom level to the logging.Logger class
@@ -146,13 +167,19 @@ class Constants:
             if key in self.constants.dtype.names:
                 if key == "NUM_THREADS":
                     # Set the number of threads for Numba
-                    assert value > 0, "Number of threads must be greater than 0"
+                    if value <= 0:
+                        raise ValueError("Number of threads must be greater than 0")
                     set_num_threads(value)
+                if key == "MAX_COEF":
+                    from .element import MAX_NCOEF
+                    # Ensure MAX_COEF is not greater than what is set in the code
+                    if value > MAX_NCOEF:
+                        raise ValueError(f"MAX_COEF cannot be greater than {MAX_NCOEF}. I you need a higher value set the MAX_NCOEF using the .andfn_config.yaml file instead.")
                 self.constants[key] = value
 
     def configure_logging(self):
         if os.path.exists(".andfn_config.yaml"):
-            config = self.load_yaml_config()
+            config = load_yaml_config()
             if config.get("LOG_LEVEL"):
                 self.logger.setLevel(config["LOG_LEVEL"])
             if config.get("LOG_FILE"):
@@ -164,29 +191,7 @@ class Constants:
             if config.get("LOG_FILE_LEVEL"):
                 file_handler.setLevel(config["LOG_FILE_LEVEL"])
 
-    def confgure_constants(self):
+    def configure_constants(self):
         if os.path.exists(".andfn_config.yaml"):
-            config = self.load_yaml_config()
+            config = load_yaml_config()
             self.change_constants(**config)
-
-    def load_yaml_config(self):
-        """
-        Load the constants from a YAML configuration file.
-        """
-        # Check if the yaml package is installed
-        try:
-            import yaml
-        except ImportError:
-            yaml = None
-
-        # If yaml is not installed, raise an ImportError
-        if yaml is None:
-            raise ImportError(
-                "The 'yaml' package is required to read the .andfn_config.yaml file. Install it with `pip install pyyaml`."
-            )
-
-        # Load the configuration from the YAML file
-        with open(".andfn_config.yaml", "r") as file:
-            config = yaml.safe_load(file)
-
-        return config
