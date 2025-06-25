@@ -184,12 +184,14 @@ class Constants:
                 self.logger.setLevel(config["LOG_LEVEL"])
             if config.get("LOG_FILE"):
                 file_handler = logging.FileHandler(config["LOG_FILE"], mode="w")
-                file_handler.setLevel(logging.DEBUG)
-                formatter = logging.Formatter("%(message)s")
+                if config.get("LOG_FILE_LEVEL"):
+                    file_handler.setLevel(config["LOG_FILE_LEVEL"])
+                else:
+                    file_handler.setLevel(logging.DEBUG)
+                formatter = logging.Formatter("%(asctime)s %(levelname)s - %(message)s")
                 file_handler.setFormatter(formatter)
                 self.logger.addHandler(file_handler)
-            if config.get("LOG_FILE_LEVEL"):
-                file_handler.setLevel(config["LOG_FILE_LEVEL"])
+
 
     def configure_constants(self):
         if os.path.exists(".andfn_config.yaml"):

@@ -1019,9 +1019,9 @@ class DFN(Constants):
         self.logger.info("---------------------------------------")
         self.logger.info("Starting HPC solve...")
         self.logger.info("---------------------------------------")
-        self.logger.info(
-            f"Number of elements: {len(self.elements)} \nNumber of fractures: {len(self.fractures)} \nNumber of entries in discharge matrix: {self.discharge_matrix.getnnz()}"
-        )
+        self.logger.info(f"Number of elements: {len(self.elements)}")
+        self.logger.info(f"Number of fractures: {len(self.fractures)}")
+        self.logger.info(f"Number of entries in discharge matrix: {self.discharge_matrix.getnnz()}")
         self.print_solver_constants()
         self.elements_struc_array = hpc_solve(
             self.fractures_struc_array_hpc,
@@ -1226,7 +1226,7 @@ class DFN(Constants):
 
         # Plot the flow net for each fracture
         for i, f in enumerate(fracs):
-            self.logger.progress(f"\rPlotting flow net: {i + 1} / {len(fracs)}")
+            self.logger.progress(f"Plotting flow net: {i + 1} / {len(fracs)}")
             # plot the flow net using matplotlib
             contours_re = plt.contour(
                 x_arrays[i], y_arrays[i], np.real(omegas[i]), levels=lvs_re
@@ -1380,7 +1380,7 @@ class DFN(Constants):
                         )[0][0]
                         color = colors[pos]
                         plot_line_3d(seg, f, pl, color, line_width=line_width)
-            self.logger.progress(f"\rPlotting hydraulic head: {i + 1} / {len(fracs)}")
+            self.logger.progress(f"Plotting hydraulic head: {i + 1} / {len(fracs)}")
 
         # Add the color bar
         if colorbar:
@@ -1442,7 +1442,7 @@ class DFN(Constants):
                     color="#000000",
                     line_width=line_width,
                 )
-            self.logger.progress(f"\rPlotting elements: {i + 1} / {len(self.elements)}")
+            self.logger.progress(f"Plotting elements: {i + 1} / {len(self.elements)}")
         self.logger.progress("")
 
     def plot_sparse_matrix(self, save=False, name="sparse_matrix.png"):
@@ -1574,7 +1574,7 @@ class DFN(Constants):
         for i, z in enumerate(z0):  # type: int, complex
             for j, e in enumerate(elevation):
                 self.logger.progress(
-                    f"\rTracing streamline: {i + 1} / {len(z0)}"
+                    f"Tracing streamline: {i + 1} / {len(z0)}"
                 )
                 streamline, streamline_frac, velocity, element = (
                     self.streamline_tracking(z, frac, e, ds, max_length, backward)
