@@ -1424,25 +1424,7 @@ class DFN(Constants):
         if const_elements:
             elements = [e for e in elements if isinstance(e, (ConstantHeadLine, Well))]
         for i, e in enumerate(elements):
-            if isinstance(e, Intersection):
-                line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
-                pl.add_mesh(
-                    pv.Line(line[0], line[1]), color="#000000", line_width=line_width
-                )
-            if isinstance(e, (ConstantHeadLine, ImpermeableLine)):
-                line = gf.map_2d_to_3d(e.endpoints0, e.frac0)
-                pl.add_mesh(
-                    pv.Line(line[0], line[1]), color="#000000", line_width=line_width
-                )
-            if isinstance(e, (Well, ImpermeableCircle)):
-                point = gf.map_2d_to_3d(e.center, e.frac0)
-                pl.add_mesh(
-                    pv.Polygon(
-                        point, e.radius, normal=e.frac0.normal, n_sides=50, fill=False
-                    ),
-                    color="#000000",
-                    line_width=line_width,
-                )
+            e.plot(pl, line_width=line_width)
             logger.debug(f"Plotting elements: {i + 1} / {len(self.elements)}")
         logger.debug("")
 

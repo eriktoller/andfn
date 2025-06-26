@@ -6,6 +6,8 @@ This module contains the element class that is a parent class to all elements.
 """
 
 import numpy as np
+import pyvista as pv
+import andfn.geometry_functions as gf
 from .constants import load_yaml_config
 
 config = load_yaml_config()
@@ -417,4 +419,44 @@ class Element:
             self.nint = n * nint_mult
             self.thetas = np.linspace(
                 start=0, stop=2 * np.pi, num=self.nint, endpoint=False
+            )
+
+    def plot(self, pl, line_width):
+        """
+        Plot the element using the given plotter.
+
+        Parameters
+        ----------
+        pl : pyvista.Plotter
+            The plotter to use for plotting.
+        line_width : float
+            The width of the lines in the plot.
+
+        Returns
+        -------
+        None
+            The element is plotted in the plotter.
+        """
+        if self.type_ in [0, 3, 5]:  # Intersection, Constant Head Line, Impermeable Line
+            line = gf.map_2d_to_3d(self.endpoints0, self.frac0)
+            pl.add_mesh(
+                pv.Line(line[0], line[1]), color="#000000", line_width=line_width
+            )
+        elif self.type_ == 1:  # Bounding Circle
+            point = gf.map_2d_to_3d(0+0j, self.frac0)
+            pl.add_mesh(
+                pv.Polygon(
+                    point, self.radius, normal=self.frac0.normal, n_sides=50, fill=False
+                ),
+                color="#000000",
+                line_width=line_width,
+            )
+        elif self.type_ in [1, 2, 4]:  # Bounding Circle, Well, Impermeable Circle
+            point = gf.map_2d_to_3d(self.center, self.frac0)
+            pl.add_mesh(
+                pv.Polygon(
+                    point, self.radius, normal=self.frac0.normal, n_sides=50, fill=False
+                ),
+                color="#000000",
+                line_width=line_width,
             )
