@@ -19,7 +19,7 @@ class ConstantHeadLine(Element):
         ----------
         label : str
             The label of the constant head line
-        endpoints0 : np.ndarray
+        endpoints0 : np.ndarray[complex]
             The endpoints of the constant head line
         head : float
             The head of the constant head line

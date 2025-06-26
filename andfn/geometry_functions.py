@@ -34,7 +34,7 @@ def map_z_line_to_chi(z, endpoints):
 
     Returns
     -------
-    chi : complex | np.complex128
+    chi : complex | np.ndarray
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane

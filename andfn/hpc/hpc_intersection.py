@@ -156,29 +156,3 @@ def calc_w(self_, z, frac_is_id):
             / (self_["endpoints1"][1] - self_["endpoints1"][0])
         )
     return w
-
-
-@nb.njit()
-def z_array(self_, n, frac_is):
-    """
-    Returns an array of n points along the intersection.
-
-    Parameters
-    ----------
-    self_ : np.ndarray element_dtype
-        The intersection element.
-    n : int
-        Number of points to return.
-    frac_is : int
-        The fracture that the intersection is associated with.
-
-    Returns
-    -------
-    z : np.ndarray[complex]
-        An array of n points along the intersection.
-    """
-    if frac_is == self_["frac0"]:
-        return np.linspace(self_["endpoints0"][0], self_["endpoints0"][1], n + 2)[
-            1 : n + 1
-        ]
-    return np.linspace(self_["endpoints1"][0], self_["endpoints1"][1], n + 2)[1 : n + 1]

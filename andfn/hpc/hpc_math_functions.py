@@ -347,6 +347,10 @@ def cauchy_integral_domega(
         Array of elements
     radius : np.float64
         The radius of the bounding circle
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
 
     Return
     ------

@@ -492,8 +492,6 @@ def solve_discharge_matrix(
         Array of fractures
     element_struc_array : np.ndarray[element_dtype]
         Array of elements
-    discharge_matrix : np.ndarray
-        The discharge matrix
     discharge_elements : np.ndarray[element_dtype]
         The discharge elements
     discharge_int : int
@@ -848,6 +846,16 @@ def get_max_min_phi(
     ----------
     element_struc_array : np.ndarray[element_dtype]
         The array of elements
+    fracture_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    ids : np.ndarray
+        The ids of the elements to check
+    frac_id : int
+        The id of the fracture to check
+    z_int : np.ndarray[dtype_z_arrays]
+        The z arrays for the discharge elements
+    discharge_int : int
+        The number of integration points
 
     Returns
     -------

@@ -1181,7 +1181,7 @@ class DFN(Constants):
                 line_width=line_width,
             )
             if print_prog:
-                logger.info(
+                logger.debug(
                     f"Plotting fractures: {i + 1} / {len(self.fractures)}"
                 )
 
@@ -1227,7 +1227,7 @@ class DFN(Constants):
 
         # Plot the flow net for each fracture
         for i, f in enumerate(fracs):
-            logger.info(f"Plotting flow net: {i + 1} / {len(fracs)}")
+            logger.debug(f"Plotting flow net: {i + 1} / {len(fracs)}")
             # plot the flow net using matplotlib
             contours_re = plt.contour(
                 x_arrays[i], y_arrays[i], np.real(omegas[i]), levels=lvs_re
@@ -1248,7 +1248,7 @@ class DFN(Constants):
                     plot_line_3d(seg, f, pl, "blue", line_width=line_width)
 
         plt.close()
-        logger.info("")
+        logger.debug("")
 
     def plot_fractures_head(
         self,
@@ -1381,7 +1381,7 @@ class DFN(Constants):
                         )[0][0]
                         color = colors[pos]
                         plot_line_3d(seg, f, pl, color, line_width=line_width)
-            logger.info(f"Plotting hydraulic head: {i + 1} / {len(fracs)}")
+            logger.debug(f"Plotting hydraulic head: {i + 1} / {len(fracs)}")
 
         # Add the color bar
         if colorbar:
@@ -1397,7 +1397,7 @@ class DFN(Constants):
                 "Hydraulic head", interactive=True, vertical=False, fmt="%10.1f"
             )
         plt.close()
-        logger.info("")
+        logger.debug("")
 
     def plot_elements(self, pl, elements=None, line_width=3.0, const_elements=False):
         """
@@ -1443,8 +1443,8 @@ class DFN(Constants):
                     color="#000000",
                     line_width=line_width,
                 )
-            logger.info(f"Plotting elements: {i + 1} / {len(self.elements)}")
-        logger.info("")
+            logger.debug(f"Plotting elements: {i + 1} / {len(self.elements)}")
+        logger.debug("")
 
     def plot_sparse_matrix(self, save=False, name="sparse_matrix.png"):
         """
@@ -1568,13 +1568,19 @@ class DFN(Constants):
         if isinstance(elevation, float):
             elevation = np.array([elevation])
 
+        logger.info("---------------------------------------")
+        logger.info("Starting streamline tracking...")
+        logger.info("---------------------------------------")
+        logger.debug(f"Number of starting points: {len(z0)}")
+        logger.debug(f"Number of elevations: {len(elevation)}")
+
         streamlines = []
         streamlines_frac = []
         velocities = []
         elements = []
         for i, z in enumerate(z0):  # type: int, complex
             for j, e in enumerate(elevation):
-                logger.info(
+                logger.debug(
                     f"Tracing streamline: {i + 1} / {len(z0)}"
                 )
                 streamline, streamline_frac, velocity, element = (
@@ -1758,6 +1764,8 @@ class DFN(Constants):
         ----------
         z0 : complex
             The initial point.
+        frac : Fracture
+            The fracture where the streamline is traced.
         ds : float
             The step size.
         backward : bool

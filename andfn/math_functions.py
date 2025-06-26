@@ -128,7 +128,7 @@ def well_chi(chi, q):
 
     Parameters
     ----------
-    chi : np.ndarray
+    chi : np.ndarray | complex
         A point in the complex chi plane
     q : float
         The discharge eof the well.

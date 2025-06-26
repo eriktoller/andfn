@@ -86,6 +86,8 @@ def calc_w(self_, z):
 
     Parameters
     ----------
+    self_ : np.ndarray[element_dtype]
+        The constant head line element
     z : np.ndarray
         The points to calculate the complex discharge vector at
 

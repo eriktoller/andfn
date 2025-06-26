@@ -11,7 +11,6 @@ __author__ = "Erik A.L. Toller"
 __version__ = "0.1.8"
 
 # Import all classes and functions
-from andfn.element import Element
 from andfn.bounding import BoundingCircle
 from andfn.const_head import ConstantHeadLine
 from andfn.fracture import Fracture
