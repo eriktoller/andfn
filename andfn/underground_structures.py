@@ -7,6 +7,7 @@ This module contains the underground structures classes.
 import numpy as np
 import pyvista as pv
 import andfn.geometry_functions as gf
+from andfn.const_head import ConstantHeadLine
 
 class UndergroundStructure:
     """
@@ -89,11 +90,16 @@ class Tunnel(UndergroundStructure):
         if n_sides < 3:
             raise ValueError("n_sides must be at least 3 for a tunnel.")
         self.n_sides = n_sides
+        self.head = 0
 
         # Calculate the vertices of the tunnel
         self.vertices = None
         self.faces = None
         self.get_vertices_and_faces()
+
+        # Make lists for the ConstantHeadLine elements and the fractures
+        self.fracs = []
+        self.const_head_lines = []
 
     def get_lvc(self):
         """
@@ -315,23 +321,47 @@ class Tunnel(UndergroundStructure):
             pl.add_points(
                 np.array(pnts_inside),
                 color="green",
-                point_size=8,
+                point_size=4,
                 render_points_as_spheres=True
             )
+        # Create constant head elements for the tunnel in this fracture
+        self.make_constant_head_elements(frac, pnts_inside, pnts)
+
+    def make_constant_head_elements(self, frac, pnts_inside, pnts):
+        """
+        Creates constant head elements for the tunnel in a given fracture.
+
+        Parameters
+        ----------
+        frac : andfn.fracture.Fracture
+            The fracture to create constant head elements in.
+        """
+        if len(pnts_inside) < 2:
+            return
+        for j in range(len(pnts_inside) - 1):
+            # Create a constant head line for each segment of the tunnel inside the fracture
+            z0 = gf.map_3d_to_2d(pnts_inside[j], frac)
+            z1 = gf.map_3d_to_2d(pnts_inside[j + 1], frac)
+            ch = ConstantHeadLine(
+                f"tunnel_{self.label}_frac_{frac.label}_{j}",
+                np.array([z0, z1]),
+                self.head,
+                frac
+            )
+            self.const_head_lines.append(ch)
         if len(pnts_inside) == len(pnts):
-            pl.add_mesh(
-                pv.MultipleLines(np.array(pnts + [pnts[0]])),
-                color="red",
-                opacity=1.0,
-                line_width=5,
+            z0 = gf.map_3d_to_2d(pnts_inside[0], frac)
+            z1 = gf.map_3d_to_2d(pnts_inside[-1], frac)
+            ch = ConstantHeadLine(
+                f"tunnel_{self.label}_frac_{frac.label}_{len(pnts_inside)}",
+                np.array([z0, z1]),
+                self.head,
+                frac
             )
-        elif len(pnts_inside) > 1:
-            pl.add_mesh(
-                pv.MultipleLines(np.array(pnts_inside)),
-                color="red",
-                opacity=1.0,
-                line_width=5,
-            )
+            self.const_head_lines.append(ch)
+        self.fracs.append(frac)
+
+
 
     @staticmethod
     def inside_fracture(pnt, frac):
