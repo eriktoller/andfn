@@ -8,35 +8,10 @@ import numpy as np
 import pyvista as pv
 import andfn.geometry_functions as gf
 from andfn.const_head import ConstantHeadLine
+from .impermeable_object import ImpermeableLine
 
-def line_plane_intersection(line_start, line_end, plane_point, plane_normal):
-    """
-    Calculates the intersection point between a line and a plane.
 
-    Parameters
-    ----------
-    line_start : np.ndarray
-        The start point of the line.
-    line_end : np.ndarray
-        The end point of the line.
-    plane_point : np.ndarray
-        A point on the plane.
-    plane_normal : np.ndarray
-        The normal vector of the plane.
-
-    Returns
-    -------
-    np.ndarray or None
-        The intersection point if it exists, otherwise None.
-    """
-    line_direction = line_end - line_start
-    d = np.dot(plane_normal, (plane_point - line_start)) / np.dot(plane_normal, line_direction)
-
-    if 0 <= d <= 1:
-        return line_start + d * line_direction
-    return None
-
-class UndergroundStructure:
+class Structure:
     """
     Base class for underground structures.
     """
@@ -60,14 +35,14 @@ class UndergroundStructure:
             setattr(self, key, value)
 
 
-class Tunnel(UndergroundStructure):
+class RegularPolygonPrism(Structure):
     """
-    Class for tunnels.
+    Base class for polygonal underground structures.
     """
 
-    def __init__(self, label, radius, start, end, n_sides=4, **kwargs):
+    def __init__(self, label, radius, start, end, n_sides, **kwargs):
         """
-        Initializes the tunnel class.
+        Initializes the polygonal underground structures class.
 
         Parameters
         ----------
@@ -98,7 +73,7 @@ class Tunnel(UndergroundStructure):
 
         # Make lists for the ConstantHeadLine elements and the fractures
         self.fracs = []
-        self.const_head_lines = []
+        self.elements = []
 
     def get_lvc(self):
         """
@@ -195,6 +170,34 @@ class Tunnel(UndergroundStructure):
             edge_opacity=1.0,
             opacity=opacity
         )
+    
+    def possible_intersections(self, frac, pl):
+        """
+        Checks if the tunnel can possibly intersect with a given fracture.
+
+        Parameters
+        ----------
+        frac : andfn.fracture.Fracture
+            The fracture to check for possible intersections.
+
+        Returns
+        -------
+        bool
+            True if the tunnel can possibly intersect with the fracture, False otherwise.
+        """
+        # Check if the fracture center + radius is between the start and end points of the tunnel
+        frac_radius = frac.radius
+        start = gf.map_3d_to_2d(self.start, frac)
+        end = gf.map_3d_to_2d(self.end, frac)
+        # make the line equation of the tunnel in the type of ax + by + c = 0
+        a = end.imag - start.imag
+        b = start.real - end.real
+        c = end.real * start.imag - start.real * end.imag
+        dist = np.abs(c) / np.sqrt(a**2 + b**2)
+        if dist > frac_radius * (1 + 1e-10):
+            # The tunnel is too far away from the fracture to intersect
+            return False
+        return True
 
     def frac_intersections(self, fractures, pl=None):
         """
@@ -202,7 +205,7 @@ class Tunnel(UndergroundStructure):
 
         Parameters
         ----------
-        frac : andfn.fracture.Fracture
+        fractures : andfn.fracture.Fracture
             The fracture to check for intersections with the tunnel.
         pl : pyvista.Plotter
             The plotter object to use for plotting the intersection points.
@@ -220,8 +223,8 @@ class Tunnel(UndergroundStructure):
                 return False
             # calculate the intersection points between line between the verticies and the fracture plane
             pnts = []
-            for i in range(self.n_sides-1):
-                pnt = line_plane_intersection(
+            for i in range(self.n_sides - 1):
+                pnt = self.line_plane_intersection(
                     self.vertices[i],
                     self.vertices[i + self.n_sides],
                     frac.center,
@@ -229,7 +232,7 @@ class Tunnel(UndergroundStructure):
                 )
                 if pnt is not None:
                     pnts.append(pnt)
-                pnt = line_plane_intersection(
+                pnt = self.line_plane_intersection(
                     self.vertices[i],
                     self.vertices[i + 1],
                     frac.center,
@@ -237,7 +240,7 @@ class Tunnel(UndergroundStructure):
                 )
                 if pnt is not None:
                     pnts.append(pnt)
-                pnt = line_plane_intersection(
+                pnt = self.line_plane_intersection(
                     self.vertices[self.n_sides + i],
                     self.vertices[self.n_sides + i + 1],
                     frac.center,
@@ -245,25 +248,25 @@ class Tunnel(UndergroundStructure):
                 )
                 if pnt is not None:
                     pnts.append(pnt)
-            pnt = line_plane_intersection(
-                self.vertices[self.n_sides-1],
-                self.vertices[self.n_sides + self.n_sides-1],
+            pnt = self.line_plane_intersection(
+                self.vertices[self.n_sides - 1],
+                self.vertices[self.n_sides + self.n_sides - 1],
                 frac.center,
                 frac.normal
             )
             if pnt is not None:
                 pnts.append(pnt)
-            pnt = line_plane_intersection(
+            pnt = self.line_plane_intersection(
                 self.vertices[0],
-                self.vertices[self.n_sides-1],
+                self.vertices[self.n_sides - 1],
                 frac.center,
                 frac.normal
             )
             if pnt is not None:
                 pnts.append(pnt)
-            pnt = line_plane_intersection(
+            pnt = self.line_plane_intersection(
                 self.vertices[self.n_sides],
-                self.vertices[self.n_sides*2-1],
+                self.vertices[self.n_sides * 2 - 1],
                 frac.center,
                 frac.normal
             )
@@ -271,7 +274,7 @@ class Tunnel(UndergroundStructure):
                 pnts.append(pnt)
 
             int_pnts = []
-            for i in range(len(pnts)-1):
+            for i in range(len(pnts) - 1):
                 # map to plane and check if there is an intersection point between the points and the boundary of the fracture
                 z1 = gf.map_3d_to_2d(pnts[i], frac)
                 z2 = gf.map_3d_to_2d(pnts[i + 1], frac)
@@ -301,7 +304,6 @@ class Tunnel(UndergroundStructure):
                     pnt4 = gf.map_2d_to_3d(z4, frac)
                     int_pnts.append(pnt4)
 
-
             if len(int_pnts) > 0:
                 pnts.insert(0, int_pnts[0])
                 pnts.append(int_pnts[1])
@@ -328,73 +330,24 @@ class Tunnel(UndergroundStructure):
                         point_size=4,
                         render_points_as_spheres=True
                     )
+
             # Create constant head elements for the tunnel in this fracture
-            self.make_constant_head_elements(frac, pnts_inside, pnts)
+            self.assign_elements(frac, pnts_inside, pnts)
 
-    def possible_intersections(self, frac, pl):
+    def assign_elements(self, frac, pnts_inside, pnts):
         """
-        Checks if the tunnel can possibly intersect with a given fracture.
-
-        Parameters
-        ----------
-        frac : andfn.fracture.Fracture
-            The fracture to check for possible intersections.
-
-        Returns
-        -------
-        bool
-            True if the tunnel can possibly intersect with the fracture, False otherwise.
-        """
-        # Check if the fracture center + radius is between the start and end points of the tunnel
-        frac_radius = frac.radius
-        start = gf.map_3d_to_2d(self.start, frac)
-        end = gf.map_3d_to_2d(self.end, frac)
-        # make the line equation of the tunnel in the type of ax + by + c = 0
-        a = end.imag - start.imag
-        b = start.real - end.real
-        c = end.real * start.imag - start.real * end.imag
-        dist = np.abs(c) / np.sqrt(a**2 + b**2)
-        if dist > frac_radius * (1 + 1e-10):
-            # The tunnel is too far away from the fracture to intersect
-            return False
-        return True
-
-
-    def make_constant_head_elements(self, frac, pnts_inside, pnts):
-        """
-        Creates constant head elements for the tunnel in a given fracture.
+        Assigns constant head elements for the tunnel in a given fracture.
 
         Parameters
         ----------
         frac : andfn.fracture.Fracture
             The fracture to create constant head elements in.
+        pnts_inside : list of np.ndarray
+            The points inside the fracture where the tunnel intersects.
+        pnts : list of np.ndarray
+            The points of the tunnel that intersect with the fracture.
         """
-        if len(pnts_inside) < 2:
-            return
-        for j in range(len(pnts_inside) - 1):
-            # Create a constant head line for each segment of the tunnel inside the fracture
-            z0 = gf.map_3d_to_2d(pnts_inside[j], frac)
-            z1 = gf.map_3d_to_2d(pnts_inside[j + 1], frac)
-            ch = ConstantHeadLine(
-                f"tunnel_{self.label}_frac_{frac.label}_{j}",
-                np.array([z0, z1]),
-                self.head,
-                frac
-            )
-            self.const_head_lines.append(ch)
-        if len(pnts_inside) == len(pnts):
-            z0 = gf.map_3d_to_2d(pnts_inside[0], frac)
-            z1 = gf.map_3d_to_2d(pnts_inside[-1], frac)
-            ch = ConstantHeadLine(
-                f"tunnel_{self.label}_frac_{frac.label}_{len(pnts_inside)}",
-                np.array([z0, z1]),
-                self.head,
-                frac
-            )
-            self.const_head_lines.append(ch)
-        self.fracs.append(frac)
-
-
+        raise NotImplementedError("This method should be implemented in subclasses.")
 
     @staticmethod
     def inside_fracture(pnt, frac):
@@ -412,6 +365,158 @@ class Tunnel(UndergroundStructure):
             True if the tunnel is inside the fracture, False otherwise.
         """
         z = gf.map_3d_to_2d(pnt, frac)
-        if np.abs(z) > frac.radius*(1+1e-10):
+        if np.abs(z) > frac.radius * (1 + 1e-10):
             return False
         return True
+
+    @staticmethod
+    def line_plane_intersection(line_start, line_end, plane_point, plane_normal):
+        """
+        Calculates the intersection point between a line and a plane.
+
+        Parameters
+        ----------
+        line_start : np.ndarray
+            The start point of the line.
+        line_end : np.ndarray
+            The end point of the line.
+        plane_point : np.ndarray
+            A point on the plane.
+        plane_normal : np.ndarray
+            The normal vector of the plane.
+
+        Returns
+        -------
+        np.ndarray or None
+            The intersection point if it exists, otherwise None.
+        """
+        line_direction = line_end - line_start
+        d = np.dot(plane_normal, (plane_point - line_start)) / np.dot(plane_normal, line_direction)
+
+        if 0 <= d <= 1:
+            return line_start + d * line_direction
+        return None
+
+
+class ConstantHeadPrism(RegularPolygonPrism):
+    """
+    Class for constant head regular polygonal prism tunnels.
+    """
+
+    def __init__(self, label, radius, start, end, head=0, n_sides=4, **kwargs):
+        """
+        Initializes the tunnel class.
+
+        Parameters
+        ----------
+        label : str or int
+            The label of the tunnel.
+        radius : float
+            The radius of the tunnel.
+        start : np.ndarray
+            The start point of the tunnel.
+        end : np.ndarray
+            The end point of the tunnel.
+        n_sides : int, optional
+            The number of sides of the tunnel. Default is -1 (circular tunnel).
+        """
+        super().__init__(label, radius, start, end, n_sides, **kwargs)
+        self.head = head
+
+    def assign_elements(self, frac, pnts_inside, pnts):
+        """
+        Creates constant head elements for the tunnel in a given fracture.
+
+        Parameters
+        ----------
+        frac : andfn.fracture.Fracture
+            The fracture to create constant head elements in.
+        pnts_inside : list of np.ndarray
+            The points inside the fracture where the tunnel intersects.
+        pnts : list of np.ndarray
+            The points of the tunnel that intersect with the fracture.
+        """
+        if len(pnts_inside) < 2:
+            return
+        for j in range(len(pnts_inside) - 1):
+            # Create a constant head line for each segment of the tunnel inside the fracture
+            z0 = gf.map_3d_to_2d(pnts_inside[j], frac)
+            z1 = gf.map_3d_to_2d(pnts_inside[j + 1], frac)
+            ch = ConstantHeadLine(
+                f"tunnel_{self.label}_frac_{frac.label}_{j}",
+                np.array([z0, z1]),
+                self.head,
+                frac
+            )
+            self.elements.append(ch)
+        if len(pnts_inside) == len(pnts):
+            z0 = gf.map_3d_to_2d(pnts_inside[0], frac)
+            z1 = gf.map_3d_to_2d(pnts_inside[-1], frac)
+            ch = ConstantHeadLine(
+                f"tunnel_{self.label}_frac_{frac.label}_{len(pnts_inside)}",
+                np.array([z0, z1]),
+                self.head,
+                frac
+            )
+            self.elements.append(ch)
+        self.fracs.append(frac)
+
+class ImpermeablePrims(RegularPolygonPrism):
+    """
+    Class for impermeable regular polygonal prims.
+    """
+
+    def __init__(self, label, radius, start, end, n_sides=4, **kwargs):
+        """
+        Initializes the impermeable cylinder class.
+
+        Parameters
+        ----------
+        label : str or int
+            The label of the tunnel.
+        radius : float
+            The radius of the tunnel.
+        start : np.ndarray
+            The start point of the tunnel.
+        end : np.ndarray
+            The end point of the tunnel.
+        n_sides : int, optional
+            The number of sides of the tunnel. Default is -1 (circular tunnel).
+        """
+        super().__init__(label, radius, start, end, n_sides, **kwargs)
+
+    def assign_elements(self, frac, pnts_inside, pnts):
+        """
+        Creates constant head elements for the tunnel in a given fracture.
+
+        Parameters
+        ----------
+        frac : andfn.fracture.Fracture
+            The fracture to create constant head elements in.
+        pnts_inside : list of np.ndarray
+            The points inside the fracture where the tunnel intersects.
+        pnts : list of np.ndarray
+            The points of the tunnel that intersect with the fracture.
+        """
+        if len(pnts_inside) < 2:
+            return
+        for j in range(len(pnts_inside) - 1):
+            # Create a constant head line for each segment of the tunnel inside the fracture
+            z0 = gf.map_3d_to_2d(pnts_inside[j], frac)
+            z1 = gf.map_3d_to_2d(pnts_inside[j + 1], frac)
+            ch = ImpermeableLine(
+                f"tunnel_{self.label}_frac_{frac.label}_{j}",
+                np.array([z0, z1]),
+                frac
+            )
+            self.elements.append(ch)
+        if len(pnts_inside) == len(pnts):
+            z0 = gf.map_3d_to_2d(pnts_inside[0], frac)
+            z1 = gf.map_3d_to_2d(pnts_inside[-1], frac)
+            ch = ImpermeableLine(
+                f"tunnel_{self.label}_frac_{frac.label}_{len(pnts_inside)}",
+                np.array([z0, z1]),
+                frac
+            )
+            self.elements.append(ch)
+        self.fracs.append(frac)
