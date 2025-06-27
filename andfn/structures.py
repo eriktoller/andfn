@@ -9,30 +9,6 @@ import pyvista as pv
 import andfn.geometry_functions as gf
 from andfn.const_head import ConstantHeadLine
 
-class UndergroundStructure:
-    """
-    Base class for underground structures.
-    """
-
-    def __init__(self, label, **kwargs):
-        """
-        Initializes the underground structure class.
-
-        Parameters
-        ----------
-        label : str or int
-            The label of the underground structure.
-        kwargs : dict
-            Additional keyword arguments.
-        """
-        self.label = label
-        self.fracs = None
-
-        # Set the kwargs
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-
 def line_plane_intersection(line_start, line_end, plane_point, plane_normal):
     """
     Calculates the intersection point between a line and a plane.
@@ -59,6 +35,29 @@ def line_plane_intersection(line_start, line_end, plane_point, plane_normal):
     if 0 <= d <= 1:
         return line_start + d * line_direction
     return None
+
+class UndergroundStructure:
+    """
+    Base class for underground structures.
+    """
+
+    def __init__(self, label, **kwargs):
+        """
+        Initializes the underground structure class.
+
+        Parameters
+        ----------
+        label : str or int
+            The label of the underground structure.
+        kwargs : dict
+            Additional keyword arguments.
+        """
+        self.label = label
+        self.fracs = None
+
+        # Set the kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 class Tunnel(UndergroundStructure):
@@ -169,7 +168,7 @@ class Tunnel(UndergroundStructure):
 
 
 
-    def plot(self, pl):
+    def plot(self, pl, opacity=0.5):
         """
         Plots the tunnel on the given axes.
 
@@ -179,14 +178,8 @@ class Tunnel(UndergroundStructure):
             The plotter object to use for plotting.
         """
         pl.add_points(
-            self.vertices,
-            scalars=self.vertices[:, 2], cmap="viridis",
-            point_size=4,
-            render_points_as_spheres=True
-        )
-        pl.add_points(
             np.array([self.start, self.end]),
-            color="orange",
+            color="black",
             point_size=4,
             render_points_as_spheres=True
         )
@@ -195,13 +188,15 @@ class Tunnel(UndergroundStructure):
         # Add the polygon to the plotter
         pl.add_mesh(
             poly,
-            color="blue",
+            color="#FFFFFF",
             show_edges=True,
+            show_vertices=True,
             edge_color="black",
-            opacity=0.5
+            edge_opacity=1.0,
+            opacity=opacity
         )
 
-    def frac_intersections(self, frac, pl):
+    def frac_intersections(self, fractures, pl=None):
         """
         Checks if the tunnel intersects with a given fracture.
 
@@ -209,69 +204,91 @@ class Tunnel(UndergroundStructure):
         ----------
         frac : andfn.fracture.Fracture
             The fracture to check for intersections with the tunnel.
+        pl : pyvista.Plotter
+            The plotter object to use for plotting the intersection points.
 
         Returns
         -------
         bool
             True if the tunnel intersects with the fracture, False otherwise.
         """
-        # calculate the intersection points between line between the verticies and the fracture plane
-        pnts = []
-        for i in range(self.n_sides-1):
+        if not isinstance(fractures, list):
+            fractures = [fractures]
+        for frac in fractures:
+            # Check if the tunnel can possibly intersect with the fracture
+            if not self.possible_intersections(frac, pl):
+                return False
+            # calculate the intersection points between line between the verticies and the fracture plane
+            pnts = []
+            for i in range(self.n_sides-1):
+                pnt = line_plane_intersection(
+                    self.vertices[i],
+                    self.vertices[i + self.n_sides],
+                    frac.center,
+                    frac.normal
+                )
+                if pnt is not None:
+                    pnts.append(pnt)
+                pnt = line_plane_intersection(
+                    self.vertices[i],
+                    self.vertices[i + 1],
+                    frac.center,
+                    frac.normal
+                )
+                if pnt is not None:
+                    pnts.append(pnt)
+                pnt = line_plane_intersection(
+                    self.vertices[self.n_sides + i],
+                    self.vertices[self.n_sides + i + 1],
+                    frac.center,
+                    frac.normal
+                )
+                if pnt is not None:
+                    pnts.append(pnt)
             pnt = line_plane_intersection(
-                self.vertices[i],
-                self.vertices[i + self.n_sides],
+                self.vertices[self.n_sides-1],
+                self.vertices[self.n_sides + self.n_sides-1],
                 frac.center,
                 frac.normal
             )
             if pnt is not None:
                 pnts.append(pnt)
             pnt = line_plane_intersection(
-                self.vertices[i],
-                self.vertices[i + 1],
+                self.vertices[0],
+                self.vertices[self.n_sides-1],
                 frac.center,
                 frac.normal
             )
             if pnt is not None:
                 pnts.append(pnt)
             pnt = line_plane_intersection(
-                self.vertices[self.n_sides + i],
-                self.vertices[self.n_sides + i + 1],
+                self.vertices[self.n_sides],
+                self.vertices[self.n_sides*2-1],
                 frac.center,
                 frac.normal
             )
             if pnt is not None:
                 pnts.append(pnt)
-        pnt = line_plane_intersection(
-            self.vertices[self.n_sides-1],
-            self.vertices[self.n_sides + self.n_sides-1],
-            frac.center,
-            frac.normal
-        )
-        if pnt is not None:
-            pnts.append(pnt)
-        pnt = line_plane_intersection(
-            self.vertices[0],
-            self.vertices[self.n_sides-1],
-            frac.center,
-            frac.normal
-        )
-        if pnt is not None:
-            pnts.append(pnt)
-        pnt = line_plane_intersection(
-            self.vertices[self.n_sides],
-            self.vertices[self.n_sides*2-1],
-            frac.center,
-            frac.normal
-        )
-        if pnt is not None:
-            pnts.append(pnt)
 
-        int_pnts = []
-        for i in range(len(pnts)-1):
-            # map to plane and check if there is an intersection point between the points and the boundary of the fracture
-            z1 = gf.map_3d_to_2d(pnts[i], frac)
-            z2 = gf.map_3d_to_2d(pnts[i + 1], frac)
+            int_pnts = []
+            for i in range(len(pnts)-1):
+                # map to plane and check if there is an intersection point between the points and the boundary of the fracture
+                z1 = gf.map_3d_to_2d(pnts[i], frac)
+                z2 = gf.map_3d_to_2d(pnts[i + 1], frac)
+                z3, z4 = gf.line_circle_intersection(z1, z2, frac.radius)
+                if z3 is not None:
+                    # Check is z3 or z4 is between z1 and z2
+                    if np.all(np.abs(np.abs(z3 - z1) + np.abs(z3 - z2) - np.abs(z2 - z1)) < 1e-10):
+                        # map the intersection point back to 3d
+                        pnt3 = gf.map_2d_to_3d(z3, frac)
+                        int_pnts.append(pnt3)
+                    if np.all(np.abs(np.abs(z4 - z1) + np.abs(z4 - z2) - np.abs(z2 - z1)) < 1e-10):
+                        # map the intersection point back to 3d
+                        pnt4 = gf.map_2d_to_3d(z4, frac)
+                        int_pnts.append(pnt4)
+            # Check if the first and last point of the tunnel intersects with the fracture
+            z1 = gf.map_3d_to_2d(pnts[0], frac)
+            z2 = gf.map_3d_to_2d(pnts[-1], frac)
             z3, z4 = gf.line_circle_intersection(z1, z2, frac.radius)
             if z3 is not None:
                 # Check is z3 or z4 is between z1 and z2
@@ -283,49 +300,65 @@ class Tunnel(UndergroundStructure):
                     # map the intersection point back to 3d
                     pnt4 = gf.map_2d_to_3d(z4, frac)
                     int_pnts.append(pnt4)
-        # Check if the first and last point of the tunnel intersects with the fracture
-        z1 = gf.map_3d_to_2d(pnts[0], frac)
-        z2 = gf.map_3d_to_2d(pnts[-1], frac)
-        z3, z4 = gf.line_circle_intersection(z1, z2, frac.radius)
-        if z3 is not None:
-            # Check is z3 or z4 is between z1 and z2
-            if np.all(np.abs(np.abs(z3 - z1) + np.abs(z3 - z2) - np.abs(z2 - z1)) < 1e-10):
-                # map the intersection point back to 3d
-                pnt3 = gf.map_2d_to_3d(z3, frac)
-                int_pnts.append(pnt3)
-            if np.all(np.abs(np.abs(z4 - z1) + np.abs(z4 - z2) - np.abs(z2 - z1)) < 1e-10):
-                # map the intersection point back to 3d
-                pnt4 = gf.map_2d_to_3d(z4, frac)
-                int_pnts.append(pnt4)
 
 
-        if len(int_pnts) > 0:
-            pnts.insert(0, int_pnts[0])
-            pnts.append(int_pnts[1])
-        pnts_inside = []
-        pnts_outside = []
-        for i, pnt in enumerate(pnts):
-            if self.inside_fracture(pnt, frac):
-                pnts_inside.append(pnt)
-            else:
-                pnts_outside.append(pnt)
+            if len(int_pnts) > 0:
+                pnts.insert(0, int_pnts[0])
+                pnts.append(int_pnts[1])
+            pnts_inside = []
+            pnts_outside = []
+            for i, pnt in enumerate(pnts):
+                if self.inside_fracture(pnt, frac):
+                    pnts_inside.append(pnt)
+                else:
+                    pnts_outside.append(pnt)
 
-        # plot the vertices in 3d
-        pl.add_points(
-            np.array(pnts),
-            color="red",
-            point_size=4,
-            render_points_as_spheres=True
-        )
-        if len(pnts_inside) > 0:
-            pl.add_points(
-                np.array(pnts_inside),
-                color="green",
-                point_size=4,
-                render_points_as_spheres=True
-            )
-        # Create constant head elements for the tunnel in this fracture
-        self.make_constant_head_elements(frac, pnts_inside, pnts)
+            # plot the vertices in 3d
+            if pl:
+                pl.add_points(
+                    np.array(pnts),
+                    color="red",
+                    point_size=4,
+                    render_points_as_spheres=True
+                )
+                if len(pnts_inside) > 0:
+                    pl.add_points(
+                        np.array(pnts_inside),
+                        color="green",
+                        point_size=4,
+                        render_points_as_spheres=True
+                    )
+            # Create constant head elements for the tunnel in this fracture
+            self.make_constant_head_elements(frac, pnts_inside, pnts)
+
+    def possible_intersections(self, frac, pl):
+        """
+        Checks if the tunnel can possibly intersect with a given fracture.
+
+        Parameters
+        ----------
+        frac : andfn.fracture.Fracture
+            The fracture to check for possible intersections.
+
+        Returns
+        -------
+        bool
+            True if the tunnel can possibly intersect with the fracture, False otherwise.
+        """
+        # Check if the fracture center + radius is between the start and end points of the tunnel
+        frac_radius = frac.radius
+        start = gf.map_3d_to_2d(self.start, frac)
+        end = gf.map_3d_to_2d(self.end, frac)
+        # make the line equation of the tunnel in the type of ax + by + c = 0
+        a = end.imag - start.imag
+        b = start.real - end.real
+        c = end.real * start.imag - start.real * end.imag
+        dist = np.abs(c) / np.sqrt(a**2 + b**2)
+        if dist > frac_radius * (1 + 1e-10):
+            # The tunnel is too far away from the fracture to intersect
+            return False
+        return True
+
 
     def make_constant_head_elements(self, frac, pnts_inside, pnts):
         """

@@ -1186,7 +1186,7 @@ class DFN(Constants):
                 )
 
     def plot_fractures_flow_net(
-        self, pl, lvs, n_points, line_width=2, margin=0.01, only_flow=False
+        self, pl, lvs=20, n_points=100, line_width=2, margin=0.01, only_flow=False
     ):
         """
         Plots the flow net for the fractures in the DFN.
