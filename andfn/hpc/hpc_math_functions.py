@@ -217,7 +217,7 @@ def find_branch_cuts(self_, fracture_struc_array, element_struc_array, work_arra
     """
     # Find the branch cuts
     z_pos = gf.map_chi_to_z_circle(
-        work_array['exp_array_p'][: self_["nint"]], self_["radius"]
+        work_array['exp_array_p'][: self_["nint"]], self_["radius"], self_["center"]
     )
     dpsi_corr = np.zeros(self_["nint"] - 1, dtype=float)
 
@@ -283,9 +283,119 @@ def find_branch_cuts(self_, fracture_struc_array, element_struc_array, work_arra
                     dpsi_corr[ii] -= e["q"]
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["id_"]
-                    work_array["sign_array"][cnt] = -1
+                    if self_["type_"] != 1:  # If not bounding circle
+                        if np.imag(chi0) < np.imag(chi1):
+                            work_array["sign_array"][cnt] = 1
+                        else:
+                            work_array["sign_array"][cnt] = -1
+                    else:  # If bounding circle
+                        work_array["sign_array"][cnt] = -1
                     work_array["len_discharge_element"] += 1
                     cnt += 1
+
+
+@nb.njit()
+def find_branch_cuts(self_, z_pos, fracture_struc_array, element_struc_array, work_array):
+    """
+    Find the branch cuts for the fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    z_pos : np.ndarray[np.complex128]
+        The positions in the complex plane
+    fracture_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+    work_array : np.ndarray[dtype_work]
+        The work array
+
+    Returns
+    -------
+    dpsi_corr : np.ndarray[np.float64]
+        The correction to the potential due to the branch cuts
+    """
+    # Find the branch cuts
+    dpsi_corr = np.zeros(self_["nint"] - 1, dtype=float)
+
+    nel = fracture_struc_array[self_["frac0"]]["nelements"]
+    elements_list = fracture_struc_array[self_["frac0"]]["elements"][:nel]
+    elements = element_struc_array[elements_list]
+    work_array["len_discharge_element"] = 0
+
+    cnt = 0
+    for ii in range(self_["nint"] - 1):
+        for e in elements:
+            if e["type_"] == 0:  # Intersection
+                if e["frac0"] == self_["frac0"]:
+                    chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
+                    chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
+                    ln0 = np.imag(np.log(chi0))
+                    ln1 = np.imag(np.log(chi1))
+                    if (
+                        np.sign(ln0) != np.sign(ln1)
+                        and np.abs(ln0) + np.abs(ln1) > np.pi
+                    ):
+                        dpsi_corr[ii] -= e["q"]
+                        work_array["element_pos"][cnt] = ii
+                        work_array["discharge_element"][cnt] = e["id_"]
+                        get_sign(self_, work_array, cnt, chi0, chi1, -1)
+                        work_array["len_discharge_element"] += 1
+                        cnt += 1
+                else:
+                    chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints1"])
+                    chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints1"])
+                    ln0 = np.imag(np.log(chi0))
+                    ln1 = np.imag(np.log(chi1))
+                    if (
+                        np.sign(ln0) != np.sign(ln1)
+                        and np.abs(ln0) + np.abs(ln1) > np.pi
+                    ):
+                        dpsi_corr[ii] += e["q"]
+                        work_array["element_pos"][cnt] = ii
+                        work_array["discharge_element"][cnt] = e["id_"]
+                        get_sign(self_, work_array, cnt, chi0, chi1, 1)
+                        work_array["len_discharge_element"] += 1
+                        cnt += 1
+            elif e["type_"] == 2:  # Well
+                chi0 = gf.map_z_circle_to_chi(z_pos[ii], e["radius"], e["center"])
+                chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e["radius"], e["center"])
+                if (
+                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
+                    and np.real(chi0) < 0
+                ):
+                    dpsi_corr[ii] -= e["q"]
+                    work_array["element_pos"][cnt] = ii
+                    work_array["discharge_element"][cnt] = e["id_"]
+                    get_sign(self_, work_array, cnt, chi0, chi1, -1)
+                    work_array["len_discharge_element"] += 1
+                    cnt += 1
+            elif e["type_"] == 3:  # Constant head line
+                chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
+                chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
+                if (
+                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
+                    and np.real(chi0) < 0
+                ):
+                    dpsi_corr[ii] -= e["q"]
+                    work_array["element_pos"][cnt] = ii
+                    work_array["discharge_element"][cnt] = e["id_"]
+                    get_sign(self_, work_array, cnt, chi0, chi1, -1)
+                    work_array["len_discharge_element"] += 1
+                    cnt += 1
+
+
+@nb.njit(inline="always")
+def get_sign(self_, work_array, cnt, chi0, chi1, sign_default):
+    if self_["type_"] != 1:  # If not bounding circle
+        if np.imag(chi0) < np.imag(chi1):
+            work_array["sign_array"][cnt] = -1 * sign_default
+        else:
+            work_array["sign_array"][cnt] = sign_default
+    else:  # If bounding circle
+        work_array["sign_array"][cnt] = sign_default
 
 
 @nb.njit()
@@ -310,7 +420,15 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
         Edits the self_ array in place.
     """
     if work_array["len_discharge_element"] == 0:
-        find_branch_cuts(self_, fracture_struc_array, element_struc_array, work_array)
+        if self_["type_"] in [1, 4]:  # If bounding circle or impermeable circle
+            z_pos = gf.map_chi_to_z_circle(
+                work_array['exp_array_p'][: self_["nint"]], self_["radius"], self_["center"]
+            )
+        elif self_["type_"] == 5: # If impermeable line
+            z_pos = gf.map_chi_to_z_line(
+                work_array['exp_array_p'][: self_["nint"]], self_["endpoints0"]
+            )
+        find_branch_cuts(self_, z_pos, fracture_struc_array, element_struc_array, work_array)
     # set dpsi_corr to zero
     self_["dpsi_corr"][: self_["nint"] - 1] = 0.0
     for i in range(work_array["len_discharge_element"]):
@@ -320,18 +438,10 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
         )
 
 
+
 @nb.njit()
-def cauchy_integral_imag_circle(
-    n,
-    m,
-    thetas,
-    frac0,
-    element_id_,
-    element_struc_array,
-    radius,
-    center,
-    work_array,
-    coef,
+def cauchy_integral_domega_line(
+    n, m, dpsi_corr, frac0, element_id_, element_struc_array, endpoints0, work_array, coef
 ):
     """
     FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
@@ -342,64 +452,8 @@ def cauchy_integral_imag_circle(
         Number of integration points
     m : int
         Number of coefficients
-    thetas : np.ndarray
-        Array with thetas along the unit circle
-    frac0 : np.ndarray
-        The fracture
-    element_id_ : int
-        The element id
-    element_struc_array : np.ndarray[element_dtype]
-        Array of elements
-    radius : np.float64
-        The radius of the circle
-    center : np.ndarray[np.complex128]
-        The center of the circle
-    work_array : np.ndarray[work_array_dtype]
-        The work array
-    coef : np.ndarray[np.complex128]
-        The coefficients that will be filled
-
-    Return
-    ------
-    coef : np.ndarray
-        Array of coefficients
-    """
-    for ii in range(n):
-        # chi = np.exp(1j * thetas[ii])
-        chi = work_array["exp_array_p"][ii]
-        z = gf.map_chi_to_z_circle(chi, radius, center)
-        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
-        work_array["phi"][ii] = np.imag(omega)
-
-    for jj in range(m):
-        res_tmp = 0.0 + 0.0j
-        for ii in range(n):
-            exp_val = 1.0 + 0.0j
-            for _ in range(jj):
-                exp_val *= work_array["exp_array_m"][ii]
-            res_tmp += work_array["phi"][ii] * exp_val
-        work_array["integral"][jj] = res_tmp
-
-    for ii in range(m):
-        coef[ii] = 2j * work_array["integral"][ii] / n
-    coef[0] = coef[0] / 2
-
-
-@nb.njit()
-def cauchy_integral_imag_line(
-    n, m, thetas, frac0, element_id_, element_struc_array, endpoints0, work_array, coef
-):
-    """
-    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
-
-    Parameters
-    ----------
-    n : int
-        Number of integration points
-    m : int
-        Number of coefficients
-    thetas : np.ndarray
-        Array with thetas along the unit circle
+    dpsi_corr : np.ndarray[np.complex128]
+        Correction for the stream function
     frac0 : np.ndarray
         The fracture
     element_id_ : int
@@ -419,11 +473,20 @@ def cauchy_integral_imag_line(
         Array of coefficients
     """
     for ii in range(n):
-        # chi = np.exp(1j * thetas[ii])
         chi = work_array["exp_array_p"][ii]
         z = gf.map_chi_to_z_line(chi, endpoints0)
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
-        work_array["phi"][ii] = np.imag(omega)
+        work_array["psi"][ii] = np.imag(omega)
+    delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
+    work_array["dpsi"][1:n] = delta_psi - dpsi_corr
+    # set integral to zero
+    work_array["integral"][:] = 0.0
+
+    psi0 = work_array["psi"][0]
+    for ii in range(n):
+        psi1 = psi0 + work_array["dpsi"][ii]
+        work_array["psi"][ii] = psi1
+        psi0 = psi1
 
     for jj in range(m):
         res_tmp = 0.0 + 0.0j
@@ -431,8 +494,24 @@ def cauchy_integral_imag_line(
             exp_val = 1.0 + 0.0j
             for _ in range(jj):
                 exp_val *= work_array["exp_array_m"][ii]
-            res_tmp += work_array["phi"][ii] * exp_val
+            res_tmp += work_array["psi"][ii] * exp_val
         work_array["integral"][jj] = res_tmp
+
+    #for ii in range(n):
+    #    # chi = np.exp(1j * thetas[ii])
+    #    chi = work_array["exp_array_p"][ii]
+    #    z = gf.map_chi_to_z_line(chi, endpoints0)
+    #    omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
+    #    work_array["phi"][ii] = np.imag(omega)
+
+    #for jj in range(m):
+    #    res_tmp = 0.0 + 0.0j
+    #    for ii in range(n):
+    #        exp_val = 1.0 + 0.0j
+    #        for _ in range(jj):
+    #            exp_val *= work_array["exp_array_m"][ii]
+    #        res_tmp += work_array["phi"][ii] * exp_val
+    #    work_array["integral"][jj] = res_tmp
 
     for ii in range(m):
         coef[ii] = 2j * work_array["integral"][ii] / n
@@ -443,12 +522,12 @@ def cauchy_integral_imag_line(
 def cauchy_integral_domega(
     n,
     m,
-    thetas,
     dpsi_corr,
     frac0,
     element_id_,
     element_struc_array,
     radius,
+    center,
     work_array,
     coef,
 ):
@@ -461,8 +540,6 @@ def cauchy_integral_domega(
         Number of integration points
     m : np.int64
         Number of coefficients
-    thetas : np.ndarray[np.float64]
-        Array with thetas along the unit circle
     dpsi_corr : np.ndarray[np.complex128]
         Correction for the stream function
     frac0 : np.ndarray[fracture_dtype]
@@ -473,6 +550,8 @@ def cauchy_integral_domega(
         Array of elements
     radius : np.float64
         The radius of the bounding circle
+    center : np.complex128
+        The center of the bounding circle
     work_array : np.ndarray[work_array_dtype]
         The work array
     coef : np.ndarray[np.complex128]
@@ -484,9 +563,8 @@ def cauchy_integral_domega(
         Array of coefficients
     """
     for ii in range(n):
-        # chi = np.exp(1j * thetas[ii])
         chi = work_array["exp_array_p"][ii]
-        z = gf.map_chi_to_z_circle(chi, radius)
+        z = gf.map_chi_to_z_circle(chi, radius, center)
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["psi"][ii] = np.imag(omega)
     delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]

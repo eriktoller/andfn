@@ -120,12 +120,12 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     mf.cauchy_integral_domega(
         self_["nint"],
         self_["ncoef"],
-        self_["thetas"][: self_["nint"]],
         self_["dpsi_corr"][: self_["nint"] - 1],
         frac0,
         self_["id_"],
         element_struc_array,
         self_["radius"],
+        self_["center"],
         work_array,
         work_array["coef"][: self_["ncoef"]],
     )

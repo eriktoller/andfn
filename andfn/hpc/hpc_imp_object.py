@@ -35,12 +35,13 @@ def solve_circle(self_, fracture_struc_array, element_struc_array, work_array):
     None
         Edits the self_ array and works_array in place.
     """
+    mf.get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array)
     frac0 = fracture_struc_array[self_["frac0"]]
     work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
-    mf.cauchy_integral_imag_circle(
+    mf.cauchy_integral_domega(
         self_["nint"],
         self_["ncoef"],
-        self_["thetas"][: self_["nint"]],
+        self_["dpsi_corr"][: self_["nint"] - 1],
         frac0,
         self_["id_"],
         element_struc_array,
@@ -109,12 +110,13 @@ def solve_line(self_, fracture_struc_array, element_struc_array, work_array):
     None
         Edits the self_ array and works_array in place.
     """
+    mf.get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array)
     frac0 = fracture_struc_array[self_["frac0"]]
     work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
-    mf.cauchy_integral_imag_line(
+    mf.cauchy_integral_domega_line(
         self_["nint"],
         self_["ncoef"],
-        self_["thetas"][: self_["nint"]],
+        self_["dpsi_corr"][: self_["nint"] - 1],
         frac0,
         self_["id_"],
         element_struc_array,
@@ -122,6 +124,19 @@ def solve_line(self_, fracture_struc_array, element_struc_array, work_array):
         work_array,
         work_array["coef"][: self_["ncoef"]],
     )
+    #frac0 = fracture_struc_array[self_["frac0"]]
+    #work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    #mf.cauchy_integral_imag_line(
+    #    self_["nint"],
+    #    self_["ncoef"],
+    #    self_["thetas"][: self_["nint"]],
+    #    frac0,
+    #    self_["id_"],
+    #    element_struc_array,
+    #    self_["endpoints0"],
+    #    work_array,
+    #    work_array["coef"][: self_["ncoef"]],
+    #)
 
     for i in range(self_["ncoef"]):
         work_array["coef"][i] = -np.imag(work_array["coef"][i]) * 1j

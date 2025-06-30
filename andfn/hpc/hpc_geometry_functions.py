@@ -78,13 +78,13 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
 
 @nb.njit(inline="always")
-def map_chi_to_z_circle(chi, r, center=0.0):
+def map_chi_to_z_circle(chi, r, center=0.0 ):
     """
     Function that maps the unit circle in the complex chi-plane to a circle in the complex z-plane.
 
     Parameters
     ----------
-    chi : complex
+    chi : np.complex128
         A point in the complex chi-plane
     r : float
         Radius of the circle
@@ -93,7 +93,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
 
     Return
     ------
-    z : complex
+    z : np.complex128
         The corresponding point in the complex z-plane
     """
     return chi * r + center
