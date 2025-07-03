@@ -124,9 +124,9 @@ def solve_line(self_, fracture_struc_array, element_struc_array, work_array):
         work_array,
         work_array["coef"][: self_["ncoef"]],
     )
-    #frac0 = fracture_struc_array[self_["frac0"]]
-    #work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
-    #mf.cauchy_integral_imag_line(
+    # frac0 = fracture_struc_array[self_["frac0"]]
+    # work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    # mf.cauchy_integral_imag_line(
     #    self_["nint"],
     #    self_["ncoef"],
     #    self_["thetas"][: self_["nint"]],
@@ -136,7 +136,7 @@ def solve_line(self_, fracture_struc_array, element_struc_array, work_array):
     #    self_["endpoints0"],
     #    work_array,
     #    work_array["coef"][: self_["ncoef"]],
-    #)
+    # )
 
     for i in range(self_["ncoef"]):
         work_array["coef"][i] = -np.imag(work_array["coef"][i]) * 1j

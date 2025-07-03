@@ -78,7 +78,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
 
 @nb.njit(inline="always")
-def map_chi_to_z_circle(chi, r, center=0.0 ):
+def map_chi_to_z_circle(chi, r, center=0.0):
     """
     Function that maps the unit circle in the complex chi-plane to a circle in the complex z-plane.
 

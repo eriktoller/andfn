@@ -10,6 +10,7 @@ import math
 
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
+from andfn.hpc import CACHE
 
 
 @nb.njit(inline="always")
@@ -195,107 +196,9 @@ def cauchy_integral_real(
 
 
 @nb.njit()
-def find_branch_cuts(self_, fracture_struc_array, element_struc_array, work_array):
-    """
-    Find the branch cuts for the fracture.
-
-    Parameters
-    ----------
-    self_ : np.ndarray[element_dtype]
-        The bounding circle element
-    fracture_struc_array : np.ndarray[fracture_dtype]
-        The array of fractures
-    element_struc_array : np.ndarray[element_dtype]
-        The array of elements
-    work_array : np.ndarray[dtype_work]
-        The work array
-
-    Returns
-    -------
-    dpsi_corr : np.ndarray[np.float64]
-        The correction to the potential due to the branch cuts
-    """
-    # Find the branch cuts
-    z_pos = gf.map_chi_to_z_circle(
-        work_array['exp_array_p'][: self_["nint"]], self_["radius"], self_["center"]
-    )
-    dpsi_corr = np.zeros(self_["nint"] - 1, dtype=float)
-
-    nel = fracture_struc_array[self_["frac0"]]["nelements"]
-    elements_list = fracture_struc_array[self_["frac0"]]["elements"][:nel]
-    elements = element_struc_array[elements_list]
-    work_array["len_discharge_element"] = 0
-
-    cnt = 0
-    for ii in range(self_["nint"] - 1):
-        for e in elements:
-            if e["type_"] == 0:  # Intersection
-                if e["frac0"] == self_["frac0"]:
-                    chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
-                    chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
-                    ln0 = np.imag(np.log(chi0))
-                    ln1 = np.imag(np.log(chi1))
-                    if (
-                        np.sign(ln0) != np.sign(ln1)
-                        and np.abs(ln0) + np.abs(ln1) > np.pi
-                    ):
-                        dpsi_corr[ii] -= e["q"]
-                        work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["id_"]
-                        work_array["sign_array"][cnt] = -1
-                        work_array["len_discharge_element"] += 1
-                        cnt += 1
-                else:
-                    chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints1"])
-                    chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints1"])
-                    ln0 = np.imag(np.log(chi0))
-                    ln1 = np.imag(np.log(chi1))
-                    if (
-                        np.sign(ln0) != np.sign(ln1)
-                        and np.abs(ln0) + np.abs(ln1) > np.pi
-                    ):
-                        dpsi_corr[ii] += e["q"]
-                        work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["id_"]
-                        work_array["sign_array"][cnt] = 1
-                        work_array["len_discharge_element"] += 1
-                        cnt += 1
-            elif e["type_"] == 2:  # Well
-                chi0 = gf.map_z_circle_to_chi(z_pos[ii], e["radius"], e["center"])
-                chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e["radius"], e["center"])
-                if (
-                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
-                    and np.real(chi0) < 0
-                ):
-                    dpsi_corr[ii] -= e["q"]
-                    work_array["element_pos"][cnt] = ii
-                    work_array["discharge_element"][cnt] = e["id_"]
-                    work_array["sign_array"][cnt] = -1
-                    work_array["len_discharge_element"] += 1
-                    cnt += 1
-            elif e["type_"] == 3:  # Constant head line
-                chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
-                chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
-                if (
-                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
-                    and np.real(chi0) < 0
-                ):
-                    dpsi_corr[ii] -= e["q"]
-                    work_array["element_pos"][cnt] = ii
-                    work_array["discharge_element"][cnt] = e["id_"]
-                    if self_["type_"] != 1:  # If not bounding circle
-                        if np.imag(chi0) < np.imag(chi1):
-                            work_array["sign_array"][cnt] = 1
-                        else:
-                            work_array["sign_array"][cnt] = -1
-                    else:  # If bounding circle
-                        work_array["sign_array"][cnt] = -1
-                    work_array["len_discharge_element"] += 1
-                    cnt += 1
-
-
-@nb.njit()
-def find_branch_cuts(self_, z_pos, fracture_struc_array, element_struc_array, work_array):
+def find_branch_cuts(
+    self_, z_pos, fracture_struc_array, element_struc_array, work_array
+):
     """
     Find the branch cuts for the fracture.
 
@@ -422,13 +325,17 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
     if work_array["len_discharge_element"] == 0:
         if self_["type_"] in [1, 4]:  # If bounding circle or impermeable circle
             z_pos = gf.map_chi_to_z_circle(
-                work_array['exp_array_p'][: self_["nint"]], self_["radius"], self_["center"]
+                work_array["exp_array_p"][: self_["nint"]],
+                self_["radius"],
+                self_["center"],
             )
-        elif self_["type_"] == 5: # If impermeable line
+        elif self_["type_"] == 5:  # If impermeable line
             z_pos = gf.map_chi_to_z_line(
-                work_array['exp_array_p'][: self_["nint"]], self_["endpoints0"]
+                work_array["exp_array_p"][: self_["nint"]], self_["endpoints0"]
             )
-        find_branch_cuts(self_, z_pos, fracture_struc_array, element_struc_array, work_array)
+        find_branch_cuts(
+            self_, z_pos, fracture_struc_array, element_struc_array, work_array
+        )
     # set dpsi_corr to zero
     self_["dpsi_corr"][: self_["nint"] - 1] = 0.0
     for i in range(work_array["len_discharge_element"]):
@@ -438,10 +345,17 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
         )
 
 
-
 @nb.njit()
 def cauchy_integral_domega_line(
-    n, m, dpsi_corr, frac0, element_id_, element_struc_array, endpoints0, work_array, coef
+    n,
+    m,
+    dpsi_corr,
+    frac0,
+    element_id_,
+    element_struc_array,
+    endpoints0,
+    work_array,
+    coef,
 ):
     """
     FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
@@ -497,14 +411,14 @@ def cauchy_integral_domega_line(
             res_tmp += work_array["psi"][ii] * exp_val
         work_array["integral"][jj] = res_tmp
 
-    #for ii in range(n):
+    # for ii in range(n):
     #    # chi = np.exp(1j * thetas[ii])
     #    chi = work_array["exp_array_p"][ii]
     #    z = gf.map_chi_to_z_line(chi, endpoints0)
     #    omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
     #    work_array["phi"][ii] = np.imag(omega)
 
-    #for jj in range(m):
+    # for jj in range(m):
     #    res_tmp = 0.0 + 0.0j
     #    for ii in range(n):
     #        exp_val = 1.0 + 0.0j
@@ -647,7 +561,7 @@ def calc_thetas(n, type_, thetas):
         thetas[i] = start + i * del_theta
 
 
-@nb.njit(inline="always")
+@nb.njit(cache=CACHE)
 def fill_exp_array(n, thetas, exp_array, sign):
     """
     Function that fills the exp_array with the values of exp(-1j * thetas).

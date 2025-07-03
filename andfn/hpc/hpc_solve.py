@@ -3,6 +3,7 @@ Notes
 -----
 This module contains the HPC solve functions.
 """
+
 import logging
 import time
 
@@ -46,14 +47,15 @@ dtype_z_arrays = np.dtype(
     [("z0", complex, MAX_ELEMENTS), ("z1", complex, MAX_ELEMENTS)]
 )
 
-logger = logging.getLogger('andfn')
+logger = logging.getLogger("andfn")
+
 
 def solve(
     fracture_struc_array,
     element_struc_array,
     discharge_matrix,
     discharge_int,
-    constants
+    constants,
 ):
     """
     Solves the DFN.
@@ -137,7 +139,7 @@ def solve(
                 head_matrix,
                 discharges,
                 z_int,
-                lu_matrix
+                lu_matrix,
             )
             error_q = np.max(np.abs(discharges - discharges_old))
             error_q = np.mean(np.abs(discharges - discharges_old))
@@ -163,20 +165,15 @@ def solve(
 
         # print info
         if nit < 10:
-            logger.info(
-                f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}"
-            )
+            logger.info(f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}")
             logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
             )
         else:
-            logger.info(
-                f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}"
-            )
+            logger.info(f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}")
             logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
             )
-
 
         if cnt_bnd > 1:
             element_solver(
@@ -210,7 +207,7 @@ def solve(
     return element_struc_array
 
 
-@nb.njit()
+@nb.njit(cache=CACHE)
 def get_error(element_struc_array):
     """
     Get the maximum error from the elements and the element that it is associated with.
@@ -409,7 +406,7 @@ def element_solver2(
             if e["type_"] == 2:  # Well
                 continue
             coefs = e["coef"][: e["ncoef"]]
-            coef0 = np.max(np.abs(coefs[1:2]))
+            coef0 = np.max(np.abs(coefs[1:3]))
             coef1 = np.max(np.abs(coefs[-2:]))
             if coef0 == 0.0:
                 coef_ratio = 0.0
@@ -481,7 +478,7 @@ def solve_discharge_matrix(
     head_matrix,
     discharges,
     z_int,
-    lu_matrix
+    lu_matrix,
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -696,7 +693,7 @@ def get_bnd_error(
     z_int,
     nit,
     max_error,
-    constants
+    constants,
 ):
     """
     Builds the head matrix for the DFN and stores it.
@@ -907,7 +904,7 @@ def get_max_min_phi(
     return max_phi, min_phi, z_max, z_min, l_min, l_max
 
 
-@nb.njit()
+@nb.njit(cache=CACHE)
 def get_z_int_array(z_int, elements, discharge_int):
     # Add the head for each discharge element
     for j in range(elements.size):
