@@ -375,6 +375,23 @@ class Fracture:
                     w += e.calc_w(z)
         return w
 
+    def calc_head(self, z):
+        """
+        Calculates the head for the fracture at a point z in the complex plane.
+
+        Parameters
+        ----------
+        z : complex
+            A point in the complex z plane.
+
+        Returns
+        -------
+        head : float
+            The head for the fracture at the point z.
+        """
+        omega = self.calc_omega(z)
+        return self.head_from_phi(omega.real)
+
     def phi_from_head(self, head):
         """
         Calculates the head from the phi for the fracture.

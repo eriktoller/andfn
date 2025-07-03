@@ -255,6 +255,8 @@ class ConstantHeadLine(Element):
         """
         z = gf.line_line_intersection(z0, z1, self.endpoints0[0], self.endpoints0[1])
 
+        # TODO: implement this if np.abs(np.imag(chi1)) > atol and np.abs(np.imag(chi2)) > atol:
+
         if z is None:
             return False
 
