@@ -8,6 +8,7 @@ import numpy as np
 import pyvista as pv
 import andfn.geometry_functions as gf
 from andfn.const_head import ConstantHeadLine
+from . import BoundingCircle, Intersection
 from .impermeable_object import ImpermeableLine
 
 
@@ -118,30 +119,31 @@ class RegularPolygonPrism(Structure):
         x0_vec /= np.linalg.norm(x0_vec)  # Normalize the vector
 
         # Map the xy coordinates to the 3D space
-        vertices_start = np.real(z)[:, np.newaxis] * x2_vec + np.imag(z)[:, np.newaxis] * x0_vec + self.start
-        vertices_end = np.real(z)[:, np.newaxis] * x2_vec + np.imag(z)[:, np.newaxis] * x0_vec + self.end
+        vertices_start = (
+            np.real(z)[:, np.newaxis] * x2_vec
+            + np.imag(z)[:, np.newaxis] * x0_vec
+            + self.start
+        )
+        vertices_end = (
+            np.real(z)[:, np.newaxis] * x2_vec
+            + np.imag(z)[:, np.newaxis] * x0_vec
+            + self.end
+        )
         # Combine the start and end vertices
         self.vertices = np.vstack((vertices_start, vertices_end))
 
         # Get the faces
-        faces = [[self.n_sides] + list(range(self.n_sides)),                    # First face (start cap)
-                 [self.n_sides] + list(range(self.n_sides, 2 * self.n_sides))]  # Second face (end cap)
+        faces = [
+            [self.n_sides] + list(range(self.n_sides)),  # First face (start cap)
+            [self.n_sides] + list(range(self.n_sides, 2 * self.n_sides)),
+        ]  # Second face (end cap)
 
         # Side faces (quads)
         for i in range(self.n_sides):
             next_i = (i + 1) % self.n_sides
-            faces.append([
-                4,
-                i,
-                next_i,
-                self.n_sides + next_i,
-                self.n_sides + i
-            ])
+            faces.append([4, i, next_i, self.n_sides + next_i, self.n_sides + i])
 
         self.faces = np.hstack(faces)
-
-
-
 
     def plot(self, pl, opacity=0.5):
         """
@@ -156,7 +158,7 @@ class RegularPolygonPrism(Structure):
             np.array([self.start, self.end]),
             color="black",
             point_size=4,
-            render_points_as_spheres=True
+            render_points_as_spheres=True,
         )
         # Create a polygon for the first 4 vertices
         poly = pv.PolyData(self.vertices, self.faces)
@@ -168,9 +170,9 @@ class RegularPolygonPrism(Structure):
             show_vertices=True,
             edge_color="black",
             edge_opacity=1.0,
-            opacity=opacity
+            opacity=opacity,
         )
-    
+
     def possible_intersections(self, frac, pl):
         """
         Checks if the tunnel can possibly intersect with a given fracture.
@@ -228,15 +230,12 @@ class RegularPolygonPrism(Structure):
                     self.vertices[i],
                     self.vertices[i + self.n_sides],
                     frac.center,
-                    frac.normal
+                    frac.normal,
                 )
                 if pnt is not None:
                     pnts.append(pnt)
                 pnt = self.line_plane_intersection(
-                    self.vertices[i],
-                    self.vertices[i + 1],
-                    frac.center,
-                    frac.normal
+                    self.vertices[i], self.vertices[i + 1], frac.center, frac.normal
                 )
                 if pnt is not None:
                     pnts.append(pnt)
@@ -244,7 +243,7 @@ class RegularPolygonPrism(Structure):
                     self.vertices[self.n_sides + i],
                     self.vertices[self.n_sides + i + 1],
                     frac.center,
-                    frac.normal
+                    frac.normal,
                 )
                 if pnt is not None:
                     pnts.append(pnt)
@@ -252,7 +251,7 @@ class RegularPolygonPrism(Structure):
                 self.vertices[self.n_sides - 1],
                 self.vertices[self.n_sides + self.n_sides - 1],
                 frac.center,
-                frac.normal
+                frac.normal,
             )
             if pnt is not None:
                 pnts.append(pnt)
@@ -260,7 +259,7 @@ class RegularPolygonPrism(Structure):
                 self.vertices[0],
                 self.vertices[self.n_sides - 1],
                 frac.center,
-                frac.normal
+                frac.normal,
             )
             if pnt is not None:
                 pnts.append(pnt)
@@ -268,10 +267,14 @@ class RegularPolygonPrism(Structure):
                 self.vertices[self.n_sides],
                 self.vertices[self.n_sides * 2 - 1],
                 frac.center,
-                frac.normal
+                frac.normal,
             )
             if pnt is not None:
                 pnts.append(pnt)
+
+            if len(pnts) == 0:
+                # No intersection points found
+                continue
 
             int_pnts = []
             for i in range(len(pnts) - 1):
@@ -281,11 +284,17 @@ class RegularPolygonPrism(Structure):
                 z3, z4 = gf.line_circle_intersection(z1, z2, frac.radius)
                 if z3 is not None:
                     # Check is z3 or z4 is between z1 and z2
-                    if np.all(np.abs(np.abs(z3 - z1) + np.abs(z3 - z2) - np.abs(z2 - z1)) < 1e-10):
+                    if np.all(
+                        np.abs(np.abs(z3 - z1) + np.abs(z3 - z2) - np.abs(z2 - z1))
+                        < 1e-10
+                    ):
                         # map the intersection point back to 3d
                         pnt3 = gf.map_2d_to_3d(z3, frac)
                         int_pnts.append(pnt3)
-                    if np.all(np.abs(np.abs(z4 - z1) + np.abs(z4 - z2) - np.abs(z2 - z1)) < 1e-10):
+                    if np.all(
+                        np.abs(np.abs(z4 - z1) + np.abs(z4 - z2) - np.abs(z2 - z1))
+                        < 1e-10
+                    ):
                         # map the intersection point back to 3d
                         pnt4 = gf.map_2d_to_3d(z4, frac)
                         int_pnts.append(pnt4)
@@ -295,11 +304,15 @@ class RegularPolygonPrism(Structure):
             z3, z4 = gf.line_circle_intersection(z1, z2, frac.radius)
             if z3 is not None:
                 # Check is z3 or z4 is between z1 and z2
-                if np.all(np.abs(np.abs(z3 - z1) + np.abs(z3 - z2) - np.abs(z2 - z1)) < 1e-10):
+                if np.all(
+                    np.abs(np.abs(z3 - z1) + np.abs(z3 - z2) - np.abs(z2 - z1)) < 1e-10
+                ):
                     # map the intersection point back to 3d
                     pnt3 = gf.map_2d_to_3d(z3, frac)
                     int_pnts.append(pnt3)
-                if np.all(np.abs(np.abs(z4 - z1) + np.abs(z4 - z2) - np.abs(z2 - z1)) < 1e-10):
+                if np.all(
+                    np.abs(np.abs(z4 - z1) + np.abs(z4 - z2) - np.abs(z2 - z1)) < 1e-10
+                ):
                     # map the intersection point back to 3d
                     pnt4 = gf.map_2d_to_3d(z4, frac)
                     int_pnts.append(pnt4)
@@ -321,18 +334,20 @@ class RegularPolygonPrism(Structure):
                     np.array(pnts),
                     color="red",
                     point_size=4,
-                    render_points_as_spheres=True
+                    render_points_as_spheres=True,
                 )
                 if len(pnts_inside) > 0:
                     pl.add_points(
                         np.array(pnts_inside),
                         color="green",
                         point_size=4,
-                        render_points_as_spheres=True
+                        render_points_as_spheres=True,
                     )
 
             # Create constant head elements for the tunnel in this fracture
             self.assign_elements(frac, pnts_inside, pnts)
+            # Check if there are any other elements in the fracture that are inside the tunnel
+            self.check_internal_elements(frac)
 
     def assign_elements(self, frac, pnts_inside, pnts):
         """
@@ -391,11 +406,67 @@ class RegularPolygonPrism(Structure):
             The intersection point if it exists, otherwise None.
         """
         line_direction = line_end - line_start
-        d = np.dot(plane_normal, (plane_point - line_start)) / np.dot(plane_normal, line_direction)
+        d = np.dot(plane_normal, (plane_point - line_start)) / np.dot(
+            plane_normal, line_direction
+        )
 
         if 0 <= d <= 1:
             return line_start + d * line_direction
         return None
+
+    def check_internal_elements(self, frac, atol=1e-1):
+        """
+        Checks if the tunnel intersects with a given fracture.
+
+        Parameters
+        ----------
+        frac : andfn.fracture.Fracture
+            The fracture to check for intersections with the tunnel.
+
+        Returns
+        -------
+        bool
+            True if the tunnel intersects with the fracture, False otherwise.
+        """
+        # Check if the elements are crossing any intersection elements
+        elem_prism = self.elements
+        elem_frac = frac.elements
+
+        line_line_intersection = gf.line_line_intersection
+
+        for elem1 in elem_prism:
+            if elem1.frac0 != frac:
+                continue
+            for elem2 in elem_frac:
+                if isinstance(elem2, BoundingCircle):
+                    continue
+                endpoints2 = elem2.endpoints0
+                if isinstance(elem2, Intersection):
+                    if frac == elem2.frac1:
+                        endpoints2 = elem2.endpoints1
+                # Check if the two elements are crossing each other
+                z = line_line_intersection(
+                    elem1.endpoints0[0],
+                    elem1.endpoints0[1],
+                    endpoints2[0],
+                    endpoints2[1],
+                )
+                if z:
+                    # If there is an intersection point, the tunnel intersects with the fracture
+                    chi1 = gf.map_z_line_to_chi(z, elem1.endpoints0)
+                    chi2 = gf.map_z_line_to_chi(z, endpoints2)
+                    if np.abs(np.imag(chi1)) > atol and np.abs(np.imag(chi2)) > atol:
+                        chi = gf.map_z_line_to_chi(endpoints2[0], elem1.endpoints0)
+                        if frac == elem2.frac0:
+                            if np.imag(chi) < 0:
+                                elem2.endpoints0[0] = z
+                            else:
+                                elem2.endpoints0[1] = z
+                        else:
+                            if np.imag(chi) < 0:
+                                elem2.endpoints1[0] = z
+                            else:
+                                elem2.endpoints1[1] = z
 
 
 class ConstantHeadPrism(RegularPolygonPrism):
@@ -446,7 +517,7 @@ class ConstantHeadPrism(RegularPolygonPrism):
                 f"tunnel_{self.label}_frac_{frac.label}_{j}",
                 np.array([z0, z1]),
                 self.head,
-                frac
+                frac,
             )
             self.elements.append(ch)
         if len(pnts_inside) == len(pnts):
@@ -456,10 +527,11 @@ class ConstantHeadPrism(RegularPolygonPrism):
                 f"tunnel_{self.label}_frac_{frac.label}_{len(pnts_inside)}",
                 np.array([z0, z1]),
                 self.head,
-                frac
+                frac,
             )
             self.elements.append(ch)
         self.fracs.append(frac)
+
 
 class ImpermeablePrims(RegularPolygonPrism):
     """
@@ -505,9 +577,7 @@ class ImpermeablePrims(RegularPolygonPrism):
             z0 = gf.map_3d_to_2d(pnts_inside[j], frac)
             z1 = gf.map_3d_to_2d(pnts_inside[j + 1], frac)
             ch = ImpermeableLine(
-                f"tunnel_{self.label}_frac_{frac.label}_{j}",
-                np.array([z0, z1]),
-                frac
+                f"tunnel_{self.label}_frac_{frac.label}_{j}", np.array([z0, z1]), frac
             )
             self.elements.append(ch)
         if len(pnts_inside) == len(pnts):
@@ -516,7 +586,7 @@ class ImpermeablePrims(RegularPolygonPrism):
             ch = ImpermeableLine(
                 f"tunnel_{self.label}_frac_{frac.label}_{len(pnts_inside)}",
                 np.array([z0, z1]),
-                frac
+                frac,
             )
             self.elements.append(ch)
         self.fracs.append(frac)
