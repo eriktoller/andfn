@@ -459,7 +459,7 @@ def element_solver2(
                         e, fracture_struc_array, element_struc_array, work_array[i]
                     )
                 coefs = work_array[i]["coef"][: e["ncoef"]]
-                coef0 = np.max(np.abs(coefs[1:2]))
+                coef0 = np.max(np.abs(coefs[1:3]))
                 coef1 = np.max(np.abs(coefs[-2:]))
                 coef_ratio = coef1 / coef0
 
