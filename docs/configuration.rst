@@ -1,9 +1,9 @@
-CONFIGURATION
+Configuration
 -------------
 
 It is possible to configure the behaviour of the ``andfn`` package by setting environment variables using the ``.andfn_config.yaml`` file. The following environment variables are available:
 
-CONSTANTS
+Constants
 ---------
 ``RHO: (float)``
 
@@ -54,7 +54,7 @@ Default number of integration points for a single element. Default is 10.
 The number of threads to use for parallel processing. If set to -1, it will use all available threads.
 
 
-LOGGING
+Logging
 -------
 ``LOG_LEVEL:``
 
@@ -63,3 +63,38 @@ This sets the logging level for the `andfn` package. Possible values are DEBUG, 
 ``LOG_FILE:``
 
 This sets the file where logs will be written. If not set, logs will be written to the console.
+
+Example Configuration File
+```yaml
+    # CONSTANTS
+
+    RHO: 1000
+
+    G: 9.81
+
+    SE_FACTOR: 1.0
+
+    MAX_ITERATIONS: 50
+
+    MAX_ERROR: 1e-6
+
+    MAX_COEF: 150
+
+    COEF_INCREASE: 5
+
+    COEF_RATIO: 0.05
+
+    MAX_ELEMENTS: 150
+
+    NCOEF: 5
+
+    NINT: 10
+
+    NUM_THREADS: -1
+
+    # LOGGING
+
+    LOG_LEVEL: INFO
+
+    LOG_FILE: andfn.log
+```
