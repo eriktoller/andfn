@@ -1,0 +1,880 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>andfn.fracture &#8212; AnDFN</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=a1637f0b"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/andfn/fracture';</script>
+    <link rel="author" title="About these documents" href="../../about.html" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">AnDFN</p>
+  
+</a></div>
+        <div class="sidebar-primary-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/eriktoller/andfn" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" class="icon-link-image" alt="GitHub"/></a>
+        </li>
+</ul></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide.html">User Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../apidocs.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../dfn.html">DFN</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="../../fracture.html">Fracture</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../elements.html">Elements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../bounding.html">Bounding elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../const_head.html">Constant head elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../impermeable_objects.html">Impermeable objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../intersection.html">Intersection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../well.html">Well</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../math_geometry.html">Mathematical and geometrical functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../hpc.html">HPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../configuration.html">CONFIGURATION</a></li>
+
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples_page.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../template.html">Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../large_dfn.html">A large DFN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../particle_tracking.html">Particle tracking</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../about.html">About</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../release_notes.html">Release notes</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for andfn.fracture</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Notes</span>
+<span class="sd">-----</span>
+<span class="sd">This module contains the fracture class.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">andfn.intersection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Intersection</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">andfn.const_head</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConstantHeadLine</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">andfn.well</span><span class="w"> </span><span class="kn">import</span> <span class="n">Well</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">andfn.bounding</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.element</span><span class="w"> </span><span class="kn">import</span> <span class="n">fracture_dtype</span><span class="p">,</span> <span class="n">fracture_dtype_hpc</span><span class="p">,</span> <span class="n">fracture_index_dtype</span>
+
+
+<div class="viewcode-block" id="Fracture">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Fracture</span><span class="p">:</span>
+<div class="viewcode-block" id="Fracture.__init__">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">label</span><span class="p">,</span>
+        <span class="n">t</span><span class="p">,</span>
+        <span class="n">radius</span><span class="p">,</span>
+        <span class="n">center</span><span class="p">,</span>
+        <span class="n">normal</span><span class="p">,</span>
+        <span class="n">aperture</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+        <span class="n">ncoef</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">nint</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">elements</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the fracture class.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        label : str</span>
+<span class="sd">            The label of the fracture.</span>
+<span class="sd">        t : float</span>
+<span class="sd">            The transmissivity of the fracture.</span>
+<span class="sd">        radius : float</span>
+<span class="sd">            The radius of the fracture.</span>
+<span class="sd">        center : np.ndarray</span>
+<span class="sd">            The center of the fracture.</span>
+<span class="sd">        normal : np.ndarray</span>
+<span class="sd">            The normal vector of the fracture.</span>
+<span class="sd">        ncoef : int</span>
+<span class="sd">            The number of coefficients for the bounding circle that bounds the fracture.</span>
+<span class="sd">        nint : int</span>
+<span class="sd">            The number of integration points for the bounding circle that bounds the fracture.</span>
+<span class="sd">        elements : list</span>
+<span class="sd">            A list of elements that the fracture is associated with. If elements is None the bounding circle will be</span>
+<span class="sd">            created.</span>
+<span class="sd">        kwargs : dict</span>
+<span class="sd">            Additional keyword arguments.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">t</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span> <span class="o">=</span> <span class="n">aperture</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">=</span> <span class="n">center</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normal</span> <span class="o">=</span> <span class="n">normal</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">normal</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span> <span class="n">normal</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span> <span class="n">normal</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_vector</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_vector</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">elements</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elements</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="n">elements</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elements</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">andfn</span><span class="o">.</span><span class="n">bounding</span><span class="o">.</span><span class="n">BoundingCircle</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="n">ncoef</span><span class="p">,</span> <span class="n">nint</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="c1"># Set the kwargs</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Fracture.__str__">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.__str__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the string representation of the fracture.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            The string representation of the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Fracture </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="Fracture.set_id">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.set_id">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the id for the fracture.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        id_ : int</span>
+<span class="sd">            The id for the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_</span> <span class="o">=</span> <span class="n">id_</span></div>
+
+
+<div class="viewcode-block" id="Fracture.consolidate">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.consolidate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Consolidates the fracture into a structured array.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        fracture_struc_array : np.ndarray</span>
+<span class="sd">            The structured array for the fracture.</span>
+<span class="sd">        fracture_index_array : np.ndarray</span>
+<span class="sd">            The structured array for the fracture index.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fracture_struc_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">fracture_dtype</span><span class="p">)</span>
+
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;radius&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;normal&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normal</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;x_vector&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;y_vector&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_vector</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;elements&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">e</span><span class="o">.</span><span class="n">id_</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">])</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;constant&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant</span>
+
+        <span class="n">fracture_index_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">fracture_index_dtype</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">fracture_index_array</span></div>
+
+
+<div class="viewcode-block" id="Fracture.consolidate_hpc">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.consolidate_hpc">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">consolidate_hpc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Consolidates the fracture into a structured array for HPC.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        fracture_struc_array : np.ndarray</span>
+<span class="sd">            The structured array for the fracture.</span>
+<span class="sd">        fracture_index_array : np.ndarray</span>
+<span class="sd">            The structured array for the fracture index.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fracture_struc_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">fracture_dtype_hpc</span><span class="p">)</span>
+
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;radius&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;normal&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normal</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;x_vector&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;y_vector&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_vector</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">e</span><span class="o">.</span><span class="n">id_</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">])</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;elements&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][:</span> <span class="n">elements</span><span class="o">.</span><span class="n">size</span><span class="p">]</span> <span class="o">=</span> <span class="n">elements</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;nelements&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">elements</span><span class="o">.</span><span class="n">size</span>
+        <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;constant&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant</span>
+
+        <span class="n">fracture_index_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">fracture_index_dtype</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">fracture_index_array</span></div>
+
+
+<div class="viewcode-block" id="Fracture.unconsolidate">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.unconsolidate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">unconsolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">fracture_index_array</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Unconsolidates the fracture from the structured array.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fracture_struc_array : np.ndarray</span>
+<span class="sd">            The structured array for the fracture.</span>
+<span class="sd">        fracture_index_array : np.ndarray</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;radius&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normal</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;normal&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;x_vector&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_vector</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;y_vector&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elements</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">e</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elements</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">id_</span>
+            <span class="ow">in</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;elements&quot;</span><span class="p">][:</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;nelements&quot;</span><span class="p">]]</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;constant&quot;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">fracture_index_array</span><span class="p">[</span><span class="s2">&quot;label&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Fracture.unconsolidate_hpc">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.unconsolidate_hpc">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">unconsolidate_hpc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">fracture_index_array</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Unconsolidates the fracture from the structured array for HPC.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fracture_struc_array : np.ndarray</span>
+<span class="sd">            The structured array for the fracture.</span>
+<span class="sd">        fracture_index_array : np.ndarray</span>
+<span class="sd">            The structured array for the fracture index.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;radius&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normal</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;normal&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_vector</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;x_vector&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_vector</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;y_vector&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elements</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elements</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">id_</span> <span class="ow">in</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;elements&quot;</span><span class="p">]</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="s2">&quot;constant&quot;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">fracture_index_array</span><span class="p">[</span><span class="s2">&quot;label&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Fracture.add_element">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.add_element">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_element</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_element</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds a new element to the fracture.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        new_element : Element</span>
+<span class="sd">            The element to add to the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">new_element</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Element already in fracture.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Fracture.get_discharge_elements">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.get_discharge_elements">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_discharge_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the elements in the fracture that have a discharge.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            A list of elements in the fracture that have a discharge.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">e</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elements</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">Intersection</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">ConstantHeadLine</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">Well</span><span class="p">)</span>
+        <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Fracture.get_discharge_entries">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.get_discharge_entries">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_discharge_entries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the elements in the fracture that have a discharge.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int</span>
+<span class="sd">            The number of discharge entries required in the discharge matrix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">el</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_discharge_elements</span><span class="p">()</span>
+        <span class="n">len_el</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">el</span><span class="p">)</span>
+        <span class="n">cnt</span> <span class="o">=</span> <span class="p">(</span><span class="n">len_el</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">len_el</span> <span class="o">+</span> <span class="n">len_el</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">el</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">Intersection</span><span class="p">):</span>
+                <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">cnt</span></div>
+
+
+<div class="viewcode-block" id="Fracture.get_total_discharge">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.get_total_discharge">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_total_discharge</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the total discharge from absolute values in the fracture.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The total discharge in the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_discharge_elements</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">q</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="Fracture.check_discharge">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.check_discharge">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_discharge</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks so the discharge in the fracture adds up to zero.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The total discharge in the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_discharge_elements</span><span class="p">()</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">Intersection</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">frac1</span> <span class="o">==</span> <span class="bp">self</span><span class="p">:</span>
+                    <span class="n">q</span> <span class="o">-=</span> <span class="n">e</span><span class="o">.</span><span class="n">q</span>
+                    <span class="k">continue</span>
+            <span class="n">q</span> <span class="o">+=</span> <span class="n">e</span><span class="o">.</span><span class="n">q</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">q</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Fracture.get_max_min_head">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.get_max_min_head">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_max_min_head</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the maximum and minimum head from the constant head elements for the fracture.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        head : list</span>
+<span class="sd">            A list containing the maximum and minimum head for the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_discharge_elements</span><span class="p">()</span>
+        <span class="n">head</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">Well</span><span class="p">):</span>
+                <span class="n">head</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">head</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">ConstantHeadLine</span><span class="p">):</span>
+                <span class="n">head</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">head</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">head</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="n">head</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">head</span><span class="p">)]</span></div>
+
+
+<div class="viewcode-block" id="Fracture.set_new_label">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.set_new_label">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_new_label</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_label</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets a new label for the fracture.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        new_label : str</span>
+<span class="sd">            The new label for the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">new_label</span></div>
+
+
+<div class="viewcode-block" id="Fracture.calc_omega">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.calc_omega">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_omega</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the omega for the fracture excluding element &quot;exclude&quot;.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        z : complex | np.ndarray</span>
+<span class="sd">            A point in the complex z plane.</span>
+<span class="sd">        exclude : any</span>
+<span class="sd">            Label of element to exclude from the omega calculation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        omega : complex | np.ndarray</span>
+<span class="sd">            The complex potential for the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant</span>
+
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span> <span class="o">!=</span> <span class="n">exclude</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">Intersection</span><span class="p">):</span>
+                    <span class="n">omega</span> <span class="o">+=</span> <span class="n">e</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">omega</span> <span class="o">+=</span> <span class="n">e</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">omega</span></div>
+
+
+<div class="viewcode-block" id="Fracture.calc_w">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.calc_w">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_w</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the complex discharge vector for the fracture excluding element &quot;exclude&quot;.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        z : complex</span>
+<span class="sd">            A point in the complex z plane.</span>
+<span class="sd">        exclude : any</span>
+<span class="sd">            Label of element to exclude from the omega calculation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        w : complex</span>
+<span class="sd">            The complex discharge vector for the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span> <span class="o">!=</span> <span class="n">exclude</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">Intersection</span><span class="p">):</span>
+                    <span class="n">w</span> <span class="o">+=</span> <span class="n">e</span><span class="o">.</span><span class="n">calc_w</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">w</span> <span class="o">+=</span> <span class="n">e</span><span class="o">.</span><span class="n">calc_w</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">w</span></div>
+
+
+<div class="viewcode-block" id="Fracture.calc_head">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.calc_head">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_head</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the head for the fracture at a point z in the complex plane.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        z : complex</span>
+<span class="sd">            A point in the complex z plane.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        head : float</span>
+<span class="sd">            The head for the fracture at the point z.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">head_from_phi</span><span class="p">(</span><span class="n">omega</span><span class="o">.</span><span class="n">real</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Fracture.phi_from_head">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.phi_from_head">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">phi_from_head</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">head</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the head from the phi for the fracture.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        head : float</span>
+<span class="sd">            The head for the .</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        phi : float</span>
+<span class="sd">            The phi for the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">head</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span></div>
+
+
+<div class="viewcode-block" id="Fracture.head_from_phi">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.head_from_phi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">head_from_phi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the head from the phi for the fracture.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        phi : float</span>
+<span class="sd">            The phi for the fracture.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        head : float</span>
+<span class="sd">            The head for the fracture.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">phi</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span></div>
+
+
+<div class="viewcode-block" id="Fracture.calc_flow_net">
+<a class="viewcode-back" href="../../fracture.html#andfn.fracture.Fracture.calc_flow_net">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_flow_net</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_points</span><span class="p">,</span> <span class="n">margin</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the flow net for the fracture.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_points : int</span>
+<span class="sd">            The number of points to use for the flow net.</span>
+<span class="sd">        margin : float</span>
+<span class="sd">            The margin around the fracture to use for the flow net.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Create the arrays for the flow net</span>
+        <span class="n">radius_margin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">margin</span><span class="p">)</span>
+        <span class="n">omega_fn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_points</span><span class="p">,</span> <span class="n">n_points</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">x_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">radius_margin</span><span class="p">,</span> <span class="n">radius_margin</span><span class="p">,</span> <span class="n">n_points</span><span class="p">)</span>
+        <span class="n">y_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">radius_margin</span><span class="p">,</span> <span class="n">radius_margin</span><span class="p">,</span> <span class="n">n_points</span><span class="p">)</span>
+
+        <span class="c1"># Calculate the omega for each point in the flow net</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x_array</span><span class="p">):</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">y_array</span>
+            <span class="n">omega_fn</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">omega_fn</span><span class="p">,</span> <span class="n">x_array</span><span class="p">,</span> <span class="n">y_array</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Erik A. L. Toller
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Erik A. L. Toller.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

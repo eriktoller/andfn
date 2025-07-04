@@ -1,0 +1,1375 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>andfn.hpc.hpc_solve &#8212; AnDFN</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=a1637f0b"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/andfn/hpc/hpc_solve';</script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">AnDFN</p>
+  
+</a></div>
+        <div class="sidebar-primary-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/eriktoller/andfn" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" class="icon-link-image" alt="GitHub"/></a>
+        </li>
+</ul></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide.html">User Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../apidocs.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../dfn.html">DFN</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="../../../fracture.html">Fracture</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../elements.html">Elements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../bounding.html">Bounding elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../const_head.html">Constant head elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../impermeable_objects.html">Impermeable objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../intersection.html">Intersection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../well.html">Well</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../math_geometry.html">Mathematical and geometrical functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../hpc.html">HPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../configuration.html">CONFIGURATION</a></li>
+
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples_page.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../template.html">Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../large_dfn.html">A large DFN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../particle_tracking.html">Particle tracking</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../about.html">About</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../release_notes.html">Release notes</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for andfn.hpc.hpc_solve</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Notes</span>
+<span class="sd">-----</span>
+<span class="sd">This module contains the HPC solve functions.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numba</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nb</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">andfn.hpc</span><span class="w"> </span><span class="kn">import</span> <span class="n">hpc_math_functions</span> <span class="k">as</span> <span class="n">mf</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">andfn.hpc</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">hpc_intersection</span><span class="p">,</span>
+    <span class="n">hpc_fracture</span><span class="p">,</span>
+    <span class="n">hpc_const_head_line</span><span class="p">,</span>
+    <span class="n">hpc_well</span><span class="p">,</span>
+    <span class="n">hpc_bounding_circle</span><span class="p">,</span>
+    <span class="n">hpc_imp_object</span><span class="p">,</span>
+    <span class="n">PARALLEL</span><span class="p">,</span>
+    <span class="n">CACHE</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">andfn.element</span><span class="w"> </span><span class="kn">import</span> <span class="n">MAX_NCOEF</span><span class="p">,</span> <span class="n">MAX_ELEMENTS</span>
+
+<span class="n">dtype_work</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;phi&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">MAX_NCOEF</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;psi&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">MAX_NCOEF</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;coef&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;coef0&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;coef1&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;old_coef&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;dpsi&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">MAX_NCOEF</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;integral&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;sign_array&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">MAX_ELEMENTS</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;discharge_element&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">MAX_ELEMENTS</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;element_pos&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">MAX_ELEMENTS</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;exp_array_m&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;exp_array_p&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">dtype_z_arrays</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+    <span class="p">[(</span><span class="s2">&quot;z0&quot;</span><span class="p">,</span> <span class="nb">complex</span><span class="p">,</span> <span class="n">MAX_ELEMENTS</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;z1&quot;</span><span class="p">,</span> <span class="nb">complex</span><span class="p">,</span> <span class="n">MAX_ELEMENTS</span><span class="p">)]</span>
+<span class="p">)</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;andfn&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="solve">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.solve">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solve</span><span class="p">(</span>
+    <span class="n">fracture_struc_array</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">discharge_matrix</span><span class="p">,</span>
+    <span class="n">discharge_int</span><span class="p">,</span>
+    <span class="n">constants</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves the DFN.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fracture_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        Array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    discharge_matrix : np.ndarray</span>
+<span class="sd">        The discharge matrix</span>
+<span class="sd">    discharge_int : int</span>
+<span class="sd">        The number of integration points</span>
+<span class="sd">    constants : np.ndarray[constants_dtype]</span>
+<span class="sd">        The constants for the solver and dfn.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get the constants, this is necessary for Numba parallelization to work</span>
+    <span class="n">max_error</span> <span class="o">=</span> <span class="n">constants</span><span class="p">[</span><span class="s2">&quot;MAX_ERROR&quot;</span><span class="p">]</span>
+    <span class="n">max_iterations</span> <span class="o">=</span> <span class="n">constants</span><span class="p">[</span><span class="s2">&quot;MAX_ITERATIONS&quot;</span><span class="p">]</span>
+    <span class="n">coef_ratio</span> <span class="o">=</span> <span class="n">constants</span><span class="p">[</span><span class="s2">&quot;COEF_RATIO&quot;</span><span class="p">]</span>
+    <span class="n">max_coef</span> <span class="o">=</span> <span class="n">constants</span><span class="p">[</span><span class="s2">&quot;MAX_COEF&quot;</span><span class="p">]</span>
+    <span class="n">coef_increase</span> <span class="o">=</span> <span class="n">constants</span><span class="p">[</span><span class="s2">&quot;COEF_INCREASE&quot;</span><span class="p">]</span>
+
+    <span class="c1"># get the discharge elements</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Compiling HPC code...&quot;</span><span class="p">)</span>
+    <span class="n">discharge_elements</span> <span class="o">=</span> <span class="n">get_discharge_elements</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">)</span>
+
+    <span class="c1"># Allocate memory for the work array</span>
+    <span class="n">num_elements</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">)</span>
+    <span class="n">work_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_elements</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_work</span><span class="p">)</span>
+    <span class="c1"># head matrix</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">discharge_elements</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="n">fracture_struc_array</span><span class="o">.</span><span class="n">size</span>
+    <span class="n">head_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">discharges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">discharges_old</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">z_int</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_elements</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_z_arrays</span><span class="p">)</span>
+    <span class="n">get_z_int_array</span><span class="p">(</span><span class="n">z_int</span><span class="p">,</span> <span class="n">discharge_elements</span><span class="p">,</span> <span class="n">discharge_int</span><span class="p">)</span>
+    <span class="n">z_int_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_elements</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_z_arrays</span><span class="p">)</span>
+    <span class="n">get_z_int_array</span><span class="p">(</span><span class="n">z_int_error</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">discharge_int</span><span class="p">)</span>
+
+    <span class="c1"># LU-factorization</span>
+    <span class="n">lu_matrix</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">splu</span><span class="p">(</span><span class="n">discharge_matrix</span><span class="p">)</span>
+
+    <span class="c1"># Set old error</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">e</span><span class="p">[</span><span class="s2">&quot;error_old&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e30</span>
+        <span class="n">e</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e30</span>
+
+    <span class="c1"># fill work array ex_array</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">):</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span>
+        <span class="n">thetas</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;thetas&quot;</span><span class="p">]</span>
+        <span class="n">mf</span><span class="o">.</span><span class="n">fill_exp_array</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">thetas</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;exp_array_m&quot;</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">mf</span><span class="o">.</span><span class="n">fill_exp_array</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">thetas</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;exp_array_p&quot;</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">nit</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">cnt_error</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">cnt_bnd</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">error_q</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">while</span> <span class="n">cnt_error</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">nit</span> <span class="o">&lt;</span> <span class="n">max_iterations</span><span class="p">:</span>
+        <span class="n">nit</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="c1"># Solve the discharge matrix</span>
+        <span class="n">startq</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">error_q</span> <span class="o">&gt;</span> <span class="n">max_error</span> <span class="ow">or</span> <span class="n">cnt_error</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">discharges_old</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">discharges</span><span class="p">[:]</span>
+            <span class="n">solve_discharge_matrix</span><span class="p">(</span>
+                <span class="n">fracture_struc_array</span><span class="p">,</span>
+                <span class="n">element_struc_array</span><span class="p">,</span>
+                <span class="n">discharge_elements</span><span class="p">,</span>
+                <span class="n">discharge_int</span><span class="p">,</span>
+                <span class="n">head_matrix</span><span class="p">,</span>
+                <span class="n">discharges</span><span class="p">,</span>
+                <span class="n">z_int</span><span class="p">,</span>
+                <span class="n">lu_matrix</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">error_q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">discharges</span> <span class="o">-</span> <span class="n">discharges_old</span><span class="p">))</span>
+            <span class="n">error_q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">discharges</span> <span class="o">-</span> <span class="n">discharges_old</span><span class="p">))</span>
+        <span class="n">timeq</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">startq</span>
+
+        <span class="c1"># Solve the elements</span>
+        <span class="n">starte</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">element_solver2</span><span class="p">(</span>
+            <span class="n">num_elements</span><span class="p">,</span>
+            <span class="n">element_struc_array</span><span class="p">,</span>
+            <span class="n">fracture_struc_array</span><span class="p">,</span>
+            <span class="n">work_array</span><span class="p">,</span>
+            <span class="n">max_error</span><span class="p">,</span>
+            <span class="n">nit</span><span class="p">,</span>
+            <span class="n">cnt_error</span><span class="p">,</span>
+            <span class="n">coef_ratio</span><span class="p">,</span>
+            <span class="n">max_coef</span><span class="p">,</span>
+            <span class="n">coef_increase</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">timee</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">starte</span>
+
+        <span class="n">error</span><span class="p">,</span> <span class="n">id_</span> <span class="o">=</span> <span class="n">get_error</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">)</span>
+
+        <span class="c1"># print info</span>
+        <span class="k">if</span> <span class="n">nit</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Iteration: 0</span><span class="si">{</span><span class="n">nit</span><span class="si">}</span><span class="s2">, Error E: </span><span class="si">{</span><span class="n">error</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">, Q: </span><span class="si">{</span><span class="n">error_q</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Solve time </span><span class="si">{</span><span class="p">(</span><span class="n">timee</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">timeq</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> sec (E: </span><span class="si">{</span><span class="n">timee</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, Q: </span><span class="si">{</span><span class="n">timeq</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Iteration: </span><span class="si">{</span><span class="n">nit</span><span class="si">}</span><span class="s2">, Error E: </span><span class="si">{</span><span class="n">error</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">, Q: </span><span class="si">{</span><span class="n">error_q</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Solve time </span><span class="si">{</span><span class="p">(</span><span class="n">timee</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">timeq</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> sec (E: </span><span class="si">{</span><span class="n">timee</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, Q: </span><span class="si">{</span><span class="n">timeq</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cnt_bnd</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">element_solver</span><span class="p">(</span>
+                <span class="n">num_elements</span><span class="p">,</span>
+                <span class="n">element_struc_array</span><span class="p">,</span>
+                <span class="n">fracture_struc_array</span><span class="p">,</span>
+                <span class="n">work_array</span><span class="p">,</span>
+                <span class="n">max_error</span><span class="p">,</span>
+                <span class="n">nit</span><span class="p">,</span>
+                <span class="n">cnt_error</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="k">if</span> <span class="n">error</span> <span class="o">&lt;</span> <span class="n">max_error</span> <span class="ow">and</span> <span class="n">error_q</span> <span class="o">&lt;</span> <span class="n">max_error</span><span class="p">:</span>
+            <span class="n">cnt_error</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># error = 1.0</span>
+
+    <span class="c1"># Print the solver results</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;---------------------------------------&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Solver results&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;---------------------------------------&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Iterations: </span><span class="si">{</span><span class="n">nit</span><span class="si">}</span><span class="s2">, Error E: </span><span class="si">{</span><span class="n">error</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">, Q: </span><span class="si">{</span><span class="n">error_q</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">, &quot;</span><span class="p">)</span>
+    <span class="n">solve_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span>
+    <span class="n">days</span><span class="p">,</span> <span class="n">rem</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">solve_time</span><span class="p">,</span> <span class="mi">86400</span><span class="p">)</span>
+    <span class="n">hours</span><span class="p">,</span> <span class="n">rem</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">rem</span><span class="p">,</span> <span class="mi">3600</span><span class="p">)</span>
+    <span class="n">minutes</span><span class="p">,</span> <span class="n">seconds</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">rem</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Solve time: </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">days</span><span class="p">)</span><span class="si">}</span><span class="s2"> days, </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">hours</span><span class="p">)</span><span class="si">}</span><span class="s2"> hours, </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">minutes</span><span class="p">)</span><span class="si">}</span><span class="s2"> minutes, </span><span class="si">{</span><span class="n">seconds</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> seconds</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">element_struc_array</span></div>
+
+
+
+<div class="viewcode-block" id="get_error">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.get_error">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_error</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the maximum error from the elements and the element that it is associated with.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    error : float</span>
+<span class="sd">        The maximum error</span>
+<span class="sd">    id_ : int</span>
+<span class="sd">        The id of the element with the maximum error</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">id_</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">element_struc_array</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span>
+            <span class="n">id_</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">,</span> <span class="n">id_</span></div>
+
+
+
+<div class="viewcode-block" id="get_discharge_elements">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.get_discharge_elements">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="n">PARALLEL</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_discharge_elements</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the discharge elements from the element array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    discharge_elements : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of discharge elements</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># get the discharge elements</span>
+    <span class="n">el</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="mi">2</span><span class="p">,</span>
+            <span class="mi">3</span><span class="p">,</span>
+        <span class="p">}:</span>  <span class="c1"># Intersection, Well, Constant head line</span>
+            <span class="n">el</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">discharge_elements</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">el</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">discharge_elements</span></div>
+
+
+
+<div class="viewcode-block" id="element_solver">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.element_solver">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="n">PARALLEL</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">element_solver</span><span class="p">(</span>
+    <span class="n">num_elements</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">fracture_struc_array</span><span class="p">,</span>
+    <span class="n">work_array</span><span class="p">,</span>
+    <span class="n">max_error</span><span class="p">,</span>
+    <span class="n">nit</span><span class="p">,</span>
+    <span class="n">cnt_error</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves the elements and updates the coefficients in the work array.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_elements : int</span>
+<span class="sd">        The number of elements</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    fracture_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        Array of fractures</span>
+<span class="sd">    work_array : np.ndarray[dtype_work]</span>
+<span class="sd">        The work array</span>
+<span class="sd">    max_error : float</span>
+<span class="sd">        The maximum error</span>
+<span class="sd">    nit : int</span>
+<span class="sd">        The number of iterations</span>
+<span class="sd">    cnt_error : int</span>
+<span class="sd">        The number of completed iterations</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cnt : int</span>
+<span class="sd">        The number of elements that were solved    </span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Solve the elements</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">max_error</span> <span class="ow">and</span> <span class="n">nit</span> <span class="o">&gt;</span> <span class="mi">30</span> <span class="ow">and</span> <span class="n">cnt_error</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+            <span class="n">hpc_intersection</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Bounding circle</span>
+            <span class="n">hpc_bounding_circle</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Well</span>
+            <span class="n">e</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>  <span class="c1"># Constant head line</span>
+            <span class="n">hpc_const_head_line</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>  <span class="c1"># Impermeable circle</span>
+            <span class="n">hpc_imp_object</span><span class="o">.</span><span class="n">solve_circle</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>  <span class="c1"># Impermeable line</span>
+            <span class="n">hpc_imp_object</span><span class="o">.</span><span class="n">solve_line</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Get the coefficients from the work array</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">e</span><span class="p">[</span><span class="s2">&quot;coef&quot;</span><span class="p">][:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;coef&quot;</span><span class="p">][:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]]</span>
+
+    <span class="k">return</span> <span class="n">cnt</span></div>
+
+
+
+<div class="viewcode-block" id="element_solver2">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.element_solver2">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="n">PARALLEL</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">element_solver2</span><span class="p">(</span>
+    <span class="n">num_elements</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">fracture_struc_array</span><span class="p">,</span>
+    <span class="n">work_array</span><span class="p">,</span>
+    <span class="n">max_error</span><span class="p">,</span>
+    <span class="n">nit</span><span class="p">,</span>
+    <span class="n">cnt_error</span><span class="p">,</span>
+    <span class="n">max_coef_ratio</span><span class="p">,</span>
+    <span class="n">max_coef</span><span class="p">,</span>
+    <span class="n">coef_increase</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves the elements and updates the coefficients in the work array.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_elements : int</span>
+<span class="sd">        The number of elements</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    fracture_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        Array of fractures</span>
+<span class="sd">    work_array : np.ndarray[dtype_work]</span>
+<span class="sd">        The work array</span>
+<span class="sd">    max_error : float</span>
+<span class="sd">        The maximum error</span>
+<span class="sd">    nit : int</span>
+<span class="sd">        The number of iterations</span>
+<span class="sd">    cnt_error : int</span>
+<span class="sd">        The number of errors</span>
+<span class="sd">    max_coef_ratio : float</span>
+<span class="sd">        The coefficient ratio</span>
+<span class="sd">    max_coef : int</span>
+<span class="sd">        The maximum number of coefficients</span>
+<span class="sd">    coef_increase : int</span>
+<span class="sd">        The coefficient increase</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cnt : int</span>
+<span class="sd">        The number of elements that were solved</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">nit_el</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">error</span> <span class="o">&gt;</span> <span class="n">max_error</span> <span class="ow">and</span> <span class="n">nit_el</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">nit_el</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Solve the elements</span>
+        <span class="n">cnt</span> <span class="o">=</span> <span class="n">element_solver</span><span class="p">(</span>
+            <span class="n">num_elements</span><span class="p">,</span>
+            <span class="n">element_struc_array</span><span class="p">,</span>
+            <span class="n">fracture_struc_array</span><span class="p">,</span>
+            <span class="n">work_array</span><span class="p">,</span>
+            <span class="n">max_error</span><span class="p">,</span>
+            <span class="n">nit</span><span class="p">,</span>
+            <span class="n">cnt_error</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">error</span><span class="p">,</span> <span class="n">id_</span> <span class="o">=</span> <span class="n">get_error</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">)</span>
+
+        <span class="c1"># Get the coefficients from the work array</span>
+        <span class="k">if</span> <span class="n">nit</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+            <span class="n">e</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Well</span>
+                <span class="k">continue</span>
+            <span class="n">coefs</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;coef&quot;</span><span class="p">][:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]]</span>
+            <span class="n">coef0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]))</span>
+            <span class="n">coef1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]))</span>
+            <span class="k">if</span> <span class="n">coef0</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">coef_ratio</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">coef_ratio</span> <span class="o">=</span> <span class="n">coef1</span> <span class="o">/</span> <span class="n">coef0</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="n">max_error</span> <span class="o">/</span> <span class="mf">1e10</span><span class="p">:</span>
+                <span class="n">coef_ratio</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="c1"># Increase the number of coefficients if the ratio is too high</span>
+            <span class="k">while</span> <span class="p">(</span>
+                <span class="n">coef_ratio</span> <span class="o">&gt;</span> <span class="n">max_coef_ratio</span>
+                <span class="ow">and</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">max_coef</span>
+                <span class="ow">and</span> <span class="n">cnt</span> <span class="o">&lt;</span> <span class="mi">5</span>
+                <span class="ow">and</span> <span class="n">nit</span> <span class="o">&gt;</span> <span class="mi">1</span>
+            <span class="p">):</span>
+                <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">coef_increase</span><span class="p">)</span>
+                <span class="n">e</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>
+
+                <span class="n">mf</span><span class="o">.</span><span class="n">calc_thetas</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;thetas&quot;</span><span class="p">][:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]])</span>
+                <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">mf</span><span class="o">.</span><span class="n">fill_exp_array</span><span class="p">(</span>
+                    <span class="n">e</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;thetas&quot;</span><span class="p">],</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;exp_array_m&quot;</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="p">)</span>
+                <span class="n">mf</span><span class="o">.</span><span class="n">fill_exp_array</span><span class="p">(</span>
+                    <span class="n">e</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;thetas&quot;</span><span class="p">],</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;exp_array_p&quot;</span><span class="p">],</span> <span class="mi">1</span>
+                <span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+                    <span class="n">hpc_intersection</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+                        <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Bounding circle</span>
+                    <span class="n">hpc_bounding_circle</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+                        <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Well</span>
+                    <span class="n">e</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>  <span class="c1"># Constant head line</span>
+                    <span class="n">hpc_const_head_line</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+                        <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>  <span class="c1"># Impermeable circle</span>
+                    <span class="n">hpc_imp_object</span><span class="o">.</span><span class="n">solve_circle</span><span class="p">(</span>
+                        <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>  <span class="c1"># Impermeable line</span>
+                    <span class="n">hpc_imp_object</span><span class="o">.</span><span class="n">solve_line</span><span class="p">(</span>
+                        <span class="n">e</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="n">coefs</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;coef&quot;</span><span class="p">][:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]]</span>
+                <span class="n">coef0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]))</span>
+                <span class="n">coef1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]))</span>
+                <span class="n">coef_ratio</span> <span class="o">=</span> <span class="n">coef1</span> <span class="o">/</span> <span class="n">coef0</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+            <span class="n">e</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">e</span><span class="p">[</span><span class="s2">&quot;coef&quot;</span><span class="p">][:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;coef&quot;</span><span class="p">][:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]]</span>
+
+    <span class="k">return</span> <span class="n">cnt</span></div>
+
+
+
+<div class="viewcode-block" id="solve_discharge_matrix">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.solve_discharge_matrix">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solve_discharge_matrix</span><span class="p">(</span>
+    <span class="n">fractures_struc_array</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">discharge_elements</span><span class="p">,</span>
+    <span class="n">discharge_int</span><span class="p">,</span>
+    <span class="n">head_matrix</span><span class="p">,</span>
+    <span class="n">discharges</span><span class="p">,</span>
+    <span class="n">z_int</span><span class="p">,</span>
+    <span class="n">lu_matrix</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fractures_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        Array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    discharge_elements : np.ndarray[element_dtype]</span>
+<span class="sd">        The discharge elements</span>
+<span class="sd">    discharge_int : int</span>
+<span class="sd">        The number of integration points</span>
+<span class="sd">    head_matrix : np.ndarray[dtype_head_matrix]</span>
+<span class="sd">        The head matrix</span>
+<span class="sd">    discharges : np.ndarray</span>
+<span class="sd">        The discharges to be solved</span>
+<span class="sd">    z_int : np.ndarray[dtype_z_arrays]</span>
+<span class="sd">        The z arrays for the discharge elements</span>
+<span class="sd">    lu_matrix : scipy.sparse.linalg.splu</span>
+<span class="sd">        The LU factorization of the discharge matrix</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fractures_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        The array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># pre solver</span>
+    <span class="n">start0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">pre_matrix_solve</span><span class="p">(</span>
+        <span class="n">fractures_struc_array</span><span class="p">,</span>
+        <span class="n">element_struc_array</span><span class="p">,</span>
+        <span class="n">discharge_elements</span><span class="p">,</span>
+        <span class="n">discharge_int</span><span class="p">,</span>
+        <span class="n">head_matrix</span><span class="p">,</span>
+        <span class="n">z_int</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Pre solve time: </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start0</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Solve the discharge matrix</span>
+    <span class="n">start0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">discharges</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">lu_matrix</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">head_matrix</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Solve matrix time: </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start0</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># post solver</span>
+    <span class="n">start0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">post_matrix_solve</span><span class="p">(</span>
+        <span class="n">fractures_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">discharge_elements</span><span class="p">,</span> <span class="n">discharges</span>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Post solve time: </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start0</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="pre_matrix_solve">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.pre_matrix_solve">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="n">PARALLEL</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">pre_matrix_solve</span><span class="p">(</span>
+    <span class="n">fractures_struc_array</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">discharge_elements</span><span class="p">,</span>
+    <span class="n">discharge_int</span><span class="p">,</span>
+    <span class="n">head_matrix</span><span class="p">,</span>
+    <span class="n">z_int</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fractures_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        Array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    discharge_elements : np.ndarray[element_dtype]</span>
+<span class="sd">        The discharge elements</span>
+<span class="sd">    discharge_int : int</span>
+<span class="sd">        The number of integration points</span>
+<span class="sd">    head_matrix : np.ndarray[dtype_head_matrix]</span>
+<span class="sd">        The head matrix</span>
+<span class="sd">    z_int : np.ndarray[dtype_z_arrays]</span>
+<span class="sd">        The z arrays for the discharge elements</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fractures_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        The array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Set the discharges equal to zero</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">)):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">}:</span>  <span class="c1"># Intersection, Well, Constant head line</span>
+            <span class="n">e</span><span class="p">[</span><span class="s2">&quot;q&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="c1"># Set the constants equal to zero</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fractures_struc_array</span><span class="p">)):</span>
+        <span class="n">fractures_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;constant&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="c1"># Get the head matrix</span>
+    <span class="n">build_head_matrix</span><span class="p">(</span>
+        <span class="n">fractures_struc_array</span><span class="p">,</span>
+        <span class="n">element_struc_array</span><span class="p">,</span>
+        <span class="n">discharge_elements</span><span class="p">,</span>
+        <span class="n">discharge_int</span><span class="p">,</span>
+        <span class="n">head_matrix</span><span class="p">,</span>
+        <span class="n">z_int</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="post_matrix_solve">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.post_matrix_solve">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="n">PARALLEL</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">post_matrix_solve</span><span class="p">(</span>
+    <span class="n">fractures_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">discharge_elements</span><span class="p">,</span> <span class="n">discharges</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fractures_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        Array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    discharge_elements : np.ndarray[element_dtype]</span>
+<span class="sd">        The discharge elements</span>
+<span class="sd">    discharges : np.ndarray</span>
+<span class="sd">        The discharges</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fractures_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        The array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Set the discharges for each element</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">discharge_elements</span><span class="p">)):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">discharge_elements</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">element_struc_array</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">]][</span><span class="s2">&quot;q&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">discharges</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="c1"># Set the constants for each fracture</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fractures_struc_array</span><span class="p">)):</span>
+        <span class="n">fractures_struc_array</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;constant&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">discharges</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">discharge_elements</span><span class="p">)</span> <span class="o">+</span> <span class="n">i</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="build_head_matrix">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.build_head_matrix">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="n">PARALLEL</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_head_matrix</span><span class="p">(</span>
+    <span class="n">fractures_struc_array</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">discharge_elements</span><span class="p">,</span>
+    <span class="n">discharge_int</span><span class="p">,</span>
+    <span class="n">head_matrix</span><span class="p">,</span>
+    <span class="n">z_int</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Builds the head matrix for the DFN and stores it.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fractures_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        Array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    discharge_elements : np.ndarray[element_dtype]</span>
+<span class="sd">        The discharge elements</span>
+<span class="sd">    discharge_int : int</span>
+<span class="sd">        The number of integration points</span>
+<span class="sd">    head_matrix : np.ndarray[dtype_head_matrix]</span>
+<span class="sd">        The head matrix</span>
+<span class="sd">    z_int : np.ndarray[dtype_z_arrays]</span>
+<span class="sd">        The z arrays for the discharge elements</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    matrix : np.ndarray</span>
+<span class="sd">        The head matrix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Add the head for each discharge element</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">discharge_elements</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">discharge_elements</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">frac0</span> <span class="o">=</span> <span class="n">fractures_struc_array</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]]</span>
+        <span class="n">z0</span> <span class="o">=</span> <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z0&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span>
+        <span class="n">omega_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">):</span>
+            <span class="n">omega_vec</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span><span class="n">frac0</span><span class="p">,</span> <span class="n">z0</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">element_struc_array</span><span class="p">)</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">)</span> <span class="o">/</span> <span class="n">discharge_int</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+            <span class="n">frac1</span> <span class="o">=</span> <span class="n">fractures_struc_array</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac1&quot;</span><span class="p">]]</span>
+            <span class="n">z1</span> <span class="o">=</span> <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z1&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span>
+            <span class="n">omega1_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">):</span>
+                <span class="n">omega1_vec</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span>
+                    <span class="n">frac1</span><span class="p">,</span> <span class="n">z1</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">element_struc_array</span>
+                <span class="p">)</span>
+            <span class="n">omega1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">omega1_vec</span><span class="p">)</span> <span class="o">/</span> <span class="n">discharge_int</span>
+            <span class="n">head_matrix</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega1</span><span class="p">)</span> <span class="o">/</span> <span class="n">frac1</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span> <span class="o">/</span> <span class="n">frac0</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>  <span class="c1"># Well or Constant head line</span>
+            <span class="n">head_matrix</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;phi&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># @nb.njit( parallel=PARALLEL, cache=CACHE)</span>
+<div class="viewcode-block" id="get_bnd_error">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.get_bnd_error">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_bnd_error</span><span class="p">(</span>
+    <span class="n">num_elements</span><span class="p">,</span>
+    <span class="n">fracture_struc_array</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">work_array</span><span class="p">,</span>
+    <span class="n">discharge_int</span><span class="p">,</span>
+    <span class="n">bnd_error</span><span class="p">,</span>
+    <span class="n">z_int</span><span class="p">,</span>
+    <span class="n">nit</span><span class="p">,</span>
+    <span class="n">max_error</span><span class="p">,</span>
+    <span class="n">constants</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Builds the head matrix for the DFN and stores it.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_elements : int</span>
+<span class="sd">        The number of elements</span>
+<span class="sd">    fracture_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        Array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    work_array : np.ndarray[dtype_work]</span>
+<span class="sd">        The work array</span>
+<span class="sd">    discharge_int : int</span>
+<span class="sd">        The number of integration points</span>
+<span class="sd">    bnd_error : np.ndarray[dtype_head_matrix]</span>
+<span class="sd">        The error matrix for the boundary conditions</span>
+<span class="sd">    z_int : np.ndarray[dtype_z_arrays]</span>
+<span class="sd">        The z arrays for the discharge elements</span>
+<span class="sd">    nit : int</span>
+<span class="sd">        The number of iterations</span>
+<span class="sd">    max_error : float</span>
+<span class="sd">        The maximum error</span>
+<span class="sd">    constants : np.ndarray[constants_dtype]</span>
+<span class="sd">        The constants for the solver and dfn.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    matrix : np.ndarray</span>
+<span class="sd">        The head matrix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">cnt_bnd</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># Add the head for each discharge element</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_elements</span> <span class="o">*</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Well</span>
+            <span class="n">bnd_error</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">continue</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;coef&quot;</span><span class="p">][:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]]</span>
+        <span class="n">coef0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="n">coef1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]))</span>
+        <span class="n">coef_ratio_re</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="n">coef_ratio_im</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="n">coef_ratio_re</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">coef0</span><span class="p">)</span>
+        <span class="n">coef_ratio_im</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">coef0</span><span class="p">)</span>
+        <span class="n">coef_ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">([</span><span class="n">coef_ratio_re</span><span class="p">,</span> <span class="n">coef_ratio_im</span><span class="p">])</span>
+        <span class="n">coef_ratio</span> <span class="o">=</span> <span class="n">coef1</span> <span class="o">/</span> <span class="n">coef0</span>
+        <span class="k">if</span> <span class="n">coef_ratio</span> <span class="o">&lt;</span> <span class="mf">0.4</span><span class="p">:</span>
+            <span class="n">coef_ratio</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coefs</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="n">max_error</span><span class="p">:</span>
+            <span class="n">coef_ratio</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>  <span class="c1"># Intersection, Constant head line</span>
+            <span class="n">frac0</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]]</span>
+            <span class="n">z0</span> <span class="o">=</span> <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z0&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span>
+            <span class="n">omega_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">):</span>
+                <span class="n">omega_vec</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span>
+                    <span class="n">frac0</span><span class="p">,</span> <span class="n">z0</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">element_struc_array</span>
+                <span class="p">)</span>
+            <span class="n">omega</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">)</span> <span class="o">/</span> <span class="n">discharge_int</span>
+            <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+                <span class="n">frac1</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac1&quot;</span><span class="p">]]</span>
+                <span class="n">z1</span> <span class="o">=</span> <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z1&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span>
+                <span class="n">omega1_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">):</span>
+                    <span class="n">omega1_vec</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span>
+                        <span class="n">frac1</span><span class="p">,</span> <span class="n">z1</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">element_struc_array</span>
+                    <span class="p">)</span>
+                <span class="n">omega1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">omega1_vec</span><span class="p">)</span> <span class="o">/</span> <span class="n">discharge_int</span>
+                <span class="n">head1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega1</span><span class="p">)</span> <span class="o">/</span> <span class="n">frac1</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">]</span>
+                <span class="n">head0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span> <span class="o">/</span> <span class="n">frac0</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">]</span>
+                <span class="n">bnd_error</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">head1</span> <span class="o">-</span> <span class="n">head0</span><span class="p">)</span> <span class="o">/</span> <span class="n">head1</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">450</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;450: </span><span class="si">{</span><span class="n">head1</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">head0</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">bnd_error</span><span class="p">[</span><span class="mi">450</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># Well or Constant head line</span>
+                <span class="n">bnd_error</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;phi&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega</span><span class="p">))</span> <span class="o">/</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;phi&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Bounding circle</span>
+            <span class="n">frac0</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]]</span>
+            <span class="n">z0</span> <span class="o">=</span> <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z0&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span>
+            <span class="n">omega_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+            <span class="n">w_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">):</span>
+                <span class="n">omega_vec</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span>
+                    <span class="n">frac0</span><span class="p">,</span> <span class="n">z0</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">element_struc_array</span>
+                <span class="p">)</span>
+                <span class="n">w_vec</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_w</span><span class="p">(</span><span class="n">frac0</span><span class="p">,</span> <span class="n">z0</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">element_struc_array</span><span class="p">)</span>
+            <span class="c1"># The angle of w_vec</span>
+            <span class="n">phi_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))</span>
+            <span class="n">phi_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="n">frac0</span><span class="p">[</span><span class="s2">&quot;elements&quot;</span><span class="p">][:</span> <span class="n">frac0</span><span class="p">[</span><span class="s2">&quot;nelements&quot;</span><span class="p">]]</span>
+            <span class="n">phi_max1</span><span class="p">,</span> <span class="n">phi_min1</span><span class="p">,</span> <span class="n">z_max</span><span class="p">,</span> <span class="n">z_min</span><span class="p">,</span> <span class="n">l_min</span><span class="p">,</span> <span class="n">l_max</span> <span class="o">=</span> <span class="n">get_max_min_phi</span><span class="p">(</span>
+                <span class="n">element_struc_array</span><span class="p">,</span>
+                <span class="n">fracture_struc_array</span><span class="p">,</span>
+                <span class="n">ids</span><span class="p">,</span>
+                <span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">],</span>
+                <span class="n">z_int</span><span class="p">,</span>
+                <span class="n">discharge_int</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">phi_max1</span> <span class="o">-</span> <span class="n">phi_min1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-2</span> <span class="o">-</span> <span class="mf">1e30</span><span class="p">:</span>
+                <span class="n">phi_error</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">phi_max</span> <span class="o">&lt;</span> <span class="n">phi_max1</span><span class="p">:</span>
+                    <span class="n">phi_max</span> <span class="o">=</span> <span class="n">phi_max1</span>
+                <span class="k">if</span> <span class="n">phi_min</span> <span class="o">&gt;</span> <span class="n">phi_min1</span><span class="p">:</span>
+                    <span class="n">phi_min</span> <span class="o">=</span> <span class="n">phi_min1</span>
+                <span class="n">phi_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">phi_max</span> <span class="o">-</span> <span class="n">phi_max1</span><span class="p">)</span> <span class="o">/</span> <span class="n">phi_max</span><span class="p">),</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">phi_min</span> <span class="o">-</span> <span class="n">phi_min1</span><span class="p">)</span> <span class="o">/</span> <span class="n">phi_min</span><span class="p">),</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+            <span class="n">dpsi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">omega_vec</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">dpsi_pos</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;element_pos&quot;</span><span class="p">][</span>
+                <span class="p">:</span> <span class="n">work_array</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]</span>
+            <span class="p">]</span>
+            <span class="n">dpsi_corr</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;dpsi_corr&quot;</span><span class="p">][</span><span class="n">dpsi_pos</span><span class="p">]</span>
+            <span class="n">corr_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">dpsi_pos</span> <span class="o">*</span> <span class="p">(</span><span class="n">discharge_int</span> <span class="o">/</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">corr_dpsi_corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dpsi_pos</span><span class="p">)):</span>
+                <span class="n">corr_dpsi_corr</span><span class="p">[</span><span class="n">corr_pos</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">dpsi_corr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">dpsi</span> <span class="o">=</span> <span class="n">dpsi</span> <span class="o">-</span> <span class="n">corr_dpsi_corr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">omega</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))</span> <span class="o">/</span> <span class="n">discharge_int</span><span class="p">)</span>
+
+            <span class="n">rmse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">dpsi</span> <span class="o">-</span> <span class="n">omega</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">discharge_int</span><span class="p">)</span> <span class="o">*</span> <span class="mi">0</span>
+
+            <span class="n">bnd_error</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">rmse</span>
+
+            <span class="k">if</span> <span class="n">phi_error</span> <span class="o">&gt;</span> <span class="n">bnd_error</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+                <span class="n">bnd_error</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">phi_error</span>
+
+        <span class="k">if</span> <span class="n">bnd_error</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">coef_ratio</span><span class="p">:</span>
+            <span class="n">bnd_error</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">coef_ratio</span>
+
+    <span class="k">return</span> <span class="n">cnt_bnd</span></div>
+
+
+
+<div class="viewcode-block" id="get_max_min_phi">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.get_max_min_phi">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_max_min_phi</span><span class="p">(</span>
+    <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">ids</span><span class="p">,</span> <span class="n">frac_id</span><span class="p">,</span> <span class="n">z_int</span><span class="p">,</span> <span class="n">discharge_int</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the maximum and minimum phi values from the elements.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+<span class="sd">    fracture_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        The array of fractures</span>
+<span class="sd">    ids : np.ndarray</span>
+<span class="sd">        The ids of the elements to check</span>
+<span class="sd">    frac_id : int</span>
+<span class="sd">        The id of the fracture to check</span>
+<span class="sd">    z_int : np.ndarray[dtype_z_arrays]</span>
+<span class="sd">        The z arrays for the discharge elements</span>
+<span class="sd">    discharge_int : int</span>
+<span class="sd">        The number of integration points</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    max_phi : float</span>
+<span class="sd">        The maximum phi value</span>
+<span class="sd">    min_phi : float</span>
+<span class="sd">        The minimum phi value</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">max_phi</span> <span class="o">=</span> <span class="mf">1e-300</span>
+    <span class="n">min_phi</span> <span class="o">=</span> <span class="mf">1e300</span>
+    <span class="n">z_max</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+    <span class="n">z_min</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+    <span class="n">l_max</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">l_min</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">element_struc_array</span><span class="p">[</span><span class="n">ids</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>  <span class="c1"># Well, Constant head line</span>
+            <span class="n">z0</span> <span class="o">=</span> <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z0&quot;</span><span class="p">][</span><span class="n">ids</span><span class="p">[</span><span class="n">j</span><span class="p">]][:</span><span class="n">discharge_int</span><span class="p">]</span>
+            <span class="n">frac0</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]]</span>
+            <span class="n">endpoints</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;endpoints0&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+                <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac1&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">frac_id</span><span class="p">:</span>
+                    <span class="n">z0</span> <span class="o">=</span> <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z1&quot;</span><span class="p">][</span><span class="n">ids</span><span class="p">[</span><span class="n">j</span><span class="p">]][:</span><span class="n">discharge_int</span><span class="p">]</span>
+                    <span class="n">frac0</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac1&quot;</span><span class="p">]]</span>
+                    <span class="n">endpoints</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;endpoints1&quot;</span><span class="p">]</span>
+            <span class="n">omega_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">discharge_int</span><span class="p">):</span>
+                <span class="n">omega_vec</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span>
+                    <span class="n">frac0</span><span class="p">,</span> <span class="n">z0</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">element_struc_array</span>
+                <span class="p">)</span>
+            <span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))</span> <span class="o">/</span> <span class="n">discharge_int</span>
+            <span class="n">phi_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))</span>
+            <span class="n">phi_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">phi</span> <span class="o">&gt;</span> <span class="n">max_phi</span><span class="p">:</span>
+                <span class="n">max_phi</span> <span class="o">=</span> <span class="n">phi</span>
+                <span class="n">z_max</span> <span class="o">=</span> <span class="n">z0</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))]</span>
+            <span class="k">if</span> <span class="n">phi</span> <span class="o">&lt;</span> <span class="n">min_phi</span><span class="p">:</span>
+                <span class="n">min_phi</span> <span class="o">=</span> <span class="n">phi</span>
+                <span class="n">z_min</span> <span class="o">=</span> <span class="n">z0</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))]</span>
+            <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+                <span class="k">if</span> <span class="n">phi_min</span> <span class="o">&lt;</span> <span class="n">min_phi</span><span class="p">:</span>
+                    <span class="n">min_phi</span> <span class="o">=</span> <span class="n">phi_min</span>
+                    <span class="n">z_min</span> <span class="o">=</span> <span class="n">z0</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))]</span>
+                    <span class="n">l_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">endpoints</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">endpoints</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">phi_max</span> <span class="o">&gt;</span> <span class="n">max_phi</span><span class="p">:</span>
+                    <span class="n">max_phi</span> <span class="o">=</span> <span class="n">phi_max</span>
+                    <span class="n">z_max</span> <span class="o">=</span> <span class="n">z0</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega_vec</span><span class="p">))]</span>
+                    <span class="n">l_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">endpoints</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">endpoints</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">max_phi</span><span class="p">,</span> <span class="n">min_phi</span><span class="p">,</span> <span class="n">z_max</span><span class="p">,</span> <span class="n">z_min</span><span class="p">,</span> <span class="n">l_min</span><span class="p">,</span> <span class="n">l_max</span></div>
+
+
+
+<div class="viewcode-block" id="get_z_int_array">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.get_z_int_array">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_z_int_array</span><span class="p">(</span><span class="n">z_int</span><span class="p">,</span> <span class="n">elements</span><span class="p">,</span> <span class="n">discharge_int</span><span class="p">):</span>
+    <span class="c1"># Add the head for each discharge element</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">elements</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">elements</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+            <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z0&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_intersection</span><span class="o">.</span><span class="n">z_array</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">discharge_int</span><span class="p">,</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z1&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_intersection</span><span class="o">.</span><span class="n">z_array</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">discharge_int</span><span class="p">,</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac1&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Bounding circle</span>
+            <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z0&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_bounding_circle</span><span class="o">.</span><span class="n">z_array</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">discharge_int</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Well</span>
+            <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z0&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_well</span><span class="o">.</span><span class="n">z_array</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">discharge_int</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>  <span class="c1"># Constant head line</span>
+            <span class="n">z_int</span><span class="p">[</span><span class="s2">&quot;z0&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][:</span><span class="n">discharge_int</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpc_const_head_line</span><span class="o">.</span><span class="n">z_array</span><span class="p">(</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">discharge_int</span>
+            <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="set_new_ncoef">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_solve.set_new_ncoef">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_new_ncoef</span><span class="p">(</span><span class="n">self_</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">nint_mult</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Increase the number of coefficients in the asymptotic expansion.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    self_ : np.ndarray[element_dtype]</span>
+<span class="sd">        The element to increase the number of coefficients.</span>
+<span class="sd">    n : int</span>
+<span class="sd">        The new number of coefficients.</span>
+<span class="sd">    nint_mult : int</span>
+<span class="sd">        The multiplier for the number of integration points.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">nint_mult</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;thetas&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]),</span>
+            <span class="n">stop</span><span class="o">=</span><span class="n">stop</span> <span class="o">-</span> <span class="n">stop</span> <span class="o">/</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">],</span>
+            <span class="n">num</span><span class="o">=</span><span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>  <span class="c1"># Constant Head Line</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">nint_mult</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;thetas&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]),</span>
+            <span class="n">stop</span><span class="o">=</span><span class="n">stop</span> <span class="o">-</span> <span class="n">stop</span> <span class="o">/</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">],</span>
+            <span class="n">num</span><span class="o">=</span><span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Bounding Circle</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">nint_mult</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;thetas&quot;</span><span class="p">][:</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+            <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">],</span> <span class="n">num</span><span class="o">=</span><span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span>
+        <span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Erik A. L. Toller
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Erik A. L. Toller.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

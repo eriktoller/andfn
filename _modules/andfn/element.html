@@ -1,0 +1,876 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>andfn.element &#8212; AnDFN</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=a1637f0b"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/andfn/element';</script>
+    <link rel="author" title="About these documents" href="../../about.html" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">AnDFN</p>
+  
+</a></div>
+        <div class="sidebar-primary-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/eriktoller/andfn" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" class="icon-link-image" alt="GitHub"/></a>
+        </li>
+</ul></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide.html">User Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../apidocs.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../dfn.html">DFN</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="../../fracture.html">Fracture</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../elements.html">Elements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../bounding.html">Bounding elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../const_head.html">Constant head elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../impermeable_objects.html">Impermeable objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../intersection.html">Intersection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../well.html">Well</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../math_geometry.html">Mathematical and geometrical functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../hpc.html">HPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../configuration.html">CONFIGURATION</a></li>
+
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples_page.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../template.html">Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../large_dfn.html">A large DFN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../particle_tracking.html">Particle tracking</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../about.html">About</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../release_notes.html">Release notes</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for andfn.element</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Notes</span>
+<span class="sd">-----</span>
+
+<span class="sd">This module contains the element class that is a parent class to all elements.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyvista</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pv</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">andfn.geometry_functions</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gf</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_yaml_config</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="n">load_yaml_config</span><span class="p">()</span>
+<span class="n">MAX_NCOEF</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="n">MAX_ELEMENTS</span> <span class="o">=</span> <span class="mi">300</span>
+<span class="k">if</span> <span class="n">config</span><span class="p">:</span>
+    <span class="n">MAX_NCOEF</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MAX_NCOEF&quot;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+    <span class="n">MAX_ELEMENTS</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MAX_ELEMENTS&quot;</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
+
+<span class="n">element_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;id_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;type_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;frac0&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;frac1&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;endpoints0&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;endpoints1&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;radius&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;head&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;phi&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;ncoef&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;nint&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;q&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;thetas&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;coef&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;old_coef&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;dpsi_corr&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">element_dtype_hpc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;id_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;type_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;frac0&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;frac1&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;endpoints0&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;endpoints1&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;radius&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;head&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;phi&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;ncoef&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;nint&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;q&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;thetas&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">MAX_NCOEF</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;coef&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;old_coef&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">MAX_NCOEF</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;dpsi_corr&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">MAX_NCOEF</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;error_old&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The element data type for the HPC solver. Note that not all elements have all properties.</span>
+
+<span class="sd">Element Types:</span>
+<span class="sd">0 = Intersection</span>
+<span class="sd">1 = Bounding Circle</span>
+<span class="sd">2 = Well</span>
+<span class="sd">3 = Constant Head Line</span>
+<span class="sd">4 = Impermeable Circle</span>
+<span class="sd">5 = Impermeable Line</span>
+
+<span class="sd">Parameters</span>
+<span class="sd">----------</span>
+<span class="sd">id_ : int</span>
+<span class="sd">    The id of the element.</span>
+<span class="sd">type_ : int</span>
+<span class="sd">    The type of the element. (see above)</span>
+<span class="sd">frac0 : int</span>
+<span class="sd">    The id of the first fracture.</span>
+<span class="sd">frac1 : int</span>
+<span class="sd">    The id of the second fracture.</span>
+<span class="sd">endpoints0 : np.ndarray</span>
+<span class="sd">    The endpoints of the element in frac0.</span>
+<span class="sd">endpoints1 : np.ndarray</span>
+<span class="sd">    The endpoints of the element in frac1.</span>
+<span class="sd">radius : float</span>
+<span class="sd">    The radius of the element.</span>
+<span class="sd">center : np.ndarray</span>
+<span class="sd">    The center of the element.</span>
+<span class="sd">head : float</span>
+<span class="sd">    The hydraulic head of the element.</span>
+<span class="sd">phi : float</span>
+<span class="sd">    The discharge potential of the element.</span>
+<span class="sd">ncoef : int</span>
+<span class="sd">    The number of coefficients in the expansion.</span>
+<span class="sd">nint : int</span>
+<span class="sd">    The number of integration points.</span>
+<span class="sd">q : float</span>
+<span class="sd">    The discharge of the element.</span>
+<span class="sd">thetas : np.ndarray</span>
+<span class="sd">    The angles of the integration points in the chi-plane.</span>
+<span class="sd">coef : np.ndarray</span>
+<span class="sd">    The coefficients of the expansion.</span>
+<span class="sd">old_coef : np.ndarray</span>
+<span class="sd">    The old coefficients of the expansion.</span>
+<span class="sd">dpsi_corr : np.ndarray</span>
+<span class="sd">    The correction to the psi values.</span>
+<span class="sd">error : float</span>
+<span class="sd">    The error of the element.</span>
+<span class="sd">    </span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="n">element_index_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;label&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">str_</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;id_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;type_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+
+<span class="n">fracture_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;id_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;radius&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;normal&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;x_vector&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;y_vector&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;elements&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">fracture_dtype_hpc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;id_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;radius&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;normal&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;x_vector&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;y_vector&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;elements&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">,</span> <span class="n">MAX_ELEMENTS</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;nelements&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">fracture_index_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([(</span><span class="s2">&quot;label&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">str_</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;id_&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">)])</span>
+
+
+<div class="viewcode-block" id="initiate_elements_array">
+<a class="viewcode-back" href="../../elements.html#andfn.element.initiate_elements_array">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">initiate_elements_array</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that initiates the elements array.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    elements : np.ndarray</span>
+<span class="sd">        The elements array.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">elements</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">element_dtype</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">elements</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">element_dtype</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">):</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">element_dtype</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">element_dtype</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">):</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">element_dtype</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">elements</span></div>
+
+
+
+<div class="viewcode-block" id="initiate_elements_array_hpc">
+<a class="viewcode-back" href="../../elements.html#andfn.element.initiate_elements_array_hpc">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">initiate_elements_array_hpc</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that initiates the elements array for HPC.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    elements : np.ndarray</span>
+<span class="sd">        The elements array.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">elements</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">element_dtype_hpc</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">elements</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">element_dtype_hpc</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">):</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">element_dtype_hpc</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">element_dtype_hpc</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">):</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;thetas&quot;</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;dpsi_corr&quot;</span><span class="p">:</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">MAX_NCOEF</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;coef&quot;</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;old_coef&quot;</span><span class="p">:</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">MAX_NCOEF</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;endpoints0&quot;</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;endpoints1&quot;</span><span class="p">:</span>
+            <span class="n">elements</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">elements</span></div>
+
+
+
+<div class="viewcode-block" id="Element">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Element</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The parent class for all elements in the andfn model.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Element.__init__">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">id_</span><span class="p">,</span> <span class="n">type_</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the element.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        label : str</span>
+<span class="sd">            The label of the element.</span>
+<span class="sd">        id_ : int</span>
+<span class="sd">            The id of the element.</span>
+<span class="sd">        type_ : int</span>
+<span class="sd">            The type of the element.</span>
+<span class="sd">            Element Types:</span>
+<span class="sd">                0 = Intersection</span>
+<span class="sd">                1 = Bounding Circle</span>
+<span class="sd">                2 = Well</span>
+<span class="sd">                3 = Constant Head Line</span>
+<span class="sd">                4 = Impermeable Circle</span>
+<span class="sd">                5 = Impermeable Line</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_</span> <span class="o">=</span> <span class="n">id_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_</span> <span class="o">=</span> <span class="n">type_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ncoef</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nint</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncoef</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thetas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+            <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nint</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Element.__str__">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.__str__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the string representation of the element.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            The string representation of the element.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="Element.set_id">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.set_id">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the id of the element.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        id_ : int</span>
+<span class="sd">            The id of the element.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None. The id is updated in place.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_</span> <span class="o">=</span> <span class="n">id_</span></div>
+
+
+<div class="viewcode-block" id="Element.change_property">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.change_property">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">change_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Change a given property/ies of the element.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        kwargs : dict</span>
+<span class="sd">            The properties to change</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None. The element is updated in place.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">key</span> <span class="ow">in</span> <span class="n">element_dtype</span><span class="o">.</span><span class="n">names</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="p">(</span>
+            <span class="s2">&quot;Invalid property name.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">key</span> <span class="ow">in</span> <span class="n">element_index_dtype</span><span class="o">.</span><span class="n">names</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="p">(</span>
+            <span class="s2">&quot;Invalid property name.&quot;</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Element.consolidate">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.consolidate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Consolidate into a numpy structures array.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        struc_array : np.ndarray</span>
+<span class="sd">            The structure array.</span>
+<span class="sd">        index_array : np.ndarray</span>
+<span class="sd">            The index array.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">struc_array</span> <span class="o">=</span> <span class="n">initiate_elements_array</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">element_dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">,</span> <span class="s2">&quot;frac1&quot;</span><span class="p">]:</span>
+                    <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">id_</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="n">index_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">element_index_dtype</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">struc_array</span><span class="p">,</span> <span class="n">index_array</span></div>
+
+
+<div class="viewcode-block" id="Element.consolidate_hpc">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.consolidate_hpc">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">consolidate_hpc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Consolidate into a numpy structures array for HPC solver.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        struc_array : np.ndarray</span>
+<span class="sd">            The structure array.</span>
+<span class="sd">        index_array : np.ndarray</span>
+<span class="sd">            The index array.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">struc_array</span> <span class="o">=</span> <span class="n">initiate_elements_array_hpc</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">element_dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">,</span> <span class="s2">&quot;frac1&quot;</span><span class="p">]:</span>
+                    <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">id_</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;thetas&quot;</span><span class="p">,</span> <span class="s2">&quot;coef&quot;</span><span class="p">,</span> <span class="s2">&quot;old_coef&quot;</span><span class="p">,</span> <span class="s2">&quot;dpsi_corr&quot;</span><span class="p">]:</span>
+                    <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">][:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="n">index_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">element_index_dtype</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">struc_array</span><span class="p">,</span> <span class="n">index_array</span></div>
+
+
+<div class="viewcode-block" id="Element.unconsolidate">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.unconsolidate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">unconsolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">struc_array</span><span class="p">,</span> <span class="n">index_array</span><span class="p">,</span> <span class="n">fracs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Unconsolidate from a numpy structures array.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None. The element is updated in place.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">element_dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;frac0&quot;</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;frac1&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+                        <span class="n">frac</span> <span class="k">for</span> <span class="n">frac</span> <span class="ow">in</span> <span class="n">fracs</span> <span class="k">if</span> <span class="n">frac</span><span class="o">.</span><span class="n">id_</span> <span class="o">==</span> <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                    <span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">index_array</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">index_array</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Element.unconsolidate_hpc">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.unconsolidate_hpc">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">unconsolidate_hpc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">struc_array</span><span class="p">,</span> <span class="n">index_array</span><span class="p">,</span> <span class="n">fracs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Unconsolidate from a numpy structures array for HPC solver.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None. The element is updated in place.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">element_dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;frac0&quot;</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;frac1&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+                        <span class="n">frac</span> <span class="k">for</span> <span class="n">frac</span> <span class="ow">in</span> <span class="n">fracs</span> <span class="k">if</span> <span class="n">frac</span><span class="o">.</span><span class="n">id_</span> <span class="o">==</span> <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                    <span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;coef&quot;</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;old_coef&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">][:</span> <span class="n">struc_array</span><span class="p">[</span><span class="s2">&quot;ncoef&quot;</span><span class="p">]]</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;thetas&quot;</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;dpsi_corr&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">][:</span> <span class="n">struc_array</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]]</span>
+                    <span class="k">continue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">struc_array</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">index_array</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">index_array</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Element.set_new_ncoef">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.set_new_ncoef">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_new_ncoef</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">nint_mult</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Increase the number of coefficients in the asymptotic expansion.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n : int</span>
+<span class="sd">            The new number of coefficients.</span>
+<span class="sd">        nint_mult : int</span>
+<span class="sd">            The multiplier for the number of integration points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>  <span class="c1"># Intersection, Constant Head Line</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ncoef</span> <span class="o">=</span> <span class="n">n</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">coef</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nint</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">nint_mult</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thetas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+                <span class="n">start</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nint</span><span class="p">),</span>
+                <span class="n">stop</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nint</span><span class="p">),</span>
+                <span class="n">num</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nint</span><span class="p">,</span>
+                <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Bounding Circle</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ncoef</span> <span class="o">=</span> <span class="n">n</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">coef</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">coef</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nint</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">nint_mult</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thetas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+                <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nint</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Element.plot">
+<a class="viewcode-back" href="../../elements.html#andfn.element.Element.plot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pl</span><span class="p">,</span> <span class="n">line_width</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot the element using the given plotter.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pl : pyvista.Plotter</span>
+<span class="sd">            The plotter to use for plotting.</span>
+<span class="sd">        line_width : float</span>
+<span class="sd">            The width of the lines in the plot.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+<span class="sd">            The element is plotted in the plotter.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="mi">3</span><span class="p">,</span>
+            <span class="mi">5</span><span class="p">,</span>
+        <span class="p">]:</span>  <span class="c1"># Intersection, Constant Head Line, Impermeable Line</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_2d_to_3d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoints0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">frac0</span><span class="p">)</span>
+            <span class="n">pl</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
+                <span class="n">pv</span><span class="o">.</span><span class="n">Line</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#000000&quot;</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="n">line_width</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Bounding Circle</span>
+            <span class="n">point</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_2d_to_3d</span><span class="p">(</span><span class="mi">0</span> <span class="o">+</span> <span class="mi">0</span><span class="n">j</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">frac0</span><span class="p">)</span>
+            <span class="n">pl</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
+                <span class="n">pv</span><span class="o">.</span><span class="n">Polygon</span><span class="p">(</span>
+                    <span class="n">point</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">,</span> <span class="n">normal</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frac0</span><span class="o">.</span><span class="n">normal</span><span class="p">,</span> <span class="n">n_sides</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">False</span>
+                <span class="p">),</span>
+                <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#000000&quot;</span><span class="p">,</span>
+                <span class="n">line_width</span><span class="o">=</span><span class="n">line_width</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>  <span class="c1"># Bounding Circle, Well, Impermeable Circle</span>
+            <span class="n">point</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_2d_to_3d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">frac0</span><span class="p">)</span>
+            <span class="n">pl</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
+                <span class="n">pv</span><span class="o">.</span><span class="n">Polygon</span><span class="p">(</span>
+                    <span class="n">point</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">,</span> <span class="n">normal</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frac0</span><span class="o">.</span><span class="n">normal</span><span class="p">,</span> <span class="n">n_sides</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">False</span>
+                <span class="p">),</span>
+                <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#000000&quot;</span><span class="p">,</span>
+                <span class="n">line_width</span><span class="o">=</span><span class="n">line_width</span><span class="p">,</span>
+            <span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Erik A. L. Toller
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Erik A. L. Toller.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

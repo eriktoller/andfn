@@ -1,0 +1,1808 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>HPC &#8212; AnDFN</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=a1637f0b"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'hpc';</script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CONFIGURATION" href="configuration.html" />
+    <link rel="prev" title="Mathematical and geometrical functions" href="math_geometry.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">AnDFN</p>
+  
+</a></div>
+        <div class="sidebar-primary-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/eriktoller/andfn" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" class="icon-link-image" alt="GitHub"/></a>
+        </li>
+</ul></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="apidocs.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="dfn.html">DFN</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="fracture.html">Fracture</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="elements.html">Elements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="bounding.html">Bounding elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="const_head.html">Constant head elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impermeable_objects.html">Impermeable objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="intersection.html">Intersection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="well.html">Well</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="math_geometry.html">Mathematical and geometrical functions</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">HPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">CONFIGURATION</a></li>
+
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples_page.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="template.html">Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="large_dfn.html">A large DFN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="particle_tracking.html">Particle tracking</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="about.html">About</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html">Release notes</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/hpc.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>HPC</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_solve">Solver functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.build_head_matrix"><code class="docutils literal notranslate"><span class="pre">build_head_matrix()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.element_solver"><code class="docutils literal notranslate"><span class="pre">element_solver()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.element_solver2"><code class="docutils literal notranslate"><span class="pre">element_solver2()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_bnd_error"><code class="docutils literal notranslate"><span class="pre">get_bnd_error()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_discharge_elements"><code class="docutils literal notranslate"><span class="pre">get_discharge_elements()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_error"><code class="docutils literal notranslate"><span class="pre">get_error()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_max_min_phi"><code class="docutils literal notranslate"><span class="pre">get_max_min_phi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_z_int_array"><code class="docutils literal notranslate"><span class="pre">get_z_int_array()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.post_matrix_solve"><code class="docutils literal notranslate"><span class="pre">post_matrix_solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.pre_matrix_solve"><code class="docutils literal notranslate"><span class="pre">pre_matrix_solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.set_new_ncoef"><code class="docutils literal notranslate"><span class="pre">set_new_ncoef()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.solve"><code class="docutils literal notranslate"><span class="pre">solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.solve_discharge_matrix"><code class="docutils literal notranslate"><span class="pre">solve_discharge_matrix()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_fracture">Fracture functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.calc_flow_net"><code class="docutils literal notranslate"><span class="pre">calc_flow_net()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.calc_heads"><code class="docutils literal notranslate"><span class="pre">calc_heads()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.get_flow_nets"><code class="docutils literal notranslate"><span class="pre">get_flow_nets()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.get_heads"><code class="docutils literal notranslate"><span class="pre">get_heads()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.head_from_phi"><code class="docutils literal notranslate"><span class="pre">head_from_phi()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_bounding_circle">Bounding circle functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.check_boundary_condition"><code class="docutils literal notranslate"><span class="pre">check_boundary_condition()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.get_chi"><code class="docutils literal notranslate"><span class="pre">get_chi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.solve"><code class="docutils literal notranslate"><span class="pre">solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.z_array"><code class="docutils literal notranslate"><span class="pre">z_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_const_head_line">Constant head line functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_const_head_line.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_const_head_line.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_const_head_line.solve"><code class="docutils literal notranslate"><span class="pre">solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_const_head_line.z_array"><code class="docutils literal notranslate"><span class="pre">z_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_intersection">Intersection functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_intersection.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_intersection.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_intersection.solve"><code class="docutils literal notranslate"><span class="pre">solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_intersection.z_array"><code class="docutils literal notranslate"><span class="pre">z_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_well">Well functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_well.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_well.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_well.z_array"><code class="docutils literal notranslate"><span class="pre">z_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_math_functions">Mathematical functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.asym_expansion"><code class="docutils literal notranslate"><span class="pre">asym_expansion()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.asym_expansion_d1"><code class="docutils literal notranslate"><span class="pre">asym_expansion_d1()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.calc_error"><code class="docutils literal notranslate"><span class="pre">calc_error()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.calc_thetas"><code class="docutils literal notranslate"><span class="pre">calc_thetas()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.cauchy_integral_domega"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_domega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.cauchy_integral_domega_line"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_domega_line()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.cauchy_integral_real"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_real()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.cut_trail"><code class="docutils literal notranslate"><span class="pre">cut_trail()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.fill_exp_array"><code class="docutils literal notranslate"><span class="pre">fill_exp_array()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.find_branch_cuts"><code class="docutils literal notranslate"><span class="pre">find_branch_cuts()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.float2str"><code class="docutils literal notranslate"><span class="pre">float2str()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.get_dpsi_corr"><code class="docutils literal notranslate"><span class="pre">get_dpsi_corr()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.get_sign"><code class="docutils literal notranslate"><span class="pre">get_sign()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.taylor_series"><code class="docutils literal notranslate"><span class="pre">taylor_series()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.taylor_series_d1"><code class="docutils literal notranslate"><span class="pre">taylor_series_d1()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.well_chi"><code class="docutils literal notranslate"><span class="pre">well_chi()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_geometry_functions">Geometry functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_geometry_functions.map_chi_to_z_circle"><code class="docutils literal notranslate"><span class="pre">map_chi_to_z_circle()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_geometry_functions.map_chi_to_z_line"><code class="docutils literal notranslate"><span class="pre">map_chi_to_z_line()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_geometry_functions.map_z_circle_to_chi"><code class="docutils literal notranslate"><span class="pre">map_z_circle_to_chi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_geometry_functions.map_z_line_to_chi"><code class="docutils literal notranslate"><span class="pre">map_z_line_to_chi()</span></code></a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="hpc">
+<h1>HPC<a class="headerlink" href="#hpc" title="Link to this heading">#</a></h1>
+<p>This module contains the High Performance Computing (HPC) functions. The module uses Numba to create a compiled version
+of the solve and plotter. The code is separated into different files, each containing a different set of functions.</p>
+<p>The compiled function utilizes parallel processing to speed up the computation.</p>
+<p>These functions are not to be called from the user directly, but are used by the other functions in the package.</p>
+<section id="module-andfn.hpc.hpc_solve">
+<span id="solver-functions"></span><h2>Solver functions<a class="headerlink" href="#module-andfn.hpc.hpc_solve" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains the HPC solve functions.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.build_head_matrix">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">build_head_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractures_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">head_matrix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#build_head_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.build_head_matrix" title="Link to this definition">#</a></dt>
+<dd><p>Builds the head matrix for the DFN and stores it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractures_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – Array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>discharge_elements</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The discharge elements</p></li>
+<li><p><strong>discharge_int</strong> (<em>int</em>) – The number of integration points</p></li>
+<li><p><strong>head_matrix</strong> (<em>np.ndarray</em><em>[</em><em>dtype_head_matrix</em><em>]</em>) – The head matrix</p></li>
+<li><p><strong>z_int</strong> (<em>np.ndarray</em><em>[</em><em>dtype_z_arrays</em><em>]</em>) – The z arrays for the discharge elements</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>matrix</strong> – The head matrix</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.element_solver">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">element_solver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cnt_error</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#element_solver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.element_solver" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.element_solver2">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">element_solver2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cnt_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_coef_ratio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_coef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef_increase</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#element_solver2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.element_solver2" title="Link to this definition">#</a></dt>
+<dd><p>Solves the elements and updates the coefficients in the work array.
+:param num_elements: The number of elements
+:type num_elements: int
+:param element_struc_array: Array of elements
+:type element_struc_array: np.ndarray[element_dtype]
+:param fracture_struc_array: Array of fractures
+:type fracture_struc_array: np.ndarray[fracture_dtype]
+:param work_array: The work array
+:type work_array: np.ndarray[dtype_work]
+:param max_error: The maximum error
+:type max_error: float
+:param nit: The number of iterations
+:type nit: int
+:param cnt_error: The number of errors
+:type cnt_error: int
+:param max_coef_ratio: The coefficient ratio
+:type max_coef_ratio: float
+:param max_coef: The maximum number of coefficients
+:type max_coef: int
+:param coef_increase: The coefficient increase
+:type coef_increase: int</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cnt</strong> – The number of elements that were solved</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.get_bnd_error">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">get_bnd_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bnd_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constants</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#get_bnd_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.get_bnd_error" title="Link to this definition">#</a></dt>
+<dd><p>Builds the head matrix for the DFN and stores it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_elements</strong> (<em>int</em>) – The number of elements</p></li>
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – Array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>dtype_work</em><em>]</em>) – The work array</p></li>
+<li><p><strong>discharge_int</strong> (<em>int</em>) – The number of integration points</p></li>
+<li><p><strong>bnd_error</strong> (<em>np.ndarray</em><em>[</em><em>dtype_head_matrix</em><em>]</em>) – The error matrix for the boundary conditions</p></li>
+<li><p><strong>z_int</strong> (<em>np.ndarray</em><em>[</em><em>dtype_z_arrays</em><em>]</em>) – The z arrays for the discharge elements</p></li>
+<li><p><strong>nit</strong> (<em>int</em>) – The number of iterations</p></li>
+<li><p><strong>max_error</strong> (<em>float</em>) – The maximum error</p></li>
+<li><p><strong>constants</strong> (<em>np.ndarray</em><em>[</em><em>constants_dtype</em><em>]</em>) – The constants for the solver and dfn.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>matrix</strong> – The head matrix</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.get_discharge_elements">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">get_discharge_elements</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#get_discharge_elements"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.get_discharge_elements" title="Link to this definition">#</a></dt>
+<dd><p>Get the discharge elements from the element array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>discharge_elements</strong> – The array of discharge elements</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[element_dtype]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.get_error">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">get_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#get_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.get_error" title="Link to this definition">#</a></dt>
+<dd><p>Get the maximum error from the elements and the element that it is associated with.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>error</strong> (<em>float</em>) – The maximum error</p></li>
+<li><p><strong>id_</strong> (<em>int</em>) – The id of the element with the maximum error</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.get_max_min_phi">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">get_max_min_phi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#get_max_min_phi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.get_max_min_phi" title="Link to this definition">#</a></dt>
+<dd><p>Get the maximum and minimum phi values from the elements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements</p></li>
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The array of fractures</p></li>
+<li><p><strong>ids</strong> (<em>np.ndarray</em>) – The ids of the elements to check</p></li>
+<li><p><strong>frac_id</strong> (<em>int</em>) – The id of the fracture to check</p></li>
+<li><p><strong>z_int</strong> (<em>np.ndarray</em><em>[</em><em>dtype_z_arrays</em><em>]</em>) – The z arrays for the discharge elements</p></li>
+<li><p><strong>discharge_int</strong> (<em>int</em>) – The number of integration points</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>max_phi</strong> (<em>float</em>) – The maximum phi value</p></li>
+<li><p><strong>min_phi</strong> (<em>float</em>) – The minimum phi value</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.get_z_int_array">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">get_z_int_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#get_z_int_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.get_z_int_array" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.post_matrix_solve">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">post_matrix_solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractures_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharges</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#post_matrix_solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.post_matrix_solve" title="Link to this definition">#</a></dt>
+<dd><p>Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractures_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – Array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>discharge_elements</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The discharge elements</p></li>
+<li><p><strong>discharges</strong> (<em>np.ndarray</em>) – The discharges</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>fractures_struc_array</strong> (<em>np.ndarray[fracture_dtype]</em>) – The array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray[element_dtype]</em>) – The array of elements</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.pre_matrix_solve">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">pre_matrix_solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractures_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">head_matrix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#pre_matrix_solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.pre_matrix_solve" title="Link to this definition">#</a></dt>
+<dd><p>Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractures_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – Array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>discharge_elements</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The discharge elements</p></li>
+<li><p><strong>discharge_int</strong> (<em>int</em>) – The number of integration points</p></li>
+<li><p><strong>head_matrix</strong> (<em>np.ndarray</em><em>[</em><em>dtype_head_matrix</em><em>]</em>) – The head matrix</p></li>
+<li><p><strong>z_int</strong> (<em>np.ndarray</em><em>[</em><em>dtype_z_arrays</em><em>]</em>) – The z arrays for the discharge elements</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>fractures_struc_array</strong> (<em>np.ndarray[fracture_dtype]</em>) – The array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray[element_dtype]</em>) – The array of elements</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.set_new_ncoef">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">set_new_ncoef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint_mult</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#set_new_ncoef"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.set_new_ncoef" title="Link to this definition">#</a></dt>
+<dd><p>Increase the number of coefficients in the asymptotic expansion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The element to increase the number of coefficients.</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – The new number of coefficients.</p></li>
+<li><p><strong>nint_mult</strong> (<em>int</em>) – The multiplier for the number of integration points.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.solve">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_matrix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constants</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.solve" title="Link to this definition">#</a></dt>
+<dd><p>Solves the DFN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – Array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>discharge_matrix</strong> (<em>np.ndarray</em>) – The discharge matrix</p></li>
+<li><p><strong>discharge_int</strong> (<em>int</em>) – The number of integration points</p></li>
+<li><p><strong>constants</strong> (<em>np.ndarray</em><em>[</em><em>constants_dtype</em><em>]</em>) – The constants for the solver and dfn.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>element_struc_array</strong> – The array of elements</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[element_dtype]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_solve.solve_discharge_matrix">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_solve.</span></span><span class="sig-name descname"><span class="pre">solve_discharge_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractures_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_elements</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">head_matrix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lu_matrix</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_solve.html#solve_discharge_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_solve.solve_discharge_matrix" title="Link to this definition">#</a></dt>
+<dd><p>Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractures_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – Array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>discharge_elements</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The discharge elements</p></li>
+<li><p><strong>discharge_int</strong> (<em>int</em>) – The number of integration points</p></li>
+<li><p><strong>head_matrix</strong> (<em>np.ndarray</em><em>[</em><em>dtype_head_matrix</em><em>]</em>) – The head matrix</p></li>
+<li><p><strong>discharges</strong> (<em>np.ndarray</em>) – The discharges to be solved</p></li>
+<li><p><strong>z_int</strong> (<em>np.ndarray</em><em>[</em><em>dtype_z_arrays</em><em>]</em>) – The z arrays for the discharge elements</p></li>
+<li><p><strong>lu_matrix</strong> (<em>scipy.sparse.linalg.splu</em>) – The LU factorization of the discharge matrix</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>fractures_struc_array</strong> (<em>np.ndarray[fracture_dtype]</em>) – The array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray[element_dtype]</em>) – The array of elements</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-andfn.hpc.hpc_fracture">
+<span id="fracture-functions"></span><h2>Fracture functions<a class="headerlink" href="#module-andfn.hpc.hpc_fracture" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains the HPC fracture functions.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_fracture.calc_flow_net">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_fracture.</span></span><span class="sig-name descname"><span class="pre">calc_flow_net</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">margin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_fracture.html#calc_flow_net"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_fracture.calc_flow_net" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the flow net for the fracture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The fracture element.</p></li>
+<li><p><strong>n_points</strong> (<em>int</em>) – Number of points in the flow net.</p></li>
+<li><p><strong>margin</strong> (<em>float</em>) – Margin for the flow net.</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>flow_net</strong> – The flow net for the fracture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[complex]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_fracture.calc_heads">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_fracture.</span></span><span class="sig-name descname"><span class="pre">calc_heads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">margin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_fracture.html#calc_heads"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_fracture.calc_heads" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the head net for the fracture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The fracture element.</p></li>
+<li><p><strong>n_points</strong> (<em>int</em>) – Number of points in the flow net.</p></li>
+<li><p><strong>margin</strong> (<em>float</em>) – Margin for the flow net.</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>heads</strong> – The head net for the fracture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[complex]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_fracture.calc_omega">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_fracture.</span></span><span class="sig-name descname"><span class="pre">calc_omega</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_fracture.html#calc_omega"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_fracture.calc_omega" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the omega for the fracture excluding element “exclude”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The fracture element.</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – A point in the complex z plane.</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements.</p></li>
+<li><p><strong>exclude</strong> (<em>int</em>) – Label of element to exclude from the omega calculation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>omega</strong> – The complex potential for the fracture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_fracture.calc_w">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_fracture.</span></span><span class="sig-name descname"><span class="pre">calc_w</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_fracture.html#calc_w"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_fracture.calc_w" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the omega for the fracture excluding element “exclude”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The fracture element.</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – A point in the complex z plane.</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements.</p></li>
+<li><p><strong>exclude</strong> (<em>int</em>) – Label of element to exclude from the omega calculation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>w</strong> – The complex potential for the fracture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_fracture.get_flow_nets">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_fracture.</span></span><span class="sig-name descname"><span class="pre">get_flow_nets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">margin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_fracture.html#get_flow_nets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_fracture.get_flow_nets" title="Link to this definition">#</a></dt>
+<dd><p>Get the flow nets for all fractures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The fracture structure array.</p></li>
+<li><p><strong>n_points</strong> (<em>int</em>) – Number of points in the flow net.</p></li>
+<li><p><strong>margin</strong> (<em>float</em>) – Margin for the flow net.</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>flow_nets</strong> – List of flow nets for each fracture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[np.ndarray[complex]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_fracture.get_heads">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_fracture.</span></span><span class="sig-name descname"><span class="pre">get_heads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">margin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_fracture.html#get_heads"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_fracture.get_heads" title="Link to this definition">#</a></dt>
+<dd><p>Get the heads for all fractures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The fracture structure array.</p></li>
+<li><p><strong>n_points</strong> (<em>int</em>) – Number of points in the flow net.</p></li>
+<li><p><strong>margin</strong> (<em>float</em>) – Margin for the flow net.</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>heads</strong> – List of heads for each fracture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[np.ndarray[complex]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_fracture.head_from_phi">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_fracture.</span></span><span class="sig-name descname"><span class="pre">head_from_phi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_fracture.html#head_from_phi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_fracture.head_from_phi" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the head net for the fracture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The fracture element.</p></li>
+<li><p><strong>phi</strong> (<em>float</em>) – The discharge potential for the fracture.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>head</strong> – The head net for the fracture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[complex]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-andfn.hpc.hpc_bounding_circle">
+<span id="bounding-circle-functions"></span><h2>Bounding circle functions<a class="headerlink" href="#module-andfn.hpc.hpc_bounding_circle" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_bounding_circle.calc_omega">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_bounding_circle.</span></span><span class="sig-name descname"><span class="pre">calc_omega</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_bounding_circle.html#calc_omega"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_bounding_circle.calc_omega" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the omega for the bounding circle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The bounding circle element</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – A point in the complex z plane.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>omega</strong> – The complex potential for the bounding circle.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_bounding_circle.calc_w">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_bounding_circle.</span></span><span class="sig-name descname"><span class="pre">calc_w</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_bounding_circle.html#calc_w"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_bounding_circle.calc_w" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the omega for the bounding circle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The bounding circle element</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – A point in the complex z plane.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>omega</strong> – The complex potential for the bounding circle.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_bounding_circle.check_boundary_condition">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_bounding_circle.</span></span><span class="sig-name descname"><span class="pre">check_boundary_condition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_bounding_circle.html#check_boundary_condition"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_bounding_circle.check_boundary_condition" title="Link to this definition">#</a></dt>
+<dd><p>Check if the bounding circle satisfies the boundary conditions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The bounding circle element</p></li>
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – The number of points to check the boundary condition</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>error</strong> – The error in the boundary condition</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.float64</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_bounding_circle.get_chi">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_bounding_circle.</span></span><span class="sig-name descname"><span class="pre">get_chi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_bounding_circle.html#get_chi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_bounding_circle.get_chi" title="Link to this definition">#</a></dt>
+<dd><p>Maps the complex z plane to the complex chi plane for the bounding circle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The bounding circle element</p></li>
+<li><p><strong>z</strong> (<em>complex</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>chi</strong> – The mapped point in the chi plane.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_bounding_circle.solve">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_bounding_circle.</span></span><span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_bounding_circle.html#solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_bounding_circle.solve" title="Link to this definition">#</a></dt>
+<dd><p>Solves the bounding circle element.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The bounding circle element</p></li>
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>dtype_work</em><em>]</em>) – The work array</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Edits the <a href="#id1"><span class="problematic" id="id2">self_</span></a> array and works_array in place.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_bounding_circle.z_array">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_bounding_circle.</span></span><span class="sig-name descname"><span class="pre">z_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_bounding_circle.html#z_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_bounding_circle.z_array" title="Link to this definition">#</a></dt>
+<dd><p>Returns an array of points in the complex z plane.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The bounding circle element</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – The number of points to return.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z</strong> – The array of points in the complex z plane.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[complex]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-andfn.hpc.hpc_const_head_line">
+<span id="constant-head-line-functions"></span><h2>Constant head line functions<a class="headerlink" href="#module-andfn.hpc.hpc_const_head_line" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains the HPC Constant head functions.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_const_head_line.calc_omega">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_const_head_line.</span></span><span class="sig-name descname"><span class="pre">calc_omega</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_const_head_line.html#calc_omega"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_const_head_line.calc_omega" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the omega function for a given point z and fracture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The intersection element</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – An array of points in the complex z-plane</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>omega</strong> – The resulting value for the omega function</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_const_head_line.calc_w">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_const_head_line.</span></span><span class="sig-name descname"><span class="pre">calc_w</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_const_head_line.html#calc_w"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_const_head_line.calc_w" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the complex discharge vector for the constant head line.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The constant head line element</p></li>
+<li><p><strong>z</strong> (<em>np.ndarray</em>) – The points to calculate the complex discharge vector at</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The complex discharge vector</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_const_head_line.solve">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_const_head_line.</span></span><span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_const_head_line.html#solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_const_head_line.solve" title="Link to this definition">#</a></dt>
+<dd><p>Solves the constant head line element.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray element_dtype</em>) – The constant head line element.</p></li>
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em>) – The array of fractures.</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements.</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>work_dtype</em><em>]</em>) – The work array.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Edits the <a href="#id3"><span class="problematic" id="id4">self_</span></a> array and works_array in place.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_const_head_line.z_array">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_const_head_line.</span></span><span class="sig-name descname"><span class="pre">z_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_const_head_line.html#z_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_const_head_line.z_array" title="Link to this definition">#</a></dt>
+<dd><p>Returns an array of n points along the constant head line.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The constant head line element</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – The number of points to return.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z</strong> – An array of n points on the well.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[complex]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-andfn.hpc.hpc_intersection">
+<span id="intersection-functions"></span><h2>Intersection functions<a class="headerlink" href="#module-andfn.hpc.hpc_intersection" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains the HPC Intersection functions.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_intersection.calc_omega">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_intersection.</span></span><span class="sig-name descname"><span class="pre">calc_omega</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac_is_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_intersection.html#calc_omega"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_intersection.calc_omega" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the omega function for a given point z and fracture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The intersection element</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – An array of points in the complex z-plane</p></li>
+<li><p><strong>frac_is_id</strong> (<em>np.int64</em>) – The fracture that the point is in</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>omega</strong> – The resulting value for the omega function</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_intersection.calc_w">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_intersection.</span></span><span class="sig-name descname"><span class="pre">calc_w</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac_is_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_intersection.html#calc_w"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_intersection.calc_w" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the complex discharge vector for the intersection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The intersection element</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – An array of points in the complex z-plane</p></li>
+<li><p><strong>frac_is_id</strong> (<em>np.int64</em>) – The fracture that the point is in</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>w</strong> – The complex discharge vector</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_intersection.solve">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_intersection.</span></span><span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_intersection.html#solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_intersection.solve" title="Link to this definition">#</a></dt>
+<dd><p>Solves the intersection element.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray element_dtype</em>) – The intersection element.</p></li>
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em>) – The array of fractures.</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements.</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>work_dtype</em><em>]</em>) – The work array.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Edits the <a href="#id5"><span class="problematic" id="id6">self_</span></a> array and works_array in place.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_intersection.z_array">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_intersection.</span></span><span class="sig-name descname"><span class="pre">z_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac_is</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_intersection.html#z_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_intersection.z_array" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-andfn.hpc.hpc_well">
+<span id="well-functions"></span><h2>Well functions<a class="headerlink" href="#module-andfn.hpc.hpc_well" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains the HPC well functions.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_well.calc_omega">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_well.</span></span><span class="sig-name descname"><span class="pre">calc_omega</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_well.html#calc_omega"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_well.calc_omega" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The well element.</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – A point in the complex z plane.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>omega</strong> – The complex potential for the well.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_well.calc_w">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_well.</span></span><span class="sig-name descname"><span class="pre">calc_w</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_well.html#calc_w"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_well.calc_w" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The well element.</p></li>
+<li><p><strong>z</strong> (<em>complex</em>) – A point in the complex z plane.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>omega</strong> – The complex potential for the well.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_well.z_array">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_well.</span></span><span class="sig-name descname"><span class="pre">z_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_well.html#z_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_well.z_array" title="Link to this definition">#</a></dt>
+<dd><p>Returns an array of n points on the well.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The well element</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – The number of points to return.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z</strong> – An array of n points on the well.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[complex]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-andfn.hpc.hpc_math_functions">
+<span id="mathematical-functions"></span><h2>Mathematical functions<a class="headerlink" href="#module-andfn.hpc.hpc_math_functions" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains some general mathematical functions.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.asym_expansion">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">asym_expansion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#asym_expansion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.asym_expansion" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
+coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – An array of coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> – The resulting value for the asymptotic expansion</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.asym_expansion_d1">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">asym_expansion_d1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#asym_expansion_d1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.asym_expansion_d1" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
+coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em>) – An array of coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> – The resulting value for the asymptotic expansion</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.calc_error">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">calc_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef_ref</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#calc_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.calc_error" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the error between two sets of coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coef</strong> (<em>np.ndarray</em>) – The coefficients to compare</p></li>
+<li><p><strong>coef_ref</strong> (<em>np.ndarray</em>) – The reference coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>error</strong> – The error</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.calc_thetas">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">calc_thetas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thetas</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#calc_thetas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.calc_thetas" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the thetas for the unit circle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em>) – The number of thetas to calculate</p></li>
+<li><p><strong>type</strong> (<em>int</em>) – The element type. 0 for bounding circle, 1 for constant head line, 3 for intersection.</p></li>
+<li><p><strong>thetas</strong> (<em>np.ndarray</em>) – The array to fill with the thetas</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Fills the thetas array with the values of thetas</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.cauchy_integral_domega">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">cauchy_integral_domega</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dpsi_corr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_id_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#cauchy_integral_domega"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.cauchy_integral_domega" title="Link to this definition">#</a></dt>
+<dd><p>FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>np.int64</em>) – Number of integration points</p></li>
+<li><p><strong>m</strong> (<em>np.int64</em>) – Number of coefficients</p></li>
+<li><p><strong>dpsi_corr</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – Correction for the stream function</p></li>
+<li><p><strong>frac0</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The fracture</p></li>
+<li><p><strong>element_id</strong> (<em>np.int64</em>) – The element id</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>radius</strong> (<em>np.float64</em>) – The radius of the bounding circle</p></li>
+<li><p><strong>center</strong> (<em>np.complex128</em>) – The center of the bounding circle</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>work_array_dtype</em><em>]</em>) – The work array</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – The coefficients that will be filled</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>coef</strong> – Array of coefficients</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[np.complex128]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.cauchy_integral_domega_line">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">cauchy_integral_domega_line</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dpsi_corr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_id_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoints0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#cauchy_integral_domega_line"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.cauchy_integral_domega_line" title="Link to this definition">#</a></dt>
+<dd><p>FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em>) – Number of integration points</p></li>
+<li><p><strong>m</strong> (<em>int</em>) – Number of coefficients</p></li>
+<li><p><strong>dpsi_corr</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – Correction for the stream function</p></li>
+<li><p><strong>frac0</strong> (<em>np.ndarray</em>) – The fracture</p></li>
+<li><p><strong>element_id</strong> (<em>int</em>) – The element id</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>endpoints0</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – The endpoints of the line</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>work_array_dtype</em><em>]</em>) – The work array</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – The coefficients that will be filled</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>coef</strong> – Array of coefficients</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.cauchy_integral_real">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">cauchy_integral_real</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thetas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_id_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoints0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#cauchy_integral_real"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.cauchy_integral_real" title="Link to this definition">#</a></dt>
+<dd><p>FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em>) – Number of integration points</p></li>
+<li><p><strong>m</strong> (<em>int</em>) – Number of coefficients</p></li>
+<li><p><strong>thetas</strong> (<em>np.ndarray</em>) – Array with thetas along the unit circle</p></li>
+<li><p><strong>frac0</strong> (<em>np.ndarray</em>) – The fracture</p></li>
+<li><p><strong>element_id</strong> (<em>int</em>) – The element id</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – Array of elements</p></li>
+<li><p><strong>endpoints0</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – The endpoints of the constant head line</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>work_array_dtype</em><em>]</em>) – The work array</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – The coefficients that will be filled</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>coef</strong> – Array of coefficients</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[np.complex128]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.cut_trail">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">cut_trail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f_str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#cut_trail"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.cut_trail" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.fill_exp_array">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">fill_exp_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thetas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sign</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#fill_exp_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.fill_exp_array" title="Link to this definition">#</a></dt>
+<dd><p>Function that fills the exp_array with the values of exp(-1j * thetas).
+:param n: The number of thetas to calculate
+:type n: int
+:param thetas: The thetas
+:type thetas: np.ndarray
+:param exp_array: The array to fill with the values of exp(sign * 1j * thetas)
+:type exp_array: np.ndarray
+:param sign: The sign of the exponent. 1 for positive, -1 for negative.
+:type sign: int</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Fills the exp_array with the values of exp(-1j * thetas)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.find_branch_cuts">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">find_branch_cuts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#find_branch_cuts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.find_branch_cuts" title="Link to this definition">#</a></dt>
+<dd><p>Find the branch cuts for the fracture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The bounding circle element</p></li>
+<li><p><strong>z_pos</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – The positions in the complex plane</p></li>
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>dtype_work</em><em>]</em>) – The work array</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>dpsi_corr</strong> – The correction to the potential due to the branch cuts</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[np.float64]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.float2str">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">float2str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#float2str"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.float2str" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.get_dpsi_corr">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">get_dpsi_corr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_struc_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#get_dpsi_corr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.get_dpsi_corr" title="Link to this definition">#</a></dt>
+<dd><p>Get the correction to the stream function due to the branch cuts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The bounding circle element</p></li>
+<li><p><strong>fracture_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>fracture_dtype</em><em>]</em>) – The array of fractures</p></li>
+<li><p><strong>element_struc_array</strong> (<em>np.ndarray</em><em>[</em><em>element_dtype</em><em>]</em>) – The array of elements</p></li>
+<li><p><strong>work_array</strong> (<em>np.ndarray</em><em>[</em><em>dtype_work</em><em>]</em>) – The work array</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Edits the <a href="#id7"><span class="problematic" id="id8">self_</span></a> array in place.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.get_sign">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">get_sign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self_</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cnt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sign_default</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#get_sign"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.get_sign" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.taylor_series">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">taylor_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#taylor_series"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.taylor_series" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the Taylor series starting from 0 for a given point chi and an array of
+coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em>) – An array of coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> – The resulting value for the asymptotic expansion</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.taylor_series_d1">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">taylor_series_d1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#taylor_series_d1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.taylor_series_d1" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the Taylor series starting from 0 for a given point chi and an array of
+coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em>) – An array of coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> – The resulting value for the asymptotic expansion</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_math_functions.well_chi">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_math_functions.</span></span><span class="sig-name descname"><span class="pre">well_chi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_math_functions.html#well_chi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_math_functions.well_chi" title="Link to this definition">#</a></dt>
+<dd><blockquote>
+<div><p>Function that return the complex potential for a well as a function of chi.</p>
+<div class="math notranslate nohighlight">
+\[\omega =\]</div>
+</div></blockquote>
+<p>rac{q}{2 pi} log(chi)</p>
+<blockquote>
+<div><dl class="simple">
+<dt>chi<span class="classifier">complex</span></dt><dd><p>A point in the complex chi plane</p>
+</dd>
+<dt>q<span class="classifier">np.float64</span></dt><dd><p>The discharge eof the well.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>omega<span class="classifier">complex</span></dt><dd><p>The complex discharge potential</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</section>
+<section id="module-andfn.hpc.hpc_geometry_functions">
+<span id="geometry-functions"></span><h2>Geometry functions<a class="headerlink" href="#module-andfn.hpc.hpc_geometry_functions" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains some geometrical functions.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_geometry_functions.map_chi_to_z_circle">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_chi_to_z_circle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_geometry_functions.html#map_chi_to_z_circle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_geometry_functions.map_chi_to_z_circle" title="Link to this definition">#</a></dt>
+<dd><p>Function that maps the unit circle in the complex chi-plane to a circle in the complex z-plane.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>np.complex128</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>r</strong> (<em>float</em>) – Radius of the circle</p></li>
+<li><p><strong>center</strong> (<em>np.complex128</em>) – Center point of the circle</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z</strong> – The corresponding point in the complex z-plane</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.complex128</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_geometry_functions.map_chi_to_z_line">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_chi_to_z_line</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_geometry_functions.html#map_chi_to_z_line"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_geometry_functions.map_chi_to_z_line" title="Link to this definition">#</a></dt>
+<dd><p>Function that maps the exterior of the unit circle in the complex chi-plane onto the exterior of a line in the
+complex z-plane.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>endpoints</strong> (<em>np.ndarray</em><em>[</em><em>np.complex128</em><em>]</em>) – Endpoints of the line in the complex z-plane</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z</strong> – The corresponding point in the complex z-plane</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_geometry_functions.map_z_circle_to_chi">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_z_circle_to_chi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_geometry_functions.html#map_z_circle_to_chi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_geometry_functions.map_z_circle_to_chi" title="Link to this definition">#</a></dt>
+<dd><p>Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z</strong> (<em>complex</em>) – A point in the complex z-plane</p></li>
+<li><p><strong>r</strong> (<em>float</em>) – Radius of the circle</p></li>
+<li><p><strong>center</strong> (<em>np.complex128</em>) – Center point of the circle in the complex z-plane</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>chi</strong> – The corresponding point in the complex chi-plane</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.hpc.hpc_geometry_functions.map_z_line_to_chi">
+<span class="sig-prename descclassname"><span class="pre">andfn.hpc.hpc_geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_z_line_to_chi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/hpc/hpc_geometry_functions.html#map_z_line_to_chi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.hpc.hpc_geometry_functions.map_z_line_to_chi" title="Link to this definition">#</a></dt>
+<dd><p>Function that maps the exterior of a line in the complex z-plane onto the exterior of the unit circle in the
+complex chi-plane.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z</strong> (<em>complex</em>) – A complex point in the complex z-plane</p></li>
+<li><p><strong>endpoints</strong> (<em>np.ndarray</em>) – Endpoints of the line in the complex z-plane</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>chi</strong> – The corresponding point in the complex chi-plane</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="math_geometry.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Mathematical and geometrical functions</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="configuration.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">CONFIGURATION</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_solve">Solver functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.build_head_matrix"><code class="docutils literal notranslate"><span class="pre">build_head_matrix()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.element_solver"><code class="docutils literal notranslate"><span class="pre">element_solver()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.element_solver2"><code class="docutils literal notranslate"><span class="pre">element_solver2()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_bnd_error"><code class="docutils literal notranslate"><span class="pre">get_bnd_error()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_discharge_elements"><code class="docutils literal notranslate"><span class="pre">get_discharge_elements()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_error"><code class="docutils literal notranslate"><span class="pre">get_error()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_max_min_phi"><code class="docutils literal notranslate"><span class="pre">get_max_min_phi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.get_z_int_array"><code class="docutils literal notranslate"><span class="pre">get_z_int_array()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.post_matrix_solve"><code class="docutils literal notranslate"><span class="pre">post_matrix_solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.pre_matrix_solve"><code class="docutils literal notranslate"><span class="pre">pre_matrix_solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.set_new_ncoef"><code class="docutils literal notranslate"><span class="pre">set_new_ncoef()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.solve"><code class="docutils literal notranslate"><span class="pre">solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_solve.solve_discharge_matrix"><code class="docutils literal notranslate"><span class="pre">solve_discharge_matrix()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_fracture">Fracture functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.calc_flow_net"><code class="docutils literal notranslate"><span class="pre">calc_flow_net()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.calc_heads"><code class="docutils literal notranslate"><span class="pre">calc_heads()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.get_flow_nets"><code class="docutils literal notranslate"><span class="pre">get_flow_nets()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.get_heads"><code class="docutils literal notranslate"><span class="pre">get_heads()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_fracture.head_from_phi"><code class="docutils literal notranslate"><span class="pre">head_from_phi()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_bounding_circle">Bounding circle functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.check_boundary_condition"><code class="docutils literal notranslate"><span class="pre">check_boundary_condition()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.get_chi"><code class="docutils literal notranslate"><span class="pre">get_chi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.solve"><code class="docutils literal notranslate"><span class="pre">solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_bounding_circle.z_array"><code class="docutils literal notranslate"><span class="pre">z_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_const_head_line">Constant head line functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_const_head_line.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_const_head_line.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_const_head_line.solve"><code class="docutils literal notranslate"><span class="pre">solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_const_head_line.z_array"><code class="docutils literal notranslate"><span class="pre">z_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_intersection">Intersection functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_intersection.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_intersection.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_intersection.solve"><code class="docutils literal notranslate"><span class="pre">solve()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_intersection.z_array"><code class="docutils literal notranslate"><span class="pre">z_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_well">Well functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_well.calc_omega"><code class="docutils literal notranslate"><span class="pre">calc_omega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_well.calc_w"><code class="docutils literal notranslate"><span class="pre">calc_w()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_well.z_array"><code class="docutils literal notranslate"><span class="pre">z_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_math_functions">Mathematical functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.asym_expansion"><code class="docutils literal notranslate"><span class="pre">asym_expansion()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.asym_expansion_d1"><code class="docutils literal notranslate"><span class="pre">asym_expansion_d1()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.calc_error"><code class="docutils literal notranslate"><span class="pre">calc_error()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.calc_thetas"><code class="docutils literal notranslate"><span class="pre">calc_thetas()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.cauchy_integral_domega"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_domega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.cauchy_integral_domega_line"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_domega_line()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.cauchy_integral_real"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_real()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.cut_trail"><code class="docutils literal notranslate"><span class="pre">cut_trail()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.fill_exp_array"><code class="docutils literal notranslate"><span class="pre">fill_exp_array()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.find_branch_cuts"><code class="docutils literal notranslate"><span class="pre">find_branch_cuts()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.float2str"><code class="docutils literal notranslate"><span class="pre">float2str()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.get_dpsi_corr"><code class="docutils literal notranslate"><span class="pre">get_dpsi_corr()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.get_sign"><code class="docutils literal notranslate"><span class="pre">get_sign()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.taylor_series"><code class="docutils literal notranslate"><span class="pre">taylor_series()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.taylor_series_d1"><code class="docutils literal notranslate"><span class="pre">taylor_series_d1()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_math_functions.well_chi"><code class="docutils literal notranslate"><span class="pre">well_chi()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.hpc.hpc_geometry_functions">Geometry functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_geometry_functions.map_chi_to_z_circle"><code class="docutils literal notranslate"><span class="pre">map_chi_to_z_circle()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_geometry_functions.map_chi_to_z_line"><code class="docutils literal notranslate"><span class="pre">map_chi_to_z_line()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_geometry_functions.map_z_circle_to_chi"><code class="docutils literal notranslate"><span class="pre">map_z_circle_to_chi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.hpc.hpc_geometry_functions.map_z_line_to_chi"><code class="docutils literal notranslate"><span class="pre">map_z_line_to_chi()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Erik A. L. Toller
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Erik A. L. Toller.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

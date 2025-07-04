@@ -1,0 +1,1060 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>andfn.hpc.hpc_math_functions &#8212; AnDFN</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=a1637f0b"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/andfn/hpc/hpc_math_functions';</script>
+    <link rel="author" title="About these documents" href="../../../about.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">AnDFN</p>
+  
+</a></div>
+        <div class="sidebar-primary-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/eriktoller/andfn" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" class="icon-link-image" alt="GitHub"/></a>
+        </li>
+</ul></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide.html">User Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../apidocs.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../dfn.html">DFN</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="../../../fracture.html">Fracture</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../elements.html">Elements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../bounding.html">Bounding elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../const_head.html">Constant head elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../impermeable_objects.html">Impermeable objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../intersection.html">Intersection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../well.html">Well</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../math_geometry.html">Mathematical and geometrical functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../hpc.html">HPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../configuration.html">CONFIGURATION</a></li>
+
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples_page.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../template.html">Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../large_dfn.html">A large DFN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../particle_tracking.html">Particle tracking</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../about.html">About</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../release_notes.html">Release notes</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for andfn.hpc.hpc_math_functions</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Notes</span>
+<span class="sd">-----</span>
+<span class="sd">This module contains some general mathematical functions.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numba</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nb</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">hpc_fracture</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">hpc_geometry_functions</span> <span class="k">as</span> <span class="n">gf</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">andfn.hpc</span><span class="w"> </span><span class="kn">import</span> <span class="n">CACHE</span>
+
+
+<div class="viewcode-block" id="asym_expansion">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.asym_expansion">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">inline</span><span class="o">=</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">asym_expansion</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">coef</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of</span>
+<span class="sd">    coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    chi : complex</span>
+<span class="sd">        A point in the complex chi-plane</span>
+<span class="sd">    coef : np.ndarray[np.complex128]</span>
+<span class="sd">        An array of coefficients</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    res : complex</span>
+<span class="sd">        The resulting value for the asymptotic expansion</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="n">coef</span><span class="p">[</span><span class="n">length</span> <span class="o">-</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">res</span> <span class="o">/=</span> <span class="n">chi</span>
+    <span class="n">res</span> <span class="o">+=</span> <span class="n">coef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+
+<div class="viewcode-block" id="asym_expansion_d1">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.asym_expansion_d1">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">asym_expansion_d1</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">coef</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of</span>
+<span class="sd">    coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    chi : complex</span>
+<span class="sd">        A point in the complex chi-plane</span>
+<span class="sd">    coef : np.ndarray</span>
+<span class="sd">        An array of coefficients</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    res : complex</span>
+<span class="sd">        The resulting value for the asymptotic expansion</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+    <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">coef</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">-=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+
+<div class="viewcode-block" id="taylor_series">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.taylor_series">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">inline</span><span class="o">=</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">taylor_series</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">coef</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that calculates the Taylor series starting from 0 for a given point chi and an array of</span>
+<span class="sd">    coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    chi : complex</span>
+<span class="sd">        A point in the complex chi-plane</span>
+<span class="sd">    coef : np.ndarray</span>
+<span class="sd">        An array of coefficients</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    res : complex</span>
+<span class="sd">        The resulting value for the asymptotic expansion</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="n">coef</span><span class="p">[</span><span class="n">length</span> <span class="o">-</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">res</span> <span class="o">*=</span> <span class="n">chi</span>
+    <span class="n">res</span> <span class="o">+=</span> <span class="n">coef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+
+<div class="viewcode-block" id="taylor_series_d1">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.taylor_series_d1">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">taylor_series_d1</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">coef</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that calculates the Taylor series starting from 0 for a given point chi and an array of</span>
+<span class="sd">    coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    chi : complex</span>
+<span class="sd">        A point in the complex chi-plane</span>
+<span class="sd">    coef : np.ndarray</span>
+<span class="sd">        An array of coefficients</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    res : complex</span>
+<span class="sd">        The resulting value for the asymptotic expansion</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+    <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">coef</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">chi</span> <span class="o">**</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+
+<div class="viewcode-block" id="well_chi">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.well_chi">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">inline</span><span class="o">=</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">well_chi</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that return the complex potential for a well as a function of chi.</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \omega = \frac{q}{2 \pi} \log(\chi)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    chi : complex</span>
+<span class="sd">        A point in the complex chi plane</span>
+<span class="sd">    q : np.float64</span>
+<span class="sd">        The discharge eof the well.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    omega : complex</span>
+<span class="sd">        The complex discharge potential</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">q</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">chi</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="cauchy_integral_real">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.cauchy_integral_real">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">cauchy_integral_real</span><span class="p">(</span>
+    <span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">thetas</span><span class="p">,</span> <span class="n">frac0</span><span class="p">,</span> <span class="n">element_id_</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">endpoints0</span><span class="p">,</span> <span class="n">work_array</span><span class="p">,</span> <span class="n">coef</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Number of integration points</span>
+<span class="sd">    m : int</span>
+<span class="sd">        Number of coefficients</span>
+<span class="sd">    thetas : np.ndarray</span>
+<span class="sd">        Array with thetas along the unit circle</span>
+<span class="sd">    frac0 : np.ndarray</span>
+<span class="sd">        The fracture</span>
+<span class="sd">    element_id_ : int</span>
+<span class="sd">        The element id</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    endpoints0 : np.ndarray[np.complex128]</span>
+<span class="sd">        The endpoints of the constant head line</span>
+<span class="sd">    work_array : np.ndarray[work_array_dtype]</span>
+<span class="sd">        The work array</span>
+<span class="sd">    coef : np.ndarray[np.complex128]</span>
+<span class="sd">        The coefficients that will be filled</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    coef : np.ndarray[np.complex128]</span>
+<span class="sd">        Array of coefficients</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># set integral to zero</span>
+    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="c1"># chi = np.exp(1j * thetas[ii])</span>
+        <span class="n">chi</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;exp_array_p&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_chi_to_z_line</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">endpoints0</span><span class="p">)</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span><span class="n">frac0</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">element_id_</span><span class="p">)</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;phi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">jj</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+        <span class="n">res_tmp</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+        <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">exp_val</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">jj</span><span class="p">):</span>
+                <span class="n">exp_val</span> <span class="o">*=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;exp_array_m&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span>
+            <span class="n">res_tmp</span> <span class="o">+=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;phi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_val</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][</span><span class="n">jj</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_tmp</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+        <span class="n">coef</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="n">coef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">coef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span></div>
+
+
+
+<div class="viewcode-block" id="find_branch_cuts">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.find_branch_cuts">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_branch_cuts</span><span class="p">(</span>
+    <span class="n">self_</span><span class="p">,</span> <span class="n">z_pos</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find the branch cuts for the fracture.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    self_ : np.ndarray[element_dtype]</span>
+<span class="sd">        The bounding circle element</span>
+<span class="sd">    z_pos : np.ndarray[np.complex128]</span>
+<span class="sd">        The positions in the complex plane</span>
+<span class="sd">    fracture_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        The array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+<span class="sd">    work_array : np.ndarray[dtype_work]</span>
+<span class="sd">        The work array</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dpsi_corr : np.ndarray[np.float64]</span>
+<span class="sd">        The correction to the potential due to the branch cuts</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Find the branch cuts</span>
+    <span class="n">dpsi_corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="n">nel</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="n">self_</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]][</span><span class="s2">&quot;nelements&quot;</span><span class="p">]</span>
+    <span class="n">elements_list</span> <span class="o">=</span> <span class="n">fracture_struc_array</span><span class="p">[</span><span class="n">self_</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]][</span><span class="s2">&quot;elements&quot;</span><span class="p">][:</span><span class="n">nel</span><span class="p">]</span>
+    <span class="n">elements</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">elements_list</span><span class="p">]</span>
+    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Intersection</span>
+                <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;frac0&quot;</span><span class="p">]:</span>
+                    <span class="n">chi0</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_z_line_to_chi</span><span class="p">(</span><span class="n">z_pos</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;endpoints0&quot;</span><span class="p">])</span>
+                    <span class="n">chi1</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_z_line_to_chi</span><span class="p">(</span><span class="n">z_pos</span><span class="p">[</span><span class="n">ii</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;endpoints0&quot;</span><span class="p">])</span>
+                    <span class="n">ln0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">chi0</span><span class="p">))</span>
+                    <span class="n">ln1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">chi1</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">ln0</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">ln1</span><span class="p">)</span>
+                        <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ln0</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ln1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+                    <span class="p">):</span>
+                        <span class="n">dpsi_corr</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">-=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;q&quot;</span><span class="p">]</span>
+                        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;element_pos&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">ii</span>
+                        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;discharge_element&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">]</span>
+                        <span class="n">get_sign</span><span class="p">(</span><span class="n">self_</span><span class="p">,</span> <span class="n">work_array</span><span class="p">,</span> <span class="n">cnt</span><span class="p">,</span> <span class="n">chi0</span><span class="p">,</span> <span class="n">chi1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">chi0</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_z_line_to_chi</span><span class="p">(</span><span class="n">z_pos</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;endpoints1&quot;</span><span class="p">])</span>
+                    <span class="n">chi1</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_z_line_to_chi</span><span class="p">(</span><span class="n">z_pos</span><span class="p">[</span><span class="n">ii</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;endpoints1&quot;</span><span class="p">])</span>
+                    <span class="n">ln0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">chi0</span><span class="p">))</span>
+                    <span class="n">ln1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">chi1</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">ln0</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">ln1</span><span class="p">)</span>
+                        <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ln0</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ln1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+                    <span class="p">):</span>
+                        <span class="n">dpsi_corr</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">+=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;q&quot;</span><span class="p">]</span>
+                        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;element_pos&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">ii</span>
+                        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;discharge_element&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">]</span>
+                        <span class="n">get_sign</span><span class="p">(</span><span class="n">self_</span><span class="p">,</span> <span class="n">work_array</span><span class="p">,</span> <span class="n">cnt</span><span class="p">,</span> <span class="n">chi0</span><span class="p">,</span> <span class="n">chi1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Well</span>
+                <span class="n">chi0</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_z_circle_to_chi</span><span class="p">(</span><span class="n">z_pos</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;radius&quot;</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">])</span>
+                <span class="n">chi1</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_z_circle_to_chi</span><span class="p">(</span><span class="n">z_pos</span><span class="p">[</span><span class="n">ii</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;radius&quot;</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">chi0</span><span class="p">))</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">chi1</span><span class="p">))</span>
+                    <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">chi0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span>
+                <span class="p">):</span>
+                    <span class="n">dpsi_corr</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">-=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;q&quot;</span><span class="p">]</span>
+                    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;element_pos&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">ii</span>
+                    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;discharge_element&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">]</span>
+                    <span class="n">get_sign</span><span class="p">(</span><span class="n">self_</span><span class="p">,</span> <span class="n">work_array</span><span class="p">,</span> <span class="n">cnt</span><span class="p">,</span> <span class="n">chi0</span><span class="p">,</span> <span class="n">chi1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>  <span class="c1"># Constant head line</span>
+                <span class="n">chi0</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_z_line_to_chi</span><span class="p">(</span><span class="n">z_pos</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;endpoints0&quot;</span><span class="p">])</span>
+                <span class="n">chi1</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_z_line_to_chi</span><span class="p">(</span><span class="n">z_pos</span><span class="p">[</span><span class="n">ii</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;endpoints0&quot;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">chi0</span><span class="p">))</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">chi1</span><span class="p">))</span>
+                    <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">chi0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span>
+                <span class="p">):</span>
+                    <span class="n">dpsi_corr</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">-=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;q&quot;</span><span class="p">]</span>
+                    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;element_pos&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">ii</span>
+                    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;discharge_element&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id_&quot;</span><span class="p">]</span>
+                    <span class="n">get_sign</span><span class="p">(</span><span class="n">self_</span><span class="p">,</span> <span class="n">work_array</span><span class="p">,</span> <span class="n">cnt</span><span class="p">,</span> <span class="n">chi0</span><span class="p">,</span> <span class="n">chi1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+
+
+<div class="viewcode-block" id="get_sign">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.get_sign">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">inline</span><span class="o">=</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_sign</span><span class="p">(</span><span class="n">self_</span><span class="p">,</span> <span class="n">work_array</span><span class="p">,</span> <span class="n">cnt</span><span class="p">,</span> <span class="n">chi0</span><span class="p">,</span> <span class="n">chi1</span><span class="p">,</span> <span class="n">sign_default</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># If not bounding circle</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">chi0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">chi1</span><span class="p">):</span>
+            <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;sign_array&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">sign_default</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;sign_array&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">sign_default</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># If bounding circle</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;sign_array&quot;</span><span class="p">][</span><span class="n">cnt</span><span class="p">]</span> <span class="o">=</span> <span class="n">sign_default</span></div>
+
+
+
+<div class="viewcode-block" id="get_dpsi_corr">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.get_dpsi_corr">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_dpsi_corr</span><span class="p">(</span><span class="n">self_</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the correction to the stream function due to the branch cuts.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    self_ : np.ndarray[element_dtype]</span>
+<span class="sd">        The bounding circle element</span>
+<span class="sd">    fracture_struc_array : np.ndarray[fracture_dtype]</span>
+<span class="sd">        The array of fractures</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        The array of elements</span>
+<span class="sd">    work_array : np.ndarray[dtype_work]</span>
+<span class="sd">        The work array</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">        Edits the self_ array in place.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>  <span class="c1"># If bounding circle or impermeable circle</span>
+            <span class="n">z_pos</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_chi_to_z_circle</span><span class="p">(</span>
+                <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;exp_array_p&quot;</span><span class="p">][:</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]],</span>
+                <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;radius&quot;</span><span class="p">],</span>
+                <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;type_&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>  <span class="c1"># If impermeable line</span>
+            <span class="n">z_pos</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_chi_to_z_line</span><span class="p">(</span>
+                <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;exp_array_p&quot;</span><span class="p">][:</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]],</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;endpoints0&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="n">find_branch_cuts</span><span class="p">(</span>
+            <span class="n">self_</span><span class="p">,</span> <span class="n">z_pos</span><span class="p">,</span> <span class="n">fracture_struc_array</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">work_array</span>
+        <span class="p">)</span>
+    <span class="c1"># set dpsi_corr to zero</span>
+    <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;dpsi_corr&quot;</span><span class="p">][:</span> <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;nint&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;len_discharge_element&quot;</span><span class="p">]):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">element_struc_array</span><span class="p">[</span><span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;discharge_element&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]]</span>
+        <span class="n">self_</span><span class="p">[</span><span class="s2">&quot;dpsi_corr&quot;</span><span class="p">][</span><span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;element_pos&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]]</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="n">e</span><span class="p">[</span><span class="s2">&quot;q&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;sign_array&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="cauchy_integral_domega_line">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.cauchy_integral_domega_line">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">cauchy_integral_domega_line</span><span class="p">(</span>
+    <span class="n">n</span><span class="p">,</span>
+    <span class="n">m</span><span class="p">,</span>
+    <span class="n">dpsi_corr</span><span class="p">,</span>
+    <span class="n">frac0</span><span class="p">,</span>
+    <span class="n">element_id_</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">endpoints0</span><span class="p">,</span>
+    <span class="n">work_array</span><span class="p">,</span>
+    <span class="n">coef</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Number of integration points</span>
+<span class="sd">    m : int</span>
+<span class="sd">        Number of coefficients</span>
+<span class="sd">    dpsi_corr : np.ndarray[np.complex128]</span>
+<span class="sd">        Correction for the stream function</span>
+<span class="sd">    frac0 : np.ndarray</span>
+<span class="sd">        The fracture</span>
+<span class="sd">    element_id_ : int</span>
+<span class="sd">        The element id</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    endpoints0 : np.ndarray[np.complex128]</span>
+<span class="sd">        The endpoints of the line</span>
+<span class="sd">    work_array : np.ndarray[work_array_dtype]</span>
+<span class="sd">        The work array</span>
+<span class="sd">    coef : np.ndarray[np.complex128]</span>
+<span class="sd">        The coefficients that will be filled</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    coef : np.ndarray</span>
+<span class="sd">        Array of coefficients</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">chi</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;exp_array_p&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_chi_to_z_line</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">endpoints0</span><span class="p">)</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span><span class="n">frac0</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">element_id_</span><span class="p">)</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span>
+    <span class="n">delta_psi</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">]</span> <span class="o">-</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][:</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;dpsi&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta_psi</span> <span class="o">-</span> <span class="n">dpsi_corr</span>
+    <span class="c1"># set integral to zero</span>
+    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="n">psi0</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">psi1</span> <span class="o">=</span> <span class="n">psi0</span> <span class="o">+</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;dpsi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">psi1</span>
+        <span class="n">psi0</span> <span class="o">=</span> <span class="n">psi1</span>
+
+    <span class="k">for</span> <span class="n">jj</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+        <span class="n">res_tmp</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+        <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">exp_val</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">jj</span><span class="p">):</span>
+                <span class="n">exp_val</span> <span class="o">*=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;exp_array_m&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span>
+            <span class="n">res_tmp</span> <span class="o">+=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_val</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][</span><span class="n">jj</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_tmp</span>
+
+    <span class="c1"># for ii in range(n):</span>
+    <span class="c1">#    # chi = np.exp(1j * thetas[ii])</span>
+    <span class="c1">#    chi = work_array[&quot;exp_array_p&quot;][ii]</span>
+    <span class="c1">#    z = gf.map_chi_to_z_line(chi, endpoints0)</span>
+    <span class="c1">#    omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)</span>
+    <span class="c1">#    work_array[&quot;phi&quot;][ii] = np.imag(omega)</span>
+
+    <span class="c1"># for jj in range(m):</span>
+    <span class="c1">#    res_tmp = 0.0 + 0.0j</span>
+    <span class="c1">#    for ii in range(n):</span>
+    <span class="c1">#        exp_val = 1.0 + 0.0j</span>
+    <span class="c1">#        for _ in range(jj):</span>
+    <span class="c1">#            exp_val *= work_array[&quot;exp_array_m&quot;][ii]</span>
+    <span class="c1">#        res_tmp += work_array[&quot;phi&quot;][ii] * exp_val</span>
+    <span class="c1">#    work_array[&quot;integral&quot;][jj] = res_tmp</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+        <span class="n">coef</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="n">j</span> <span class="o">*</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="n">coef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">coef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span></div>
+
+
+
+<div class="viewcode-block" id="cauchy_integral_domega">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.cauchy_integral_domega">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">cauchy_integral_domega</span><span class="p">(</span>
+    <span class="n">n</span><span class="p">,</span>
+    <span class="n">m</span><span class="p">,</span>
+    <span class="n">dpsi_corr</span><span class="p">,</span>
+    <span class="n">frac0</span><span class="p">,</span>
+    <span class="n">element_id_</span><span class="p">,</span>
+    <span class="n">element_struc_array</span><span class="p">,</span>
+    <span class="n">radius</span><span class="p">,</span>
+    <span class="n">center</span><span class="p">,</span>
+    <span class="n">work_array</span><span class="p">,</span>
+    <span class="n">coef</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : np.int64</span>
+<span class="sd">        Number of integration points</span>
+<span class="sd">    m : np.int64</span>
+<span class="sd">        Number of coefficients</span>
+<span class="sd">    dpsi_corr : np.ndarray[np.complex128]</span>
+<span class="sd">        Correction for the stream function</span>
+<span class="sd">    frac0 : np.ndarray[fracture_dtype]</span>
+<span class="sd">        The fracture</span>
+<span class="sd">    element_id_ : np.int64</span>
+<span class="sd">        The element id</span>
+<span class="sd">    element_struc_array : np.ndarray[element_dtype]</span>
+<span class="sd">        Array of elements</span>
+<span class="sd">    radius : np.float64</span>
+<span class="sd">        The radius of the bounding circle</span>
+<span class="sd">    center : np.complex128</span>
+<span class="sd">        The center of the bounding circle</span>
+<span class="sd">    work_array : np.ndarray[work_array_dtype]</span>
+<span class="sd">        The work array</span>
+<span class="sd">    coef : np.ndarray[np.complex128]</span>
+<span class="sd">        The coefficients that will be filled</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    coef : np.ndarray[np.complex128]</span>
+<span class="sd">        Array of coefficients</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">chi</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;exp_array_p&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">map_chi_to_z_circle</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">center</span><span class="p">)</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="n">hpc_fracture</span><span class="o">.</span><span class="n">calc_omega</span><span class="p">(</span><span class="n">frac0</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">element_struc_array</span><span class="p">,</span> <span class="n">element_id_</span><span class="p">)</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span>
+    <span class="n">delta_psi</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">]</span> <span class="o">-</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][:</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;dpsi&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta_psi</span> <span class="o">-</span> <span class="n">dpsi_corr</span>
+    <span class="c1"># set integral to zero</span>
+    <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="n">psi0</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">psi1</span> <span class="o">=</span> <span class="n">psi0</span> <span class="o">+</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;dpsi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">psi1</span>
+        <span class="n">psi0</span> <span class="o">=</span> <span class="n">psi1</span>
+
+    <span class="k">for</span> <span class="n">jj</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+        <span class="n">res_tmp</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+        <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">exp_val</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">jj</span><span class="p">):</span>
+                <span class="n">exp_val</span> <span class="o">*=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;exp_array_m&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span>
+            <span class="n">res_tmp</span> <span class="o">+=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_val</span>
+        <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][</span><span class="n">jj</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_tmp</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+        <span class="n">coef</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="n">j</span> <span class="o">*</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;integral&quot;</span><span class="p">][</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="n">coef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">work_array</span><span class="p">[</span><span class="s2">&quot;coef&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span></div>
+
+
+
+<div class="viewcode-block" id="calc_error">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.calc_error">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">inline</span><span class="o">=</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_error</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="n">coef_ref</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that calculates the error between two sets of coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coef : np.ndarray</span>
+<span class="sd">        The coefficients to compare</span>
+<span class="sd">    coef_ref : np.ndarray</span>
+<span class="sd">        The reference coefficients</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    error : float</span>
+<span class="sd">        The error</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">max_coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coef</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">max_coef</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">max_coef</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coef</span><span class="p">)):</span>
+        <span class="n">error</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">coef</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">coef_ref</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">error</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="calc_thetas">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.calc_thetas">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_thetas</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">type_</span><span class="p">,</span> <span class="n">thetas</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that calculates the thetas for the unit circle.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        The number of thetas to calculate</span>
+<span class="sd">    type_ : int</span>
+<span class="sd">        The element type. 0 for bounding circle, 1 for constant head line, 3 for intersection.</span>
+<span class="sd">    thetas : np.ndarray</span>
+<span class="sd">        The array to fill with the thetas</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+<span class="sd">        Fills the thetas array with the values of thetas</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># if type_ is 0 or 3</span>
+    <span class="n">del_theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">del_theta</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="k">if</span> <span class="n">type_</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">del_theta</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">n</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">thetas</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">del_theta</span></div>
+
+
+
+<div class="viewcode-block" id="fill_exp_array">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.fill_exp_array">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">CACHE</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">fill_exp_array</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">thetas</span><span class="p">,</span> <span class="n">exp_array</span><span class="p">,</span> <span class="n">sign</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that fills the exp_array with the values of exp(-1j * thetas).</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        The number of thetas to calculate</span>
+<span class="sd">    thetas : np.ndarray</span>
+<span class="sd">        The thetas</span>
+<span class="sd">    exp_array : np.ndarray</span>
+<span class="sd">        The array to fill with the values of exp(sign * 1j * thetas)</span>
+<span class="sd">    sign : int</span>
+<span class="sd">        The sign of the exponent. 1 for positive, -1 for negative.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">        Fills the exp_array with the values of exp(-1j * thetas)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">exp_array</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">sign</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">thetas</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span></div>
+
+
+
+<span class="c1">########################################################################################################################</span>
+<span class="c1"># Functions NUMBA</span>
+<span class="c1">########################################################################################################################</span>
+
+
+<div class="viewcode-block" id="cut_trail">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.cut_trail">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">cut_trail</span><span class="p">(</span><span class="n">f_str</span><span class="p">):</span>
+    <span class="n">cut</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">f_str</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
+            <span class="n">cut</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="n">cut</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">f_str</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s2">&quot;9&quot;</span><span class="p">:</span>
+                <span class="n">cut</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cut</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="k">break</span>
+    <span class="k">if</span> <span class="n">cut</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">f_str</span> <span class="o">=</span> <span class="n">f_str</span><span class="p">[:</span><span class="o">-</span><span class="n">cut</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">f_str</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="n">f_str</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span>
+    <span class="k">return</span> <span class="n">f_str</span></div>
+
+
+
+<div class="viewcode-block" id="float2str">
+<a class="viewcode-back" href="../../../hpc.html#andfn.hpc.hpc_math_functions.float2str">[docs]</a>
+<span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">float2str</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;nan&quot;</span>
+    <span class="k">elif</span> <span class="n">value</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;0.0&quot;</span>
+    <span class="k">elif</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="n">float2str</span><span class="p">(</span><span class="o">-</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">math</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;inf&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">max_digits</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="n">min_digits</span> <span class="o">=</span> <span class="o">-</span><span class="mi">4</span>
+        <span class="n">e10</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">min_digits</span> <span class="o">&lt;</span> <span class="n">e10</span> <span class="o">&lt;</span> <span class="n">max_digits</span><span class="p">:</span>
+            <span class="n">i_part</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">f_part</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">value</span> <span class="o">%</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">10.0</span><span class="o">**</span><span class="n">max_digits</span><span class="p">)</span>
+            <span class="n">i_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i_part</span><span class="p">)</span>
+            <span class="n">f_str</span> <span class="o">=</span> <span class="n">cut_trail</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f_part</span><span class="p">)[</span><span class="mi">1</span> <span class="p">:</span> <span class="n">max_digits</span> <span class="o">-</span> <span class="n">e10</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">i_str</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">f_str</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">m10</span> <span class="o">=</span> <span class="n">value</span> <span class="o">/</span> <span class="mf">10.0</span><span class="o">**</span><span class="n">e10</span>
+            <span class="n">i_part</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">m10</span><span class="p">)</span>
+            <span class="n">f_part</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">m10</span> <span class="o">%</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">10.0</span><span class="o">**</span><span class="n">max_digits</span><span class="p">)</span>
+            <span class="n">i_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i_part</span><span class="p">)</span>
+            <span class="n">f_str</span> <span class="o">=</span> <span class="n">cut_trail</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f_part</span><span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="n">max_digits</span><span class="p">])</span>
+            <span class="n">e_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e10</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">e10</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">e_str</span> <span class="o">=</span> <span class="s2">&quot;+&quot;</span> <span class="o">+</span> <span class="n">e_str</span>
+            <span class="k">return</span> <span class="n">i_str</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">f_str</span> <span class="o">+</span> <span class="s2">&quot;e&quot;</span> <span class="o">+</span> <span class="n">e_str</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Erik A. L. Toller
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Erik A. L. Toller.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

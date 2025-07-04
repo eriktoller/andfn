@@ -1,0 +1,1132 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Mathematical and geometrical functions &#8212; AnDFN</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=a1637f0b"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'math_geometry';</script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="HPC" href="hpc.html" />
+    <link rel="prev" title="Well" href="well.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">AnDFN</p>
+  
+</a></div>
+        <div class="sidebar-primary-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/eriktoller/andfn" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" class="icon-link-image" alt="GitHub"/></a>
+        </li>
+</ul></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="apidocs.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="dfn.html">DFN</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="fracture.html">Fracture</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="elements.html">Elements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="bounding.html">Bounding elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="const_head.html">Constant head elements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impermeable_objects.html">Impermeable objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="intersection.html">Intersection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="well.html">Well</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Mathematical and geometrical functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hpc.html">HPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">CONFIGURATION</a></li>
+
+
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples_page.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="template.html">Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="large_dfn.html">A large DFN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="particle_tracking.html">Particle tracking</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="about.html">About</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html">Release notes</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/math_geometry.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Mathematical and geometrical functions</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.math_functions">Mathematical functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.asym_expansion"><code class="docutils literal notranslate"><span class="pre">asym_expansion()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.asym_expansion_d1"><code class="docutils literal notranslate"><span class="pre">asym_expansion_d1()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.cauchy_integral_domega"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_domega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.cauchy_integral_imag"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_imag()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.cauchy_integral_real"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_real()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.taylor_series"><code class="docutils literal notranslate"><span class="pre">taylor_series()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.taylor_series_d1"><code class="docutils literal notranslate"><span class="pre">taylor_series_d1()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.well_chi"><code class="docutils literal notranslate"><span class="pre">well_chi()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.geometry_functions">Geometry functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.convert_normal_to_strike_dip"><code class="docutils literal notranslate"><span class="pre">convert_normal_to_strike_dip()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.convert_strike_dip_to_normal"><code class="docutils literal notranslate"><span class="pre">convert_strike_dip_to_normal()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.convert_trend_plunge_to_normal"><code class="docutils literal notranslate"><span class="pre">convert_trend_plunge_to_normal()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.fracture_intersection"><code class="docutils literal notranslate"><span class="pre">fracture_intersection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.generate_fractures"><code class="docutils literal notranslate"><span class="pre">generate_fractures()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.get_chi_from_theta"><code class="docutils literal notranslate"><span class="pre">get_chi_from_theta()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.get_connected_fractures"><code class="docutils literal notranslate"><span class="pre">get_connected_fractures()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.get_fracture_intersections"><code class="docutils literal notranslate"><span class="pre">get_fracture_intersections()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.line_circle_intersection"><code class="docutils literal notranslate"><span class="pre">line_circle_intersection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.line_line_intersection"><code class="docutils literal notranslate"><span class="pre">line_line_intersection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_2d_to_3d"><code class="docutils literal notranslate"><span class="pre">map_2d_to_3d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_3d_to_2d"><code class="docutils literal notranslate"><span class="pre">map_3d_to_2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_chi_to_z_circle"><code class="docutils literal notranslate"><span class="pre">map_chi_to_z_circle()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_chi_to_z_line"><code class="docutils literal notranslate"><span class="pre">map_chi_to_z_line()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_z_circle_to_chi"><code class="docutils literal notranslate"><span class="pre">map_z_circle_to_chi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_z_line_to_chi"><code class="docutils literal notranslate"><span class="pre">map_z_line_to_chi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.set_head_boundary"><code class="docutils literal notranslate"><span class="pre">set_head_boundary()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.shorten_line"><code class="docutils literal notranslate"><span class="pre">shorten_line()</span></code></a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="mathematical-and-geometrical-functions">
+<h1>Mathematical and geometrical functions<a class="headerlink" href="#mathematical-and-geometrical-functions" title="Link to this heading">#</a></h1>
+<p>These functions are used to perform mathematical and geometrical operations.</p>
+<section id="module-andfn.math_functions">
+<span id="mathematical-functions"></span><h2>Mathematical functions<a class="headerlink" href="#module-andfn.math_functions" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains some general mathematical functions, e.g. series expansions and Cauchy integrals.</p>
+<p>The mathematical functions are used by the element classes in the andfn module.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.math_functions.asym_expansion">
+<span class="sig-prename descclassname"><span class="pre">andfn.math_functions.</span></span><span class="sig-name descname"><span class="pre">asym_expansion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/math_functions.html#asym_expansion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.math_functions.asym_expansion" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
+coefficients.</p>
+<div class="math notranslate nohighlight">
+\[f(\chi) = \sum_{n=0}^{\infty} c_n \chi^{-n}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em>) – An array of coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> – The resulting value for the asymptotic expansion</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex | np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.math_functions.asym_expansion_d1">
+<span class="sig-prename descclassname"><span class="pre">andfn.math_functions.</span></span><span class="sig-name descname"><span class="pre">asym_expansion_d1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/math_functions.html#asym_expansion_d1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.math_functions.asym_expansion_d1" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the first derivative of the asymptotic expansion starting from 0 for a given point chi and
+an array of coefficients.</p>
+<div class="math notranslate nohighlight">
+\[f(\chi) = -\sum_{n=0}^{\infty} n c_n \chi^{-n-1}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em>) – An array of coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> – The resulting value for the asymptotic expansion</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex | np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.math_functions.cauchy_integral_domega">
+<span class="sig-prename descclassname"><span class="pre">andfn.math_functions.</span></span><span class="sig-name descname"><span class="pre">cauchy_integral_domega</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thetas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dpsi_corr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega_func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/math_functions.html#cauchy_integral_domega"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.math_functions.cauchy_integral_domega" title="Link to this definition">#</a></dt>
+<dd><p>FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em>) – Number of integration points</p></li>
+<li><p><strong>m</strong> (<em>int</em>) – Number of coefficients</p></li>
+<li><p><strong>thetas</strong> (<em>np.ndarray</em>) – Array with thetas along the unit circle</p></li>
+<li><p><strong>dpsi_corr</strong> (<em>np.ndarray</em>) – Correction for the stream function</p></li>
+<li><p><strong>omega_func</strong> (<em>function</em>) – The function for the complex potential</p></li>
+<li><p><strong>z_func</strong> (<em>function</em>) – The function for the mapping of chi to z</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>coef</strong> – Array of coefficients</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.math_functions.cauchy_integral_imag">
+<span class="sig-prename descclassname"><span class="pre">andfn.math_functions.</span></span><span class="sig-name descname"><span class="pre">cauchy_integral_imag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thetas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega_func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/math_functions.html#cauchy_integral_imag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.math_functions.cauchy_integral_imag" title="Link to this definition">#</a></dt>
+<dd><p>FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em>) – Number of integration points</p></li>
+<li><p><strong>m</strong> (<em>int</em>) – Number of coefficients</p></li>
+<li><p><strong>thetas</strong> (<em>np.ndarray</em>) – Array with thetas along the unit circle</p></li>
+<li><p><strong>omega_func</strong> (<em>function</em>) – The function for the complex potential</p></li>
+<li><p><strong>z_func</strong> (<em>function</em>) – The function for the mapping of chi to z</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>coef</strong> – Array of coefficients</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.math_functions.cauchy_integral_real">
+<span class="sig-prename descclassname"><span class="pre">andfn.math_functions.</span></span><span class="sig-name descname"><span class="pre">cauchy_integral_real</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thetas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega_func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/math_functions.html#cauchy_integral_real"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.math_functions.cauchy_integral_real" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the Cauchy integral with the discharge potential for a given array of thetas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em>) – Number of integration points</p></li>
+<li><p><strong>m</strong> (<em>int</em>) – Number of coefficients</p></li>
+<li><p><strong>thetas</strong> (<em>np.ndarray</em>) – Array with thetas along the unit circle</p></li>
+<li><p><strong>omega_func</strong> (<em>function</em>) – The function for the complex potential</p></li>
+<li><p><strong>z_func</strong> (<em>function</em>) – The function for the mapping of chi to z</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>coef</strong> – Array of coefficients</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.math_functions.taylor_series">
+<span class="sig-prename descclassname"><span class="pre">andfn.math_functions.</span></span><span class="sig-name descname"><span class="pre">taylor_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/math_functions.html#taylor_series"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.math_functions.taylor_series" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the Taylor series starting from 0 for a given point chi and an array of
+coefficients.</p>
+<div class="math notranslate nohighlight">
+\[f(\chi) = \sum_{n=0}^{\infty} c_n \chi^{n}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>coef</strong> (<em>np.ndarray</em>) – An array of coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> – The resulting value for the asymptotic expansion</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.math_functions.taylor_series_d1">
+<span class="sig-prename descclassname"><span class="pre">andfn.math_functions.</span></span><span class="sig-name descname"><span class="pre">taylor_series_d1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coef</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/math_functions.html#taylor_series_d1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.math_functions.taylor_series_d1" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the first derivative of the Taylor series starting from 0 for a given point chi and an array of
+coefficients.</p>
+<div class="math notranslate nohighlight">
+\[f(\chi) = \sum_{n=1}^{\infty} n c_n \chi^{n-1}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>coef</strong> (<em>array_like</em>) – An array of coefficients</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>res</strong> – The resulting value for the asymptotic expansion</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.math_functions.well_chi">
+<span class="sig-prename descclassname"><span class="pre">andfn.math_functions.</span></span><span class="sig-name descname"><span class="pre">well_chi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/math_functions.html#well_chi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.math_functions.well_chi" title="Link to this definition">#</a></dt>
+<dd><p>Function that return the complex potential for a well as a function of chi.</p>
+<div class="math notranslate nohighlight">
+\[\omega = \frac{q}{2\pi} \log(\chi)\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>np.ndarray</em><em> | </em><em>complex</em>) – A point in the complex chi plane</p></li>
+<li><p><strong>q</strong> (<em>float</em>) – The discharge eof the well.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>omega</strong> – The complex discharge potential</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-andfn.geometry_functions">
+<span id="geometry-functions"></span><h2>Geometry functions<a class="headerlink" href="#module-andfn.geometry_functions" title="Link to this heading">#</a></h2>
+<p class="rubric">Notes</p>
+<p>This module contains some geometrical functions for e.g. conformal mappings and mapping between 3D space and fracture planes.</p>
+<p>The geometrical functions are used by the element classes and to create the DFN in the andfn module.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.convert_normal_to_strike_dip">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">convert_normal_to_strike_dip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">normal</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#convert_normal_to_strike_dip"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.convert_normal_to_strike_dip" title="Link to this definition">#</a></dt>
+<dd><p>Function that converts a normal vector to a strike and dip</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>normal</strong> (<em>np.ndarray</em>) – The normal vector of the fracture plane.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>strike</strong> (<em>float</em>) – The strike of the fracture plane.</p></li>
+<li><p><strong>dip</strong> (<em>float</em>) – The dip of the fracture plane.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.convert_strike_dip_to_normal">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">convert_strike_dip_to_normal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">strike</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dip</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#convert_strike_dip_to_normal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.convert_strike_dip_to_normal" title="Link to this definition">#</a></dt>
+<dd><p>Function that converts a strike and dip to a normal vector</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>strike</strong> (<em>float</em>) – The strike of the fracture plane.</p></li>
+<li><p><strong>dip</strong> (<em>float</em>) – The dip of the fracture plane.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>normal</strong> – The normal vector of the fracture plane.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.convert_trend_plunge_to_normal">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">convert_trend_plunge_to_normal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trend</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plunge</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#convert_trend_plunge_to_normal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.convert_trend_plunge_to_normal" title="Link to this definition">#</a></dt>
+<dd><p>Function that converts a trend and plunge to a normal vector</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trend</strong> (<em>float</em>) – The trend of the fracture plane.</p></li>
+<li><p><strong>plunge</strong> (<em>float</em>) – The plunge of the fracture plane.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>normal</strong> – The normal vector of the fracture plane.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.fracture_intersection">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">fracture_intersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frac0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frac1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#fracture_intersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.fracture_intersection" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the intersection between two fractures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frac0</strong> (<a class="reference internal" href="fracture.html#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The first fracture.</p></li>
+<li><p><strong>frac1</strong> (<a class="reference internal" href="fracture.html#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The second fracture.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>endpoints0</strong> (<em>np.ndarray</em>) – The endpoints of the intersection line in the first fracture. If no intersection is found, None is returned.</p></li>
+<li><p><strong>endpoints1</strong> (<em>np.ndarray</em>) – The endpoints of the intersection line in the second fracture. If no intersection is found, None is returned.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.generate_fractures">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">generate_fractures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_fractures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#generate_fractures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.generate_fractures" title="Link to this definition">#</a></dt>
+<dd><p>Function that generates a number of fractures with random radii, centers and normals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_fractures</strong> (<em>int</em>) – Number of fractures to generate.</p></li>
+<li><p><strong>radius_factor</strong> (<em>float</em>) – The maximum radius of the fractures.</p></li>
+<li><p><strong>center_factor</strong> (<em>float</em>) – The maximum distance from the origin of the centers of the fractures.</p></li>
+<li><p><strong>ncoef</strong> (<em>int</em>) – The number of coefficients for the bounding circle.</p></li>
+<li><p><strong>nint</strong> (<em>int</em>) – The number of integration points for the bounding circle.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>fractures</strong> – A list of the generated fractures.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.get_chi_from_theta">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">get_chi_from_theta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nint</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#get_chi_from_theta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.get_chi_from_theta" title="Link to this definition">#</a></dt>
+<dd><p>Function that creates an array with chi values for a given number of points along the unit circle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nint</strong> (<em>int</em>) – Number of instances to generate</p></li>
+<li><p><strong>start</strong> (<em>float</em>) – Start point</p></li>
+<li><p><strong>stop</strong> (<em>float</em>) – Stop point</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>chi</strong> – Array with chi values</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.get_connected_fractures">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">get_connected_fractures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">se_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fracture_surface</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#get_connected_fractures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.get_connected_fractures" title="Link to this definition">#</a></dt>
+<dd><p>Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
+a given fracture, the function iterates through the list of fractures and finds all connected fractures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractures</strong> (<em>list</em>) – A list of fractures.</p></li>
+<li><p><strong>se_factor</strong> (<em>float</em>) – The shortening element factor. This is used to shorten the intersection line between two fractures.</p></li>
+<li><p><strong>ncoef</strong> (<em>int</em>) – The number of coefficients for the intersection elements.</p></li>
+<li><p><strong>nint</strong> (<em>int</em>) – The number of integration points for the intersection elements.</p></li>
+<li><p><strong>fracture_surface</strong> (<a class="reference internal" href="fracture.html#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture to start the search from. If None, the first fracture in the list is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>connected_fractures</strong> – A list of connected fractures.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.get_fracture_intersections">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">get_fracture_intersections</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">se_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#get_fracture_intersections"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.get_fracture_intersections" title="Link to this definition">#</a></dt>
+<dd><p>Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
+a given fracture, the function iterates through the list of fractures and finds all connected fractures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractures</strong> (<em>list</em>) – A list of fractures.</p></li>
+<li><p><strong>se_factor</strong> (<em>float</em>) – The shortening element factor. This is used to shorten the intersection line between two fractures.</p></li>
+<li><p><strong>ncoef</strong> (<em>int</em>) – The number of coefficients for the intersection elements.</p></li>
+<li><p><strong>nint</strong> (<em>int</em>) – The number of integration points for the intersection elements.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>connected_fractures</strong> – A list of connected fractures.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.line_circle_intersection">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">line_circle_intersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#line_circle_intersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.line_circle_intersection" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the intersection between a line and a circle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z0</strong> (<em>complex</em>) – A point on the line.</p></li>
+<li><p><strong>z1</strong> (<em>complex</em>) – Another point on the line.</p></li>
+<li><p><strong>radius</strong> (<em>float</em>) – The radius of the circle.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>z_0</strong> (<em>complex</em>) – The first intersection point. If no intersection is found, None is returned.</p></li>
+<li><p><strong>z_1</strong> (<em>complex</em>) – The second intersection point. If no intersection is found, None is returned.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.line_line_intersection">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">line_line_intersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z3</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#line_line_intersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.line_line_intersection" title="Link to this definition">#</a></dt>
+<dd><p>Function that calculates the intersection between two lines.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z0</strong> (<em>complex</em>) – A point on the first line.</p></li>
+<li><p><strong>z1</strong> (<em>complex</em>) – Another point on the first line.</p></li>
+<li><p><strong>z2</strong> (<em>complex</em>) – A point on the second line.</p></li>
+<li><p><strong>z3</strong> (<em>complex</em>) – Another point on the second line.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z</strong> – The intersection point. If no intersection is found, None is returned.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.map_2d_to_3d">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_2d_to_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fractures</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#map_2d_to_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.map_2d_to_3d" title="Link to this definition">#</a></dt>
+<dd><p>Function that maps a point in the complex z-plane to a point in the 3D plane</p>
+<div class="math notranslate nohighlight">
+\[x_i = x u_i + y v_i + x_{i,0}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – A point in the complex z-plane</p></li>
+<li><p><strong>fractures</strong> (<a class="reference internal" href="fracture.html#andfn.fracture.Fracture" title="andfn.fracture.Fracture"><em>Fracture</em></a>) – The fracture object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>point</strong> – The corresponding point in the 3D plane</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.map_3d_to_2d">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_3d_to_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fractures</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#map_3d_to_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.map_3d_to_2d" title="Link to this definition">#</a></dt>
+<dd><blockquote>
+<div><p>Function that maps a point in the 3D plane to a point in the complex z-plane.</p>
+<div class="math notranslate nohighlight">
+\[x = \left( x_i - x_{i,0}\]</div>
+</div></blockquote>
+<p>ight) u_i</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[y = \left( x_i - x_{i,0}\]</div>
+</div></blockquote>
+<p>ight) v_i</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[z = x + iy\]</div>
+<dl class="simple">
+<dt>point<span class="classifier">np.ndarray</span></dt><dd><p>A point in the 3D plane</p>
+</dd>
+<dt>fractures<span class="classifier">Fracture</span></dt><dd><p>The fracture object</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>z<span class="classifier">complex</span></dt><dd><p>The corresponding point in the complex z-plane</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.map_chi_to_z_circle">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_chi_to_z_circle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#map_chi_to_z_circle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.map_chi_to_z_circle" title="Link to this definition">#</a></dt>
+<dd><p>Function that maps the unit circle in the complex chi-plane to a circle in the complex z-plane.</p>
+<div class="math notranslate nohighlight">
+\[z = \chi r + \text{center}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>r</strong> (<em>float</em>) – Radius of the circle</p></li>
+<li><p><strong>center</strong> (<em>complex</em><em> or </em><em>np.ndarray</em>) – Center point of the circle</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z</strong> – The corresponding point in the complex z-plane</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex | np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.map_chi_to_z_line">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_chi_to_z_line</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#map_chi_to_z_line"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.map_chi_to_z_line" title="Link to this definition">#</a></dt>
+<dd><p>Function that maps the exterior of the unit circle in the complex chi-plane onto the exterior of a line in the
+complex z-plane.</p>
+<div class="math notranslate nohighlight">
+\[Z = \frac{1}{2} \left( \chi + \frac{1}{\chi} \right)\]</div>
+<div class="math notranslate nohighlight">
+\[z = \frac{1}{2} \left( Z \left(\text{endpoints}[1] - \text{endpoints}[0] \right) + \text{endpoints}[0] + \text{endpoints}[1]\right)\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>chi</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – A point in the complex chi-plane</p></li>
+<li><p><strong>endpoints</strong> (<em>list</em><em> | </em><em>np.ndarray</em>) – Endpoints of the line in the complex z-plane</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>z</strong> – The corresponding point in the complex z-plane</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>complex | np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.map_z_circle_to_chi">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_z_circle_to_chi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#map_z_circle_to_chi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.map_z_circle_to_chi" title="Link to this definition">#</a></dt>
+<dd><p>Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.</p>
+<div class="math notranslate nohighlight">
+\[\chi = \frac{z - \text{center}}{r}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – A point in the complex z-plane</p></li>
+<li><p><strong>r</strong> (<em>float</em>) – Radius of the circle</p></li>
+<li><p><strong>center</strong> (<em>complex</em><em> | </em><em>np.ndarray</em>) – Center point of the circle in the complex z-plane</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>chi</strong> – The corresponding point in the complex chi-plane</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.map_z_line_to_chi">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">map_z_line_to_chi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#map_z_line_to_chi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.map_z_line_to_chi" title="Link to this definition">#</a></dt>
+<dd><blockquote>
+<div><p>Function that maps the exterior of a line in the complex z-plane onto the exterior of the unit circle in the
+complex chi-plane.</p>
+<div class="math notranslate nohighlight">
+\[Z =\]</div>
+</div></blockquote>
+<p>rac{ 2z -      ext{endpoints}[0] -     ext{endpoints}[1] }{    ext{endpoints}[1] -     ext{endpoints}[0]}</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[\chi =\]</div>
+</div></blockquote>
+<p>rac{1}{2} left( z + sqrt{z - 1} sqrt{z + 1}
+ight)</p>
+<blockquote>
+<div><dl class="simple">
+<dt>z<span class="classifier">complex | np.ndarray</span></dt><dd><p>A complex point in the complex z-plane</p>
+</dd>
+<dt>endpoints<span class="classifier">np.ndarray</span></dt><dd><p>Endpoints of the line in the complex z-plane</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>chi<span class="classifier">complex | np.ndarray</span></dt><dd><p>The corresponding point in the complex chi-plane</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.set_head_boundary">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">set_head_boundary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncoef</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nint</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">head</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">se_factor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#set_head_boundary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.set_head_boundary" title="Link to this definition">#</a></dt>
+<dd><p>Function that sets a constant head boundary condition on the intersection line between a fracture and a defined
+fracture. The constant head lines are added to the fractures in the list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractures</strong> (<em>list</em>) – A list of fractures.</p></li>
+<li><p><strong>ncoef</strong> (<em>int</em>) – The number of coefficients for the constant head line.</p></li>
+<li><p><strong>nint</strong> (<em>int</em>) – The number of integration points for the constant head line.</p></li>
+<li><p><strong>head</strong> (<em>float</em>) – The hydraulic head value.</p></li>
+<li><p><strong>center</strong> (<em>np.ndarray</em>) – The center of the constant head fracture plane.</p></li>
+<li><p><strong>radius</strong> (<em>float</em>) – The radius of the constant head fracture plane.</p></li>
+<li><p><strong>normal</strong> (<em>np.ndarray</em>) – The normal vector of the constant head fracture plane.</p></li>
+<li><p><strong>label</strong> (<em>str</em>) – The label of the constant head fracture plane.</p></li>
+<li><p><strong>se_factor</strong> (<em>float</em>) – The shortening element factor. This is used to shorten the constant head line.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="andfn.geometry_functions.shorten_line">
+<span class="sig-prename descclassname"><span class="pre">andfn.geometry_functions.</span></span><span class="sig-name descname"><span class="pre">shorten_line</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">se_factor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/andfn/geometry_functions.html#shorten_line"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#andfn.geometry_functions.shorten_line" title="Link to this definition">#</a></dt>
+<dd><p>Function that shortens a line segment by a given se_factor and keeps the same center point.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z0</strong> (<em>complex</em>)</p></li>
+<li><p><strong>z1</strong> (<em>complex</em>)</p></li>
+<li><p><strong>se_factor</strong> (<em>float</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="well.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Well</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="hpc.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">HPC</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.math_functions">Mathematical functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.asym_expansion"><code class="docutils literal notranslate"><span class="pre">asym_expansion()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.asym_expansion_d1"><code class="docutils literal notranslate"><span class="pre">asym_expansion_d1()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.cauchy_integral_domega"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_domega()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.cauchy_integral_imag"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_imag()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.cauchy_integral_real"><code class="docutils literal notranslate"><span class="pre">cauchy_integral_real()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.taylor_series"><code class="docutils literal notranslate"><span class="pre">taylor_series()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.taylor_series_d1"><code class="docutils literal notranslate"><span class="pre">taylor_series_d1()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.math_functions.well_chi"><code class="docutils literal notranslate"><span class="pre">well_chi()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-andfn.geometry_functions">Geometry functions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.convert_normal_to_strike_dip"><code class="docutils literal notranslate"><span class="pre">convert_normal_to_strike_dip()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.convert_strike_dip_to_normal"><code class="docutils literal notranslate"><span class="pre">convert_strike_dip_to_normal()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.convert_trend_plunge_to_normal"><code class="docutils literal notranslate"><span class="pre">convert_trend_plunge_to_normal()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.fracture_intersection"><code class="docutils literal notranslate"><span class="pre">fracture_intersection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.generate_fractures"><code class="docutils literal notranslate"><span class="pre">generate_fractures()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.get_chi_from_theta"><code class="docutils literal notranslate"><span class="pre">get_chi_from_theta()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.get_connected_fractures"><code class="docutils literal notranslate"><span class="pre">get_connected_fractures()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.get_fracture_intersections"><code class="docutils literal notranslate"><span class="pre">get_fracture_intersections()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.line_circle_intersection"><code class="docutils literal notranslate"><span class="pre">line_circle_intersection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.line_line_intersection"><code class="docutils literal notranslate"><span class="pre">line_line_intersection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_2d_to_3d"><code class="docutils literal notranslate"><span class="pre">map_2d_to_3d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_3d_to_2d"><code class="docutils literal notranslate"><span class="pre">map_3d_to_2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_chi_to_z_circle"><code class="docutils literal notranslate"><span class="pre">map_chi_to_z_circle()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_chi_to_z_line"><code class="docutils literal notranslate"><span class="pre">map_chi_to_z_line()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_z_circle_to_chi"><code class="docutils literal notranslate"><span class="pre">map_z_circle_to_chi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.map_z_line_to_chi"><code class="docutils literal notranslate"><span class="pre">map_z_line_to_chi()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.set_head_boundary"><code class="docutils literal notranslate"><span class="pre">set_head_boundary()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#andfn.geometry_functions.shorten_line"><code class="docutils literal notranslate"><span class="pre">shorten_line()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Erik A. L. Toller
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Erik A. L. Toller.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
