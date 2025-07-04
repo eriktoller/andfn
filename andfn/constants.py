@@ -27,10 +27,15 @@ dtype_constants = np.dtype(
     ]
 )
 
+
 def load_yaml_config():
     """
     Load the constants from a YAML configuration file.
     """
+    # Check if the .andfn_config.yaml file exists
+    if not os.path.exists(".andfn_config.yaml"):
+        return
+
     # Check if the yaml package is installed
     try:
         import yaml
@@ -49,25 +54,26 @@ def load_yaml_config():
 
     return config
 
+
 # set the packages to WARNING level to avoid too much output
 logging.getLogger("matplotlib").propagate = False
 logging.getLogger("numba").propagate = False
 logging.getLogger("PIL").propagate = False
 
 # Configure the logging
-logging.basicConfig(
-    level='INFO', format="%(message)s", stream=sys.stdout
-)
+logging.basicConfig(level="INFO", format="%(message)s", stream=sys.stdout)
 
 # Set up the logger
-logger = logging.getLogger('andfn')
+logger = logging.getLogger("andfn")
 if os.path.exists(".andfn_config.yaml"):
     config = load_yaml_config()
     if config.get("LOG_LEVEL"):
         logger.setLevel(config["LOG_LEVEL"])
     if config.get("LOG_FILE"):
         file_handler = logging.FileHandler(config["LOG_FILE"], mode="w")
-        formatter = logging.Formatter("%(asctime)s [%(module)s] %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s [%(module)s] %(levelname)s - %(message)s"
+        )
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
@@ -98,7 +104,6 @@ class Constants:
 
         # Load the YAML configuration if available
         self.configure_constants()
-
 
     def print_constants(self):
         """
@@ -166,9 +171,12 @@ class Constants:
                     set_num_threads(value)
                 if key == "MAX_COEF":
                     from .element import MAX_NCOEF
+
                     # Ensure MAX_COEF is not greater than what is set in the code
                     if value > MAX_NCOEF:
-                        raise ValueError(f"MAX_COEF cannot be greater than {MAX_NCOEF}. I you need a higher value set the MAX_NCOEF using the .andfn_config.yaml file instead.")
+                        raise ValueError(
+                            f"MAX_COEF cannot be greater than {MAX_NCOEF}. I you need a higher value set the MAX_NCOEF using the .andfn_config.yaml file instead."
+                        )
                 self.constants[key] = value
 
     def configure_constants(self):

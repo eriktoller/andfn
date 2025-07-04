@@ -8,6 +8,8 @@ The mathematical functions are used by the element classes in the andfn module.
 
 import numpy as np
 
+import andfn.hpc.hpc_math_functions
+
 
 def asym_expansion(chi, coef):
     """
@@ -29,12 +31,14 @@ def asym_expansion(chi, coef):
     res : complex | np.ndarray
         The resulting value for the asymptotic expansion
     """
-    # res = 0.0
-    # for n, c in enumerate(coef):
-    #    res += c * chi ** (-n)
-    res = np.sum(coef * chi[:, np.newaxis] ** (-np.arange(len(coef))), axis=1)
+    res = []
+    if np.isscalar(chi):
+        return andfn.hpc.hpc_math_functions.asym_expansion(chi, coef)
+    else:
+        for c in chi:
+            res.append(andfn.hpc.hpc_math_functions.asym_expansion(c, coef))
 
-    return res
+    return np.array(res)
 
 
 def asym_expansion_d1(chi, coef):
@@ -84,10 +88,10 @@ def taylor_series(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    # res = 0.0 + 0.0j
-    # for n, c in enumerate(coef):
-    #    res += c * chi ** n
-    res = np.sum(coef * chi[:, np.newaxis] ** np.arange(len(coef)), axis=1)
+    res = 0.0 + 0.0j
+    for n, c in enumerate(coef):
+       res += c * chi ** n
+    #res = np.sum(coef * chi[:, np.newaxis] ** np.arange(len(coef)), axis=1)
 
     return res
 

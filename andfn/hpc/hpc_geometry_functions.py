@@ -84,7 +84,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
 
     Parameters
     ----------
-    chi : complex
+    chi : np.complex128
         A point in the complex chi-plane
     r : float
         Radius of the circle
@@ -93,7 +93,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
 
     Return
     ------
-    z : complex
+    z : np.complex128
         The corresponding point in the complex z-plane
     """
     return chi * r + center

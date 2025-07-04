@@ -224,9 +224,9 @@ def fracture_intersection(frac0, frac1):
 
     Returns
     -------
-    endpoints0 : list
+    endpoints0 : np.ndarray
         The endpoints of the intersection line in the first fracture. If no intersection is found, None is returned.
-    endpoints1 : list
+    endpoints1 : np.ndarray
         The endpoints of the intersection line in the second fracture. If no intersection is found, None is returned.
     """
     # vector parallel to the intersection line
@@ -289,8 +289,8 @@ def fracture_intersection(frac0, frac1):
         return None, None
     xi0, xi1 = xis[pos[0]], xis[pos[1]]
 
-    endpoints0 = [map_3d_to_2d(xi0, frac0), map_3d_to_2d(xi1, frac0)]
-    endpoints1 = [map_3d_to_2d(xi0, frac1), map_3d_to_2d(xi1, frac1)]
+    endpoints0 = np.array([map_3d_to_2d(xi0, frac0), map_3d_to_2d(xi1, frac0)])
+    endpoints1 = np.array([map_3d_to_2d(xi0, frac1), map_3d_to_2d(xi1, frac1)])
 
     return endpoints0, endpoints1
 
@@ -497,6 +497,59 @@ def get_connected_fractures(
         f"\r{len(connected_fractures)} connected fractures found out of {len(fractures)} and took {cnt} iterations"
     )
     return connected_fractures
+
+
+def get_fracture_intersections(
+    fractures, se_factor, ncoef=5, nint=10
+):
+    """
+    Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
+    a given fracture, the function iterates through the list of fractures and finds all connected fractures.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+    se_factor : float
+        The shortening element factor. This is used to shorten the intersection line between two fractures.
+    ncoef : int
+        The number of coefficients for the intersection elements.
+    nint : int
+        The number of integration points for the intersection elements.
+
+    Returns
+    -------
+    connected_fractures : list
+        A list of connected fractures.
+    """
+    for i, fr in enumerate(fractures):
+        for fr2 in fractures[i + 1:]:
+            if fr == fr2:
+                continue
+            if np.linalg.norm(fr.center - fr2.center) > fr.radius + fr2.radius:
+                continue
+            endpoints0, endpoints1 = fracture_intersection(fr, fr2)
+            if endpoints0 is not None:
+                if fr2 not in []:
+                    endpoints01 = shorten_line(
+                        endpoints0[0], endpoints0[1], se_factor
+                    )
+                    endpoints11 = shorten_line(
+                        endpoints1[0], endpoints1[1], se_factor
+                    )
+                    intersections = intersection.Intersection(
+                        f"{fr.label}_{fr2.label}",
+                        endpoints01,
+                        endpoints11,
+                        fr,
+                        fr2,
+                        ncoef,
+                        nint,
+                    )
+                    fr.add_element(intersections)
+                    fr2.add_element(intersections)
+
+    return fractures
 
 
 def set_head_boundary(

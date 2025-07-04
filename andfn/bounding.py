@@ -34,6 +34,7 @@ class BoundingCircle(Element):
         super().__init__(label, id_=0, type_=1)
         self.label = label
         self.radius = radius
+        self.center = 0.0 + 0.0j  # Default center at origin
         self.ncoef = ncoef
         self.nint = nint
         self.frac0 = frac0

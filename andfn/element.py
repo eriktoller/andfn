@@ -11,8 +11,11 @@ import andfn.geometry_functions as gf
 from .constants import load_yaml_config
 
 config = load_yaml_config()
-MAX_NCOEF = config.get('MAX_NCOEF', 200)
-MAX_ELEMENTS = config.get('MAX_ELEMENTS', 300)
+MAX_NCOEF = 200
+MAX_ELEMENTS = 300
+if config:
+    MAX_NCOEF = config.get("MAX_NCOEF", 200)
+    MAX_ELEMENTS = config.get("MAX_ELEMENTS", 300)
 
 element_dtype = np.dtype(
     [
@@ -437,13 +440,17 @@ class Element:
         None
             The element is plotted in the plotter.
         """
-        if self.type_ in [0, 3, 5]:  # Intersection, Constant Head Line, Impermeable Line
+        if self.type_ in [
+            0,
+            3,
+            5,
+        ]:  # Intersection, Constant Head Line, Impermeable Line
             line = gf.map_2d_to_3d(self.endpoints0, self.frac0)
             pl.add_mesh(
                 pv.Line(line[0], line[1]), color="#000000", line_width=line_width
             )
         elif self.type_ == 1:  # Bounding Circle
-            point = gf.map_2d_to_3d(0+0j, self.frac0)
+            point = gf.map_2d_to_3d(0 + 0j, self.frac0)
             pl.add_mesh(
                 pv.Polygon(
                     point, self.radius, normal=self.frac0.normal, n_sides=50, fill=False

@@ -40,7 +40,9 @@ from .element import (
 from matplotlib.colors import LinearSegmentedColormap
 
 import logging
+
 logger = logging.getLogger("andfn")
+
 
 def _constant_cmap(name, color, n_bin):
     """
@@ -73,6 +75,7 @@ def generate_connected_fractures(
     ncoef_b,
     nint_b,
     frac_surface=None,
+    se_factor=1.0,
 ):
     """
     Generates connected fractures and intersections.
@@ -95,6 +98,8 @@ def generate_connected_fractures(
         The number of integration points to use for the bounding elements.
     frac_surface : Fracture
         The fracture to use as the surface fracture.
+    se_factor : float, optional
+        The factor to use for shortening fo the elements. Default is 1.0 (no shortening).
 
     Returns
     -------
@@ -113,7 +118,7 @@ def generate_connected_fractures(
 
     print("Analyzing intersections...")
     frac_list = gf.get_connected_fractures(
-        fracs, self.constants["SE_FACTOR"], ncoef_i, nint_i, frac_surface
+        fracs, se_factor, ncoef_i, nint_i, frac_surface
     )
 
     return frac_list
@@ -347,6 +352,7 @@ class DFN(Constants):
                             nint=hf[f"elements/properties/nint/{i}"][()],
                             frac0=fracs[hf[f"elements/properties/frac0/{i}"][()]],
                             frac1=fracs[hf[f"elements/properties/frac1/{i}"][()]],
+                            q=hf[f"elements/properties/q/{i}"][()],
                             thetas=hf[f"elements/properties/thetas/{i}"][()],
                             coef=hf[f"elements/properties/coef/{i}"][()],
                             error=hf[f"elements/properties/error/{i}"][()],
@@ -392,6 +398,7 @@ class DFN(Constants):
                             ncoef=hf[f"elements/properties/ncoef/{i}"][()],
                             nint=hf[f"elements/properties/nint/{i}"][()],
                             frac0=fracs[hf[f"elements/properties/frac0/{i}"][()]],
+                            q=hf[f"elements/properties/q/{i}"][()],
                             phi=hf[f"elements/properties/phi/{i}"][()],
                             thetas=hf[f"elements/properties/thetas/{i}"][()],
                             coef=hf[f"elements/properties/coef/{i}"][()],
@@ -678,7 +685,9 @@ class DFN(Constants):
         try:
             import pandas as pd
         except ImportError:
-            raise ImportError("Pandas is required to import fractures from a file. Please install pandas.")
+            raise ImportError(
+                "Pandas is required to import fractures from a file. Please install pandas."
+            )
 
         # Check if the file exists
         if not os.path.exists(path):
@@ -739,7 +748,7 @@ class DFN(Constants):
                 fracture_surface=starting_frac,
             )
         else:
-            fracs = gf.get_connected_fractures(
+            fracs = gf.get_fracture_intersections(
                 frac,
                 self.constants["SE_FACTOR"],
                 ncoef=self.constants["NCOEF"],
@@ -1023,14 +1032,16 @@ class DFN(Constants):
         logger.info("---------------------------------------")
         logger.info(f"Number of elements: {len(self.elements)}")
         logger.info(f"Number of fractures: {len(self.fractures)}")
-        logger.info(f"Number of entries in discharge matrix: {self.discharge_matrix.getnnz()}")
+        logger.info(
+            f"Number of entries in discharge matrix: {self.discharge_matrix.getnnz()}"
+        )
         self.print_solver_constants()
         self.elements_struc_array = hpc_solve(
             self.fractures_struc_array_hpc,
             self.elements_struc_array_hpc,
             self.discharge_matrix,
             self.discharge_int,
-            self.constants
+            self.constants,
         )
         self.unconsolidate_dfn(hpc=True)
 
@@ -1084,6 +1095,7 @@ class DFN(Constants):
             lighting=lighting,
             off_screen=off_screen,
             notebook=notebook,
+            title='AnDFN'
         )
         if axis:
             _ = pl.add_axes(
@@ -1181,12 +1193,10 @@ class DFN(Constants):
                 line_width=line_width,
             )
             if print_prog:
-                logger.debug(
-                    f"Plotting fractures: {i + 1} / {len(self.fractures)}"
-                )
+                logger.debug(f"Plotting fractures: {i + 1} / {len(self.fractures)}")
 
     def plot_fractures_flow_net(
-        self, pl, lvs, n_points, line_width=2, margin=0.01, only_flow=False
+        self, pl, lvs=20, n_points=100, line_width=2, margin=0.01, only_flow=False
     ):
         """
         Plots the flow net for the fractures in the DFN.
@@ -1562,9 +1572,7 @@ class DFN(Constants):
         elements = []
         for i, z in enumerate(z0):  # type: int, complex
             for j, e in enumerate(elevation):
-                logger.debug(
-                    f"Tracing streamline: {i + 1} / {len(z0)}"
-                )
+                logger.debug(f"Tracing streamline: {i + 1} / {len(z0)}")
                 streamline, streamline_frac, velocity, element = (
                     self.streamline_tracking(z, frac, e, ds, max_length, backward)
                 )
