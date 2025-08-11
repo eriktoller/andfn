@@ -43,17 +43,17 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
         el = self_["elements"][e]
         if el != exclude:
             element = element_struc_array[el]
-            if element["type_"] == 0:  # Intersection
-                omega += hpc_intersection.calc_omega(element, z, self_["id_"])
-            elif element["type_"] == 1:  # Bounding circle
+            if element["_type"] == 0:  # Intersection
+                omega += hpc_intersection.calc_omega(element, z, self_["_id"])
+            elif element["_type"] == 1:  # Bounding circle
                 omega += hpc_bounding_circle.calc_omega(element, z)
-            elif element["type_"] == 2:  # Well
+            elif element["_type"] == 2:  # Well
                 omega += hpc_well.calc_omega(element, z)
-            elif element["type_"] == 3:  # Constant head line
+            elif element["_type"] == 3:  # Constant head line
                 omega += hpc_const_head_line.calc_omega(element, z)
-            elif element["type_"] == 4:  # Impermeable circle
+            elif element["_type"] == 4:  # Impermeable circle
                 omega += hpc_imp_object.calc_omega_circle(element, z)
-            elif element["type_"] == 5:  # Impermeable line
+            elif element["_type"] == 5:  # Impermeable line
                 omega += hpc_imp_object.calc_omega_line(element, z)
 
     return omega
@@ -85,13 +85,13 @@ def calc_w(self_, z, element_struc_array, exclude=-1):
         el = self_["elements"][e]
         if el != exclude:
             element = element_struc_array[el]
-            if element["type_"] == 0:  # Intersection
-                w += hpc_intersection.calc_w(element, z, self_["id_"])
-            elif element["type_"] == 1:  # Bounding circle
+            if element["_type"] == 0:  # Intersection
+                w += hpc_intersection.calc_w(element, z, self_["_id"])
+            elif element["_type"] == 1:  # Bounding circle
                 w += hpc_bounding_circle.calc_w(element, z)
-            elif element["type_"] == 2:  # Well
+            elif element["_type"] == 2:  # Well
                 w += hpc_well.calc_w(element, z)
-            elif element["type_"] == 3:  # Constant head line
+            elif element["_type"] == 3:  # Constant head line
                 w += hpc_const_head_line.calc_w(element, z)
 
     return w

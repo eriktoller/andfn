@@ -161,7 +161,7 @@ def solve(
         )
         timee = time.time() - starte
 
-        error, id_ = get_error(element_struc_array)
+        error, _id = get_error(element_struc_array)
 
         # print info
         if nit < 10:
@@ -221,16 +221,16 @@ def get_error(element_struc_array):
     -------
     error : float
         The maximum error
-    id_ : int
+    _id : int
         The id of the element with the maximum error
     """
     error = 0.0
-    id_ = 0
+    _id = 0
     for e in element_struc_array:
         if e["error"] > error:
             error = e["error"]
-            id_ = e["id_"]
-    return error, id_
+            _id = e["_id"]
+    return error, _id
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
@@ -251,7 +251,7 @@ def get_discharge_elements(element_struc_array):
     # get the discharge elements
     el = np.zeros(len(element_struc_array), dtype=np.bool_)
     for i in range(len(element_struc_array)):
-        if element_struc_array[i]["type_"] in {
+        if element_struc_array[i]["_type"] in {
             0,
             2,
             3,
@@ -305,26 +305,26 @@ def element_solver(
         if e["error"] < max_error and nit > 30 and cnt_error == 0:
             cnt += 1
             continue
-        if e["type_"] == 0:  # Intersection
+        if e["_type"] == 0:  # Intersection
             hpc_intersection.solve(
                 e, fracture_struc_array, element_struc_array, work_array[i]
             )
-        elif e["type_"] == 1:  # Bounding circle
+        elif e["_type"] == 1:  # Bounding circle
             hpc_bounding_circle.solve(
                 e, fracture_struc_array, element_struc_array, work_array[i]
             )
-        elif e["type_"] == 2:  # Well
+        elif e["_type"] == 2:  # Well
             e["error"] = 0.0
             cnt += 1
-        elif e["type_"] == 3:  # Constant head line
+        elif e["_type"] == 3:  # Constant head line
             hpc_const_head_line.solve(
                 e, fracture_struc_array, element_struc_array, work_array[i]
             )
-        elif e["type_"] == 4:  # Impermeable circle
+        elif e["_type"] == 4:  # Impermeable circle
             hpc_imp_object.solve_circle(
                 e, fracture_struc_array, element_struc_array, work_array[i]
             )
-        elif e["type_"] == 5:  # Impermeable line
+        elif e["_type"] == 5:  # Impermeable line
             hpc_imp_object.solve_line(
                 e, fracture_struc_array, element_struc_array, work_array[i]
             )
@@ -396,14 +396,14 @@ def element_solver2(
             cnt_error,
         )
 
-        error, id_ = get_error(element_struc_array)
+        error, _id = get_error(element_struc_array)
 
         # Get the coefficients from the work array
         if nit < 2:
             continue
         for i in nb.prange(num_elements):
             e = element_struc_array[i]
-            if e["type_"] == 2:  # Well
+            if e["_type"] == 2:  # Well
                 continue
             coefs = e["coef"][: e["ncoef"]]
             coef0 = np.max(np.abs(coefs[1:3]))
@@ -427,7 +427,7 @@ def element_solver2(
                 e["ncoef"] = int(e["ncoef"] + coef_increase)
                 e["nint"] = e["ncoef"] * 2
 
-                mf.calc_thetas(e["nint"], e["type_"], e["thetas"][: e["nint"]])
+                mf.calc_thetas(e["nint"], e["_type"], e["thetas"][: e["nint"]])
                 work_array[i]["len_discharge_element"] = 0
                 mf.fill_exp_array(
                     e["nint"], e["thetas"], work_array[i]["exp_array_m"], -1
@@ -436,25 +436,25 @@ def element_solver2(
                     e["nint"], e["thetas"], work_array[i]["exp_array_p"], 1
                 )
 
-                if e["type_"] == 0:  # Intersection
+                if e["_type"] == 0:  # Intersection
                     hpc_intersection.solve(
                         e, fracture_struc_array, element_struc_array, work_array[i]
                     )
-                elif e["type_"] == 1:  # Bounding circle
+                elif e["_type"] == 1:  # Bounding circle
                     hpc_bounding_circle.solve(
                         e, fracture_struc_array, element_struc_array, work_array[i]
                     )
-                elif e["type_"] == 2:  # Well
+                elif e["_type"] == 2:  # Well
                     e["error"] = 0.0
-                elif e["type_"] == 3:  # Constant head line
+                elif e["_type"] == 3:  # Constant head line
                     hpc_const_head_line.solve(
                         e, fracture_struc_array, element_struc_array, work_array[i]
                     )
-                elif e["type_"] == 4:  # Impermeable circle
+                elif e["_type"] == 4:  # Impermeable circle
                     hpc_imp_object.solve_circle(
                         e, fracture_struc_array, element_struc_array, work_array[i]
                     )
-                elif e["type_"] == 5:  # Impermeable line
+                elif e["_type"] == 5:  # Impermeable line
                     hpc_imp_object.solve_line(
                         e, fracture_struc_array, element_struc_array, work_array[i]
                     )
@@ -573,7 +573,7 @@ def pre_matrix_solve(
     # Set the discharges equal to zero
     for i in nb.prange(len(element_struc_array)):
         e = element_struc_array[i]
-        if e["type_"] in {0, 2, 3}:  # Intersection, Well, Constant head line
+        if e["_type"] in {0, 2, 3}:  # Intersection, Well, Constant head line
             e["q"] = 0.0
 
     # Set the constants equal to zero
@@ -619,7 +619,7 @@ def post_matrix_solve(
     # Set the discharges for each element
     for i in nb.prange(len(discharge_elements)):
         e = discharge_elements[i]
-        element_struc_array[e["id_"]]["q"] = discharges[i]
+        element_struc_array[e["_id"]]["q"] = discharges[i]
 
     # Set the constants for each fracture
     for i in nb.prange(len(fractures_struc_array)):
@@ -668,7 +668,7 @@ def build_head_matrix(
         for i in range(discharge_int):
             omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
         omega = np.sum(omega_vec) / discharge_int
-        if e["type_"] == 0:  # Intersection
+        if e["_type"] == 0:  # Intersection
             frac1 = fractures_struc_array[e["frac1"]]
             z1 = z_int["z1"][j][:discharge_int]
             omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
@@ -678,7 +678,7 @@ def build_head_matrix(
                 )
             omega1 = np.sum(omega1_vec) / discharge_int
             head_matrix[j] = np.real(omega1) / frac1["t"] - np.real(omega) / frac0["t"]
-        elif e["type_"] in [2, 3]:  # Well or Constant head line
+        elif e["_type"] in [2, 3]:  # Well or Constant head line
             head_matrix[j] = e["phi"] - np.real(omega)
 
 
@@ -732,7 +732,7 @@ def get_bnd_error(
     # Add the head for each discharge element
     for j in range(num_elements * 0):
         e = element_struc_array[j]
-        if e["type_"] == 2:  # Well
+        if e["_type"] == 2:  # Well
             bnd_error[j] = 0.0
             continue
         coefs = e["coef"][: e["ncoef"]]
@@ -748,7 +748,7 @@ def get_bnd_error(
             coef_ratio = 0.0
         if np.max(np.abs(coefs[1:2])) < max_error:
             coef_ratio = 0.0
-        if e["type_"] in [0, 3]:  # Intersection, Constant head line
+        if e["_type"] in [0, 3]:  # Intersection, Constant head line
             frac0 = fracture_struc_array[e["frac0"]]
             z0 = z_int["z0"][j][:discharge_int]
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
@@ -757,7 +757,7 @@ def get_bnd_error(
                     frac0, z0[i], element_struc_array
                 )
             omega = np.sum(omega_vec) / discharge_int
-            if e["type_"] == 0:  # Intersection
+            if e["_type"] == 0:  # Intersection
                 frac1 = fracture_struc_array[e["frac1"]]
                 z1 = z_int["z1"][j][:discharge_int]
                 omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
@@ -773,7 +773,7 @@ def get_bnd_error(
                     logger.debug(f"450: {head1}, {head0}, {bnd_error[450]}")
             else:  # Well or Constant head line
                 bnd_error[j] = np.abs((e["phi"] - np.real(omega)) / e["phi"])
-        elif e["type_"] == 1:  # Bounding circle
+        elif e["_type"] == 1:  # Bounding circle
             frac0 = fracture_struc_array[e["frac0"]]
             z0 = z_int["z0"][j][:discharge_int]
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
@@ -868,11 +868,11 @@ def get_max_min_phi(
     l_max = 0.0
     l_min = 0.0
     for j, e in enumerate(element_struc_array[ids]):
-        if e["type_"] in [0, 2, 3]:  # Well, Constant head line
+        if e["_type"] in [0, 2, 3]:  # Well, Constant head line
             z0 = z_int["z0"][ids[j]][:discharge_int]
             frac0 = fracture_struc_array[e["frac0"]]
             endpoints = e["endpoints0"]
-            if e["type_"] == 0:  # Intersection
+            if e["_type"] == 0:  # Intersection
                 if e["frac1"] == frac_id:
                     z0 = z_int["z1"][ids[j]][:discharge_int]
                     frac0 = fracture_struc_array[e["frac1"]]
@@ -891,7 +891,7 @@ def get_max_min_phi(
             if phi < min_phi:
                 min_phi = phi
                 z_min = z0[np.argmin(np.real(omega_vec))]
-            if e["type_"] == 0:  # Intersection
+            if e["_type"] == 0:  # Intersection
                 if phi_min < min_phi:
                     min_phi = phi_min
                     z_min = z0[np.argmin(np.real(omega_vec))]
@@ -909,20 +909,20 @@ def get_z_int_array(z_int, elements, discharge_int):
     # Add the head for each discharge element
     for j in range(elements.size):
         e = elements[j]
-        if e["type_"] == 0:  # Intersection
+        if e["_type"] == 0:  # Intersection
             z_int["z0"][j][:discharge_int] = hpc_intersection.z_array(
                 e, discharge_int, e["frac0"]
             )
             z_int["z1"][j][:discharge_int] = hpc_intersection.z_array(
                 e, discharge_int, e["frac1"]
             )
-        elif e["type_"] == 1:  # Bounding circle
+        elif e["_type"] == 1:  # Bounding circle
             z_int["z0"][j][:discharge_int] = hpc_bounding_circle.z_array(
                 e, discharge_int
             )
-        elif e["type_"] == 2:  # Well
+        elif e["_type"] == 2:  # Well
             z_int["z0"][j][:discharge_int] = hpc_well.z_array(e, discharge_int)
-        elif e["type_"] == 3:  # Constant head line
+        elif e["_type"] == 3:  # Constant head line
             z_int["z0"][j][:discharge_int] = hpc_const_head_line.z_array(
                 e, discharge_int
             )
@@ -942,7 +942,7 @@ def set_new_ncoef(self_, n, nint_mult=2):
     nint_mult : int
         The multiplier for the number of integration points.
     """
-    if self_["type_"] == 0:  # Intersection
+    if self_["_type"] == 0:  # Intersection
         self_["ncoef"] = n
         self_["nint"] = n * nint_mult
         stop = 2 * np.pi + 2 * np.pi / self_["nint"]
@@ -951,7 +951,7 @@ def set_new_ncoef(self_, n, nint_mult=2):
             stop=stop - stop / self_["nint"],
             num=self_["nint"],
         )
-    elif self_["type_"] == 3:  # Constant Head Line
+    elif self_["_type"] == 3:  # Constant Head Line
         self_["ncoef"] = n
         self_["nint"] = n * nint_mult
         stop = 2 * np.pi + 2 * np.pi / self_["nint"]
@@ -960,7 +960,7 @@ def set_new_ncoef(self_, n, nint_mult=2):
             stop=stop - stop / self_["nint"],
             num=self_["nint"],
         )
-    elif self_["type_"] == 1:  # Bounding Circle
+    elif self_["_type"] == 1:  # Bounding Circle
         self_["ncoef"] = n
         self_["nint"] = n * nint_mult
         self_["thetas"][: self_["nint"]] = np.linspace(

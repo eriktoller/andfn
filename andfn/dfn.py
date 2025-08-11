@@ -326,7 +326,7 @@ class DFN(Constants):
                 fracs.append(
                     Fracture(
                         label=hf["fractures/index/label"][i].decode(),
-                        id_=hf["fractures/index/id_"][i],
+                        _id=hf["fractures/index/_id"][i],
                         t=hf[f"fractures/properties/t/{i}"][()],
                         radius=hf[f"fractures/properties/radius/{i}"][()],
                         center=hf[f"fractures/properties/center/{i}"][()],
@@ -341,11 +341,11 @@ class DFN(Constants):
             # Load the elements
             elements = []
             for i in range(len(hf["elements/index/label"])):
-                if hf["elements/index/type_"][i] == 0:  # Intersection
+                if hf["elements/index/_type"][i] == 0:  # Intersection
                     elements.append(
                         Intersection(
                             label=hf["elements/index/label"][i].decode(),
-                            id_=hf["elements/index/id_"][i],
+                            _id=hf["elements/index/_id"][i],
                             endpoints0=hf[f"elements/properties/endpoints0/{i}"][()],
                             endpoints1=hf[f"elements/properties/endpoints1/{i}"][()],
                             ncoef=hf[f"elements/properties/ncoef/{i}"][()],
@@ -358,11 +358,11 @@ class DFN(Constants):
                             error=hf[f"elements/properties/error/{i}"][()],
                         )
                     )
-                elif hf["elements/index/type_"][i] == 1:  # Bounding circle
+                elif hf["elements/index/_type"][i] == 1:  # Bounding circle
                     elements.append(
                         BoundingCircle(
                             label=hf["elements/index/label"][i].decode(),
-                            id_=hf["elements/index/id_"][i],
+                            _id=hf["elements/index/_id"][i],
                             radius=hf[f"elements/properties/radius/{i}"][()],
                             center=hf[f"elements/properties/center/{i}"][()],
                             frac0=fracs[hf[f"elements/properties/frac0/{i}"][()]],
@@ -374,11 +374,11 @@ class DFN(Constants):
                             error=hf[f"elements/properties/error/{i}"][()],
                         )
                     )
-                elif hf["elements/index/type_"][i] == 2:  # Well
+                elif hf["elements/index/_type"][i] == 2:  # Well
                     elements.append(
                         Well(
                             label=hf["elements/index/label"][i].decode(),
-                            id_=hf["elements/index/id_"][i],
+                            _id=hf["elements/index/_id"][i],
                             radius=hf[f"elements/properties/radius/{i}"][()],
                             center=hf[f"elements/properties/center/{i}"][()],
                             head=hf[f"elements/properties/head/{i}"][()],
@@ -388,11 +388,11 @@ class DFN(Constants):
                             error=hf[f"elements/properties/error/{i}"][()],
                         )
                     )
-                elif hf["elements/index/type_"][i] == 3:  # Constant head line
+                elif hf["elements/index/_type"][i] == 3:  # Constant head line
                     elements.append(
                         ConstantHeadLine(
                             label=hf["elements/index/label"][i].decode(),
-                            id_=hf["elements/index/id_"][i],
+                            _id=hf["elements/index/_id"][i],
                             head=hf[f"elements/properties/head/{i}"][()],
                             endpoints0=hf[f"elements/properties/endpoints0/{i}"][()],
                             ncoef=hf[f"elements/properties/ncoef/{i}"][()],
@@ -405,11 +405,11 @@ class DFN(Constants):
                             error=hf[f"elements/properties/error/{i}"][()],
                         )
                     )
-                elif hf["elements/index/type_"][i] == 4:  # Impermeable circle
+                elif hf["elements/index/_type"][i] == 4:  # Impermeable circle
                     elements.append(
                         ImpermeableCircle(
                             label=hf["elements/index/label"][i].decode(),
-                            id_=hf["elements/index/id_"][i],
+                            _id=hf["elements/index/_id"][i],
                             radius=hf[f"elements/properties/radius/{i}"][()],
                             center=hf[f"elements/properties/center/{i}"][()],
                             frac0=fracs[hf[f"elements/properties/frac0/{i}"][()]],
@@ -420,11 +420,11 @@ class DFN(Constants):
                             error=hf[f"elements/properties/error/{i}"][()],
                         )
                     )
-                elif hf["elements/index/type_"][i] == 5:  # Impermeable line
+                elif hf["elements/index/_type"][i] == 5:  # Impermeable line
                     elements.append(
                         ImpermeableLine(
                             label=hf["elements/index/label"][i].decode(),
-                            id_=hf["elements/index/id_"][i],
+                            _id=hf["elements/index/_id"][i],
                             endpoints0=hf[f"elements/properties/focis/{i}"][()],
                             frac0=fracs[hf[f"elements/properties/frac0/{i}"][()]],
                             ncoef=hf[f"elements/properties/ncoef/{i}"][()],
@@ -574,7 +574,7 @@ class DFN(Constants):
             or isinstance(e, Well)
         ]
 
-        self.discharge_elements_index = [e.id_ for e in self.discharge_elements]
+        self.discharge_elements_index = [e._id for e in self.discharge_elements]
 
     def get_dfn_discharge(self):
         # sum all discharges, except the intersections

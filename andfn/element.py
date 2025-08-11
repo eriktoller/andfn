@@ -19,8 +19,8 @@ if config:
 
 element_dtype = np.dtype(
     [
-        ("id_", np.int_),
-        ("type_", np.int_),
+        ("_id", np.int_),
+        ("_type", np.int_),
         ("frac0", np.int_),
         ("frac1", np.int_),
         ("endpoints0", np.complex128, 2),
@@ -42,8 +42,8 @@ element_dtype = np.dtype(
 
 element_dtype_hpc = np.dtype(
     [
-        ("id_", np.int_),
-        ("type_", np.int_),
+        ("_id", np.int_),
+        ("_type", np.int_),
         ("frac0", np.int_),
         ("frac1", np.int_),
         ("endpoints0", np.complex128, 2),
@@ -76,9 +76,9 @@ Element Types:
 
 Parameters
 ----------
-id_ : int
+_id : int
     The id of the element.
-type_ : int
+_type : int
     The type of the element. (see above)
 frac0 : int
     The id of the first fracture.
@@ -118,15 +118,15 @@ error : float
 element_index_dtype = np.dtype(
     [
         ("label", np.str_, 100),
-        ("id_", np.int_),
-        ("type_", np.int_),
+        ("_id", np.int_),
+        ("_type", np.int_),
     ]
 )
 
 
 fracture_dtype = np.dtype(
     [
-        ("id_", np.int_),
+        ("_id", np.int_),
         ("t", np.float64),
         ("radius", np.float64),
         ("center", np.float64, 3),
@@ -140,7 +140,7 @@ fracture_dtype = np.dtype(
 
 fracture_dtype_hpc = np.dtype(
     [
-        ("id_", np.int_),
+        ("_id", np.int_),
         ("t", np.float64),
         ("radius", np.float64),
         ("center", np.float64, 3),
@@ -153,7 +153,7 @@ fracture_dtype_hpc = np.dtype(
     ]
 )
 
-fracture_index_dtype = np.dtype([("label", np.str_, 100), ("id_", np.int_)])
+fracture_index_dtype = np.dtype([("label", np.str_, 100), ("_id", np.int_)])
 
 
 def initiate_elements_array():
@@ -211,7 +211,7 @@ class Element:
     The parent class for all elements in the andfn model.
     """
 
-    def __init__(self, label, id_, type_):
+    def __init__(self, label, _id, _type):
         """
         Initialize the element.
 
@@ -219,9 +219,9 @@ class Element:
         ----------
         label : str
             The label of the element.
-        id_ : int
+        _id : int
             The id of the element.
-        type_ : int
+        _type : int
             The type of the element.
             Element Types:
                 0 = Intersection
@@ -232,8 +232,8 @@ class Element:
                 5 = Impermeable Line
         """
         self.label = label
-        self.id_ = id_
-        self.type_ = type_
+        self._id = _id
+        self._type = _type
         self.error = 1.0
         self.ncoef = 5
         self.nint = 10
@@ -253,20 +253,20 @@ class Element:
         """
         return f"{self.__class__.__name__}: {self.label}"
 
-    def set_id(self, id_):
+    def set_id(self, _id):
         """
         Set the id of the element.
 
         Parameters
         ----------
-        id_ : int
+        _id : int
             The id of the element.
 
         Returns
         -------
         None. The id is updated in place.
         """
-        self.id_ = id_
+        self._id = _id
 
     def change_property(self, **kwargs):
         """
@@ -307,12 +307,12 @@ class Element:
         for key in self.__dict__.keys():
             if key in element_dtype.names:
                 if key in ["frac0", "frac1"]:
-                    struc_array[key][0] = self.__dict__[key].id_
+                    struc_array[key][0] = self.__dict__[key]._id
                 else:
                     struc_array[key][0] = self.__dict__[key]
 
         index_array = np.array(
-            [(self.label, self.id_, self.type_)], dtype=element_index_dtype
+            [(self.label, self._id, self._type)], dtype=element_index_dtype
         )
 
         return struc_array, index_array
@@ -333,14 +333,14 @@ class Element:
         for key in self.__dict__.keys():
             if key in element_dtype.names:
                 if key in ["frac0", "frac1"]:
-                    struc_array[key][0] = self.__dict__[key].id_
+                    struc_array[key][0] = self.__dict__[key]._id
                 elif key in ["thetas", "coef", "old_coef", "dpsi_corr"]:
                     struc_array[key][0][: self.__dict__[key].size] = self.__dict__[key]
                 else:
                     struc_array[key][0] = self.__dict__[key]
 
         index_array = np.array(
-            [(self.label, self.id_, self.type_)], dtype=element_index_dtype
+            [(self.label, self._id, self._type)], dtype=element_index_dtype
         )
 
         return struc_array, index_array
@@ -357,7 +357,7 @@ class Element:
             if key in element_dtype.names:
                 if key == "frac0" or key == "frac1":
                     self.__dict__[key] = next(
-                        frac for frac in fracs if frac.id_ == struc_array[key]
+                        frac for frac in fracs if frac._id == struc_array[key]
                     )
                     continue
                 self.__dict__[key] = struc_array[key]
@@ -377,7 +377,7 @@ class Element:
             if key in element_dtype.names:
                 if key == "frac0" or key == "frac1":
                     self.__dict__[key] = next(
-                        frac for frac in fracs if frac.id_ == struc_array[key]
+                        frac for frac in fracs if frac._id == struc_array[key]
                     )
                     continue
                 if key == "coef" or key == "old_coef":
@@ -402,7 +402,7 @@ class Element:
         nint_mult : int
             The multiplier for the number of integration points.
         """
-        if self.type_ in [0, 3]:  # Intersection, Constant Head Line
+        if self._type in [0, 3]:  # Intersection, Constant Head Line
             self.ncoef = n
             self.coef = np.append(
                 self.coef, np.zeros(n - self.coef.size, dtype=complex)
@@ -414,7 +414,7 @@ class Element:
                 num=self.nint,
                 endpoint=False,
             )
-        elif self.type_ == 1:  # Bounding Circle
+        elif self._type == 1:  # Bounding Circle
             self.ncoef = n
             self.coef = np.append(
                 self.coef, np.zeros(n - self.coef.size, dtype=complex)
@@ -440,7 +440,7 @@ class Element:
         None
             The element is plotted in the plotter.
         """
-        if self.type_ in [
+        if self._type in [
             0,
             3,
             5,
@@ -449,7 +449,7 @@ class Element:
             pl.add_mesh(
                 pv.Line(line[0], line[1]), color="#000000", line_width=line_width
             )
-        elif self.type_ == 1:  # Bounding Circle
+        elif self._type == 1:  # Bounding Circle
             point = gf.map_2d_to_3d(0 + 0j, self.frac0)
             pl.add_mesh(
                 pv.Polygon(
@@ -458,7 +458,7 @@ class Element:
                 color="#000000",
                 line_width=line_width,
             )
-        elif self.type_ in [1, 2, 4]:  # Bounding Circle, Well, Impermeable Circle
+        elif self._type in [1, 2, 4]:  # Bounding Circle, Well, Impermeable Circle
             point = gf.map_2d_to_3d(self.center, self.frac0)
             pl.add_mesh(
                 pv.Polygon(

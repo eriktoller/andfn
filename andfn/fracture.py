@@ -53,7 +53,7 @@ class Fracture:
             Additional keyword arguments.
         """
         self.label = label
-        self.id_ = 0
+        self._id = 0
         self.t = t
         self.aperture = aperture
         self.radius = radius
@@ -90,16 +90,16 @@ class Fracture:
         """
         return f"Fracture {self.label}"
 
-    def set_id(self, id_):
+    def set_id(self, _id):
         """
         Sets the id for the fracture.
 
         Parameters
         ----------
-        id_ : int
+        _id : int
             The id for the fracture.
         """
-        self.id_ = id_
+        self._id = _id
 
     def consolidate(self):
         """
@@ -114,18 +114,18 @@ class Fracture:
         """
         fracture_struc_array = np.empty(1, dtype=fracture_dtype)
 
-        fracture_struc_array["id_"][0] = self.id_
+        fracture_struc_array["_id"][0] = self._id
         fracture_struc_array["t"][0] = self.t
         fracture_struc_array["radius"][0] = self.radius
         fracture_struc_array["center"][0] = self.center
         fracture_struc_array["normal"][0] = self.normal
         fracture_struc_array["x_vector"][0] = self.x_vector
         fracture_struc_array["y_vector"][0] = self.y_vector
-        fracture_struc_array["elements"][0] = np.array([e.id_ for e in self.elements])
+        fracture_struc_array["elements"][0] = np.array([e._id for e in self.elements])
         fracture_struc_array["constant"][0] = self.constant
 
         fracture_index_array = np.array(
-            [(self.label, self.id_)], dtype=fracture_index_dtype
+            [(self.label, self._id)], dtype=fracture_index_dtype
         )
 
         return fracture_struc_array, fracture_index_array
@@ -143,20 +143,20 @@ class Fracture:
         """
         fracture_struc_array = np.empty(1, dtype=fracture_dtype_hpc)
 
-        fracture_struc_array["id_"][0] = self.id_
+        fracture_struc_array["_id"][0] = self._id
         fracture_struc_array["t"][0] = self.t
         fracture_struc_array["radius"][0] = self.radius
         fracture_struc_array["center"][0] = self.center
         fracture_struc_array["normal"][0] = self.normal
         fracture_struc_array["x_vector"][0] = self.x_vector
         fracture_struc_array["y_vector"][0] = self.y_vector
-        elements = np.array([e.id_ for e in self.elements])
+        elements = np.array([e._id for e in self.elements])
         fracture_struc_array["elements"][0][: elements.size] = elements
         fracture_struc_array["nelements"][0] = elements.size
         fracture_struc_array["constant"][0] = self.constant
 
         fracture_index_array = np.array(
-            [(self.label, self.id_)], dtype=fracture_index_dtype
+            [(self.label, self._id)], dtype=fracture_index_dtype
         )
 
         return fracture_struc_array, fracture_index_array
@@ -171,7 +171,7 @@ class Fracture:
             The structured array for the fracture.
         fracture_index_array : np.ndarray
         """
-        self.id_ = fracture_struc_array["id_"]
+        self._id = fracture_struc_array["_id"]
         self.t = fracture_struc_array["t"]
         self.radius = fracture_struc_array["radius"]
         self.center = fracture_struc_array["center"]
@@ -181,7 +181,7 @@ class Fracture:
         self.elements = [
             e
             for e in self.elements
-            if e.id_
+            if e._id
             in fracture_struc_array["elements"][: fracture_struc_array["nelements"]]
         ]
         self.constant = fracture_struc_array["constant"]
@@ -199,7 +199,7 @@ class Fracture:
         fracture_index_array : np.ndarray
             The structured array for the fracture index.
         """
-        self.id_ = fracture_struc_array["id_"]
+        self._id = fracture_struc_array["_id"]
         self.t = fracture_struc_array["t"]
         self.radius = fracture_struc_array["radius"]
         self.center = fracture_struc_array["center"]
@@ -207,7 +207,7 @@ class Fracture:
         self.x_vector = fracture_struc_array["x_vector"]
         self.y_vector = fracture_struc_array["y_vector"]
         self.elements = [
-            e for e in self.elements if e.id_ in fracture_struc_array["elements"]
+            e for e in self.elements if e._id in fracture_struc_array["elements"]
         ]
         self.constant = fracture_struc_array["constant"]
 

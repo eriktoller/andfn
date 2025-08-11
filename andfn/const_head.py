@@ -32,7 +32,7 @@ class ConstantHeadLine(Element):
         kwargs : dict
             Additional keyword arguments
         """
-        super().__init__(label, id_=0, type_=3)
+        super().__init__(label, _id=-1, _type=3)
         self.label = label
         self.endpoints0 = endpoints0
         self.ncoef = ncoef

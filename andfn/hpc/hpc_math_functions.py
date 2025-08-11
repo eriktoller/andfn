@@ -231,7 +231,7 @@ def find_branch_cuts(
     cnt = 0
     for ii in range(self_["nint"] - 1):
         for e in elements:
-            if e["type_"] == 0:  # Intersection
+            if e["_type"] == 0:  # Intersection
                 if e["frac0"] == self_["frac0"]:
                     chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                     chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
@@ -243,7 +243,7 @@ def find_branch_cuts(
                     ):
                         dpsi_corr[ii] -= e["q"]
                         work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["id_"]
+                        work_array["discharge_element"][cnt] = e["_id"]
                         get_sign(self_, work_array, cnt, chi0, chi1, -1)
                         work_array["len_discharge_element"] += 1
                         cnt += 1
@@ -258,11 +258,11 @@ def find_branch_cuts(
                     ):
                         dpsi_corr[ii] += e["q"]
                         work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["id_"]
+                        work_array["discharge_element"][cnt] = e["_id"]
                         get_sign(self_, work_array, cnt, chi0, chi1, 1)
                         work_array["len_discharge_element"] += 1
                         cnt += 1
-            elif e["type_"] == 2:  # Well
+            elif e["_type"] == 2:  # Well
                 chi0 = gf.map_z_circle_to_chi(z_pos[ii], e["radius"], e["center"])
                 chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e["radius"], e["center"])
                 if (
@@ -271,11 +271,11 @@ def find_branch_cuts(
                 ):
                     dpsi_corr[ii] -= e["q"]
                     work_array["element_pos"][cnt] = ii
-                    work_array["discharge_element"][cnt] = e["id_"]
+                    work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
                     work_array["len_discharge_element"] += 1
                     cnt += 1
-            elif e["type_"] == 3:  # Constant head line
+            elif e["_type"] == 3:  # Constant head line
                 chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                 chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
                 if (
@@ -284,7 +284,7 @@ def find_branch_cuts(
                 ):
                     dpsi_corr[ii] -= e["q"]
                     work_array["element_pos"][cnt] = ii
-                    work_array["discharge_element"][cnt] = e["id_"]
+                    work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
                     work_array["len_discharge_element"] += 1
                     cnt += 1
@@ -292,7 +292,7 @@ def find_branch_cuts(
 
 @nb.njit(inline="always")
 def get_sign(self_, work_array, cnt, chi0, chi1, sign_default):
-    if self_["type_"] != 1:  # If not bounding circle
+    if self_["_type"] != 1:  # If not bounding circle
         if np.imag(chi0) < np.imag(chi1):
             work_array["sign_array"][cnt] = -1 * sign_default
         else:
@@ -323,13 +323,13 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
         Edits the self_ array in place.
     """
     if work_array["len_discharge_element"] == 0:
-        if self_["type_"] in [1, 4]:  # If bounding circle or impermeable circle
+        if self_["_type"] in [1, 4]:  # If bounding circle or impermeable circle
             z_pos = gf.map_chi_to_z_circle(
                 work_array["exp_array_p"][: self_["nint"]],
                 self_["radius"],
                 self_["center"],
             )
-        elif self_["type_"] == 5:  # If impermeable line
+        elif self_["_type"] == 5:  # If impermeable line
             z_pos = gf.map_chi_to_z_line(
                 work_array["exp_array_p"][: self_["nint"]], self_["endpoints0"]
             )
@@ -533,7 +533,7 @@ def calc_error(coef, coef_ref):
 
 
 @nb.njit()
-def calc_thetas(n, type_, thetas):
+def calc_thetas(n, _type, thetas):
     """
     Function that calculates the thetas for the unit circle.
 
@@ -541,7 +541,7 @@ def calc_thetas(n, type_, thetas):
     ----------
     n : int
         The number of thetas to calculate
-    type_ : int
+    _type : int
         The element type. 0 for bounding circle, 1 for constant head line, 3 for intersection.
     thetas : np.ndarray
         The array to fill with the thetas
@@ -551,10 +551,10 @@ def calc_thetas(n, type_, thetas):
     None
         Fills the thetas array with the values of thetas
     """
-    # if type_ is 0 or 3
+    # if _type is 0 or 3
     del_theta = np.pi / n
     start = del_theta / 2
-    if type_ == 1:
+    if _type == 1:
         del_theta = 2 * np.pi / n
         start = 0.0
     for i in range(n):

@@ -65,7 +65,7 @@ class ImpermeableCircle(Element):
         frac0 : Fracture
             The fracture object that the impermeable circle is associated with.
         """
-        super().__init__(label, id_=0, type_=4)
+        super().__init__(label, _id=-1, _type=4)
         self.label = label
         self.radius = radius
         self.center = center
@@ -182,7 +182,7 @@ class ImpermeableCircle(Element):
 
 class ImpermeableLine(Element):
     def __init__(self, label, endpoints0, frac0, ncoef=5, nint=10, **kwargs):
-        super().__init__(label, id_=0, type_=5)
+        super().__init__(label, _id=-1, _type=5)
         self.label = label
         self.endpoints0 = endpoints0
         self.ncoef = ncoef

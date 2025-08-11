@@ -38,7 +38,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
         self_["ncoef"],
         self_["thetas"][: self_["nint"]],
         frac0,
-        self_["id_"],
+        self_["_id"],
         element_struc_array,
         self_["endpoints0"],
         work_array,

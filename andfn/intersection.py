@@ -36,7 +36,7 @@ class Intersection(Element):
         kwargs : dict
             Additional keyword arguments
         """
-        super().__init__(label=label, id_=0, type_=0)
+        super().__init__(label=label, _id=-1, _type=0)
         self.label = label
         self.endpoints0 = endpoints0
         self.endpoints1 = endpoints1

@@ -43,7 +43,7 @@ def z_array(self_, n):
         The array of points in the complex z plane.
     """
     theta = np.zeros(n, dtype=np.float64)
-    mf.calc_thetas(n, self_["type_"], theta)
+    mf.calc_thetas(n, self_["_type"], theta)
     chi = np.exp(1j * theta)
     z = gf.map_chi_to_z_circle(chi, self_["radius"])
     return z
@@ -122,7 +122,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
         self_["ncoef"],
         self_["dpsi_corr"][: self_["nint"] - 1],
         frac0,
-        self_["id_"],
+        self_["_id"],
         element_struc_array,
         self_["radius"],
         self_["center"],

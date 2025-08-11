@@ -31,7 +31,7 @@ class BoundingCircle(Element):
         frac : Fracture
             The fracture object that the bounding circle is associated with.
         """
-        super().__init__(label, id_=0, type_=1)
+        super().__init__(label, _id=-1, _type=1)
         self.label = label
         self.radius = radius
         self.center = 0.0 + 0.0j  # Default center at origin

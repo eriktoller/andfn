@@ -30,7 +30,7 @@ class Well(Element):
         q : float
             The flow rate of the well.
         """
-        super().__init__(label=label, id_=0, type_=2)
+        super().__init__(label=label, _id=-1, _type=2)
         self.radius = radius
         self.center = center
         self.head = head
