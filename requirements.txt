@@ -1,5 +1,6 @@
 sphinx
 sphinx-book-theme
+sphinx-copybutton
 ghp-import
 numpy
 pandas
