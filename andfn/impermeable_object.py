@@ -163,22 +163,6 @@ class ImpermeableCircle(Element):
         w /= self.radius
         return w
 
-    def solve(self):
-        """
-        Solve the coefficients of the impermeable circle.
-        """
-        s = mf.cauchy_integral_imag(
-            self.nint,
-            self.ncoef,
-            self.thetas,
-            lambda z: self.frac0.calc_omega(z, exclude=self),
-            lambda chi: gf.map_chi_to_z_circle(chi, self.radius, self.center),
-        )
-        s[0] = 0.0 + 0.0j
-
-        self.error = np.max(np.abs(np.conj(s) - self.coef))
-        self.coef = np.conj(s)
-
 
 class ImpermeableLine(Element):
     def __init__(self, label, endpoints0, frac0, ncoef=5, nint=10, **kwargs):
@@ -250,19 +234,3 @@ class ImpermeableLine(Element):
         w = -mf.asym_expansion_d1(chi, self.coef)
         w *= 2 * chi**2 / (chi**2 - 1) * 2 / (self.endpoints0[1] - self.endpoints0[0])
         return w
-
-    def solve(self):
-        """
-        Solve the coefficients of the impermeable circle.
-        """
-        s = mf.cauchy_integral_imag(
-            self.nint,
-            self.ncoef,
-            self.thetas,
-            lambda z: self.frac0.calc_omega(z, exclude=self),
-            lambda chi: gf.map_chi_to_z_line(chi, self.endpoints0),
-        )
-        s[0] = 0.0 + 0.0j
-
-        self.error = np.max(np.abs(s + self.coef))
-        self.coef = -np.imag(s) * 1j

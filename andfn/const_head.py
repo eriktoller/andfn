@@ -194,25 +194,6 @@ class ConstantHeadLine(Element):
         w *= 2 * chi**2 / (chi**2 - 1) * 2 / (self.endpoints0[1] - self.endpoints0[0])
         return w
 
-    def solve(self):
-        """
-        Solve the coefficients of the constant head line.
-        """
-        s = mf.cauchy_integral_real(
-            self.nint,
-            self.ncoef,
-            self.thetas,
-            lambda z: self.frac0.calc_omega(z, exclude=self),
-            lambda chi: gf.map_chi_to_z_line(chi, self.endpoints0),
-        )
-
-        s = np.real(s)
-        s[0] = (
-            0  # Set the first coefficient to zero (constant embedded in discharge matrix)
-        )
-
-        self.error = np.max(np.abs(s + self.coef))
-        self.coef = -s
 
     def check_boundary_condition(self, n=10):
         """

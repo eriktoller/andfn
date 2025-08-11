@@ -39,7 +39,7 @@ def asym_expansion(chi, coef):
     res += coef[0]
     return res
 
-
+@nb.njit(inline="always")
 def asym_expansion_d1(chi, coef):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
@@ -57,9 +57,12 @@ def asym_expansion_d1(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
+
     res = 0.0 + 0.0j
-    for n, c in enumerate(coef):
-        res -= c * n * np.pow(chi, (-n - 1))
+    length = len(coef)
+    for n in range(length):
+        res -= coef[length - n - 1] * (length - n - 1)
+        res /= chi
 
     return res
 
@@ -92,6 +95,7 @@ def taylor_series(chi, coef):
     return res
 
 
+@nb.njit(inline="always")
 def taylor_series_d1(chi, coef):
     """
     Function that calculates the Taylor series starting from 0 for a given point chi and an array of
@@ -109,9 +113,14 @@ def taylor_series_d1(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
+
     res = 0.0 + 0.0j
-    for n, c in enumerate(coef[1:], start=1):
-        res += c * n * chi ** (n - 1)
+    length = len(coef)
+    for n in range(length - 2):
+        res += coef[length - n - 1] * (length - n - 1)
+        res *= chi
+
+    res += coef[1]
 
     return res
 
