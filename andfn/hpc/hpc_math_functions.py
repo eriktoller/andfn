@@ -39,6 +39,7 @@ def asym_expansion(chi, coef):
     res += coef[0]
     return res
 
+
 @nb.njit(inline="always")
 def asym_expansion_d1(chi, coef):
     """

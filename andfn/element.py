@@ -155,6 +155,15 @@ fracture_dtype_hpc = np.dtype(
 
 fracture_index_dtype = np.dtype([("label", np.str_, 100), ("_id", np.int_)])
 
+ELEMENT_COLORS = {
+    0: "#008000",  # Intersection
+    1: "#000000",  # Bounding Circle
+    2: "#FF0000",  # Well
+    3: "#FF0000",  # Constant Head Line
+    4: "#0000FF",  # Impermeable Circle
+    5: "#0000FF",
+}  # Impermeable Line
+
 
 def initiate_elements_array():
     """
@@ -447,7 +456,9 @@ class Element:
         ]:  # Intersection, Constant Head Line, Impermeable Line
             line = gf.map_2d_to_3d(self.endpoints0, self.frac0)
             pl.add_mesh(
-                pv.Line(line[0], line[1]), color="#000000", line_width=line_width
+                pv.Line(line[0], line[1]),
+                color=ELEMENT_COLORS[self._type],
+                line_width=line_width,
             )
         elif self._type == 1:  # Bounding Circle
             point = gf.map_2d_to_3d(0 + 0j, self.frac0)
@@ -455,7 +466,7 @@ class Element:
                 pv.Polygon(
                     point, self.radius, normal=self.frac0.normal, n_sides=50, fill=False
                 ),
-                color="#000000",
+                color=ELEMENT_COLORS[self._type],
                 line_width=line_width,
             )
         elif self._type in [1, 2, 4]:  # Bounding Circle, Well, Impermeable Circle
@@ -464,6 +475,6 @@ class Element:
                 pv.Polygon(
                     point, self.radius, normal=self.frac0.normal, n_sides=50, fill=False
                 ),
-                color="#000000",
+                color=ELEMENT_COLORS[self._type],
                 line_width=line_width,
             )

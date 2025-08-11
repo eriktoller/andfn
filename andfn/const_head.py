@@ -194,7 +194,6 @@ class ConstantHeadLine(Element):
         w *= 2 * chi**2 / (chi**2 - 1) * 2 / (self.endpoints0[1] - self.endpoints0[0])
         return w
 
-
     def check_boundary_condition(self, n=10):
         """
         Check if the constant head line satisfies the boundary conditions.

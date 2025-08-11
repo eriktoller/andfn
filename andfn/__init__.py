@@ -17,7 +17,7 @@ from andfn.fracture import Fracture
 from andfn.intersection import Intersection
 from andfn.well import Well
 from andfn.impermeable_object import ImpermeableCircle, ImpermeableLine
-from andfn.structures import ConstantHeadPrism, ImpermeablePrims
+from andfn.structures import ConstantHeadPrism, ImpermeablePrism
 from andfn.dfn import DFN
 from andfn.geometry_functions import map_2d_to_3d, map_3d_to_2d, fracture_intersection
 
@@ -31,7 +31,7 @@ __all__ = [
     "ImpermeableCircle",
     "ImpermeableLine",
     "ConstantHeadPrism",
-    "ImpermeablePrims",
+    "ImpermeablePrism",
     "map_2d_to_3d",
     "map_3d_to_2d",
     "fracture_intersection",
