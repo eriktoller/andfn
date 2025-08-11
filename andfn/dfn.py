@@ -1139,6 +1139,18 @@ class DFN(Constants):
                 fracs.append(f)
         return fracs
 
+    def plot_input(self):
+        """
+        Plots the input of the DFN, i.e. the fractures and elements.
+        """
+        pl = self.initiate_plotter()
+        self.plot_fractures(pl)
+        if self.elements is not None:
+            for e in self.elements:
+                e.plot(pl)
+        pl.show()
+
+
     def plot_fractures(
         self,
         pl,
