@@ -33,6 +33,9 @@ pip uninstall andfn
 - `numba`
 - `h5py`
 
+and the following optional dependencies:
+- `pyyaml` (for using the YAML configuration file)
+
 ## Functionality
 AnDFN currently have the following functionality:
 - Generate random DFN
