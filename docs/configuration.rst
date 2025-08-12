@@ -25,7 +25,7 @@ The maximum number of iterations for the solver. Default is 50.
 
 The maximum error allowed in the solver. Default is 1e-6.
 
-``MAX_COEF: (int)``
+``MAX_NCOEF: (int)``
 
 The maximum number of coefficients for a single element. Default is 150.
 
@@ -78,7 +78,7 @@ Example Configuration File
 
     MAX_ERROR: 1e-6
 
-    MAX_COEF: 150
+    MAX_NCOEF: 150
 
     COEF_INCREASE: 5
 

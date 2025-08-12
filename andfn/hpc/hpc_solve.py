@@ -83,7 +83,7 @@ def solve(
     max_error = constants["MAX_ERROR"]
     max_iterations = constants["MAX_ITERATIONS"]
     coef_ratio = constants["COEF_RATIO"]
-    max_coef = constants["MAX_COEF"]
+    max_coef = constants["MAX_NCOEF"]
     coef_increase = constants["COEF_INCREASE"]
 
     # get the discharge elements
