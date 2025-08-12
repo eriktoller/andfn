@@ -499,9 +499,7 @@ def get_connected_fractures(
     return connected_fractures
 
 
-def get_fracture_intersections(
-    fractures, se_factor, ncoef=5, nint=10
-):
+def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10):
     """
     Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
     a given fracture, the function iterates through the list of fractures and finds all connected fractures.
@@ -523,7 +521,7 @@ def get_fracture_intersections(
         A list of connected fractures.
     """
     for i, fr in enumerate(fractures):
-        for fr2 in fractures[i + 1:]:
+        for fr2 in fractures[i + 1 :]:
             if fr == fr2:
                 continue
             if np.linalg.norm(fr.center - fr2.center) > fr.radius + fr2.radius:
@@ -531,12 +529,8 @@ def get_fracture_intersections(
             endpoints0, endpoints1 = fracture_intersection(fr, fr2)
             if endpoints0 is not None:
                 if fr2 not in []:
-                    endpoints01 = shorten_line(
-                        endpoints0[0], endpoints0[1], se_factor
-                    )
-                    endpoints11 = shorten_line(
-                        endpoints1[0], endpoints1[1], se_factor
-                    )
+                    endpoints01 = shorten_line(endpoints0[0], endpoints0[1], se_factor)
+                    endpoints11 = shorten_line(endpoints1[0], endpoints1[1], se_factor)
                     intersections = intersection.Intersection(
                         f"{fr.label}_{fr2.label}",
                         endpoints01,

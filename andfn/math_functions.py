@@ -8,7 +8,7 @@ The mathematical functions are used by the element classes in the andfn module.
 
 import numpy as np
 
-import andfn.hpc.hpc_math_functions
+import andfn.hpc.hpc_math_functions as hpc_mf
 
 
 def asym_expansion(chi, coef):
@@ -23,7 +23,7 @@ def asym_expansion(chi, coef):
     ----------
     chi : complex | np.ndarray
         A point in the complex chi-plane
-    coef : np.ndarray
+    coef : np.ndarray[np.complex128]
         An array of coefficients
 
     Return
@@ -33,10 +33,10 @@ def asym_expansion(chi, coef):
     """
     res = []
     if np.isscalar(chi):
-        return andfn.hpc.hpc_math_functions.asym_expansion(chi, coef)
+        return hpc_mf.asym_expansion(chi, coef)
     else:
         for c in chi:
-            res.append(andfn.hpc.hpc_math_functions.asym_expansion(c, coef))
+            res.append(hpc_mf.asym_expansion(c, coef))
 
     return np.array(res)
 
@@ -61,11 +61,8 @@ def asym_expansion_d1(chi, coef):
     res : complex | np.ndarray
         The resulting value for the asymptotic expansion
     """
-    res = 0.0
-    for n, c in enumerate(coef):
-        res -= c * n * chi ** (-n - 1)
 
-    return res
+    return hpc_mf.asym_expansion_d1(chi, coef)
 
 
 def taylor_series(chi, coef):
@@ -78,7 +75,7 @@ def taylor_series(chi, coef):
 
     Parameters
     ----------
-    chi : complex
+    chi : complex | np.ndarray
         A point in the complex chi-plane
     coef : np.ndarray
         An array of coefficients
@@ -88,12 +85,15 @@ def taylor_series(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    res = 0.0 + 0.0j
-    for n, c in enumerate(coef):
-       res += c * chi ** n
-    #res = np.sum(coef * chi[:, np.newaxis] ** np.arange(len(coef)), axis=1)
 
-    return res
+    res = []
+    if np.isscalar(chi):
+        return hpc_mf.taylor_series(chi, coef)
+    else:
+        for c in chi:
+            res.append(hpc_mf.taylor_series(c, coef))
+
+    return np.array(res)
 
 
 def taylor_series_d1(chi, coef):
@@ -116,11 +116,8 @@ def taylor_series_d1(chi, coef):
     res : complex
         The resulting value for the asymptotic expansion
     """
-    res = 0.0 + 0.0j
-    for n, c in enumerate(coef[1:], start=1):
-        res += c * n * chi ** (n - 1)
 
-    return res
+    return hpc_mf.taylor_series_d1(chi, coef)
 
 
 def well_chi(chi, q):
@@ -134,7 +131,7 @@ def well_chi(chi, q):
     ----------
     chi : np.ndarray | complex
         A point in the complex chi plane
-    q : float
+    q : np.float64
         The discharge eof the well.
 
     Returns
@@ -142,123 +139,5 @@ def well_chi(chi, q):
     omega : np.ndarray
         The complex discharge potential
     """
-    return q / (2 * np.pi) * np.log(chi)
 
-
-def cauchy_integral_real(n, m, thetas, omega_func, z_func):
-    """
-    Function that calculates the Cauchy integral with the discharge potential for a given array of thetas.
-
-    Parameters
-    ----------
-    n : int
-        Number of integration points
-    m : int
-        Number of coefficients
-    thetas : np.ndarray
-        Array with thetas along the unit circle
-    omega_func : function
-        The function for the complex potential
-    z_func : function
-        The function for the mapping of chi to z
-
-    Return
-    ------
-    coef : np.ndarray
-        Array of coefficients
-    """
-    # integral = np.zeros((n, m), dtype=complex)
-
-    # chi = np.exp(1j * thetas)
-    # z = z_func(chi)
-    # phi = np.real(omega_func(z))
-    # integral[:, :m] = phi[:, np.newaxis] * np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
-    integral = (
-        np.exp(-1j * np.arange(m) * thetas[:, np.newaxis])
-        * np.real(omega_func(z_func(np.exp(1j * thetas))))[:, np.newaxis]
-    )
-
-    coef = 2 * np.sum(integral, axis=0) / n
-    coef[0] = coef[0] / 2
-
-    return coef
-
-
-def cauchy_integral_imag(n, m, thetas, omega_func, z_func):
-    """
-    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
-
-    Parameters
-    ----------
-    n : int
-        Number of integration points
-    m : int
-        Number of coefficients
-    thetas : np.ndarray
-        Array with thetas along the unit circle
-    omega_func : function
-        The function for the complex potential
-    z_func : function
-        The function for the mapping of chi to z
-
-    Return
-    ------
-    coef : np.ndarray
-        Array of coefficients
-    """
-    integral = np.zeros((n, m), dtype=complex)
-
-    chi = np.exp(1j * thetas)
-    z = z_func(chi)
-    psi = np.imag(omega_func(z))
-    integral[:, :m] = psi[:, np.newaxis] * np.exp(
-        -1j * np.arange(m) * thetas[:, np.newaxis]
-    )
-
-    coef = 2j * np.sum(integral, axis=0) / n
-    coef[0] = coef[0] / 2
-
-    return coef
-
-
-def cauchy_integral_domega(n, m, thetas, dpsi_corr, omega_func, z_func):
-    """
-    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
-
-    Parameters
-    ----------
-    n : int
-        Number of integration points
-    m : int
-        Number of coefficients
-    thetas : np.ndarray
-        Array with thetas along the unit circle
-    dpsi_corr : np.ndarray
-        Correction for the stream function
-    omega_func : function
-        The function for the complex potential
-    z_func : function
-        The function for the mapping of chi to z
-
-    Return
-    ------
-    coef : np.ndarray
-        Array of coefficients
-    """
-    integral = np.zeros((n, m), dtype=complex)
-
-    chi = np.exp(1j * thetas)
-    z = z_func(chi)
-    psi = np.imag(omega_func(z))
-    dpsi = np.diff(psi)
-    dpsi = np.hstack([0, np.add(dpsi, -dpsi_corr)])
-
-    psi1 = np.cumsum(dpsi) + psi[0]
-    integral[:, :m] = psi1[:, np.newaxis] * np.exp(
-        -1j * np.arange(m) * thetas[:, np.newaxis]
-    )
-
-    coef = 2j * np.sum(integral, axis=0) / n
-    coef[0] = coef[0] / 2
-
-    return coef
+    return hpc_mf.well_chi(chi, q)

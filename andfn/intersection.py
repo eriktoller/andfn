@@ -198,35 +198,6 @@ class Intersection(Element):
             )
         return w
 
-    def solve(self):
-        """
-        Solve the intersection.
-        """
-        s0 = mf.cauchy_integral_real(
-            self.nint,
-            self.ncoef,
-            self.thetas,
-            lambda z: self.frac0.calc_omega(z, exclude=self),
-            lambda chi: gf.map_chi_to_z_line(chi, self.endpoints0),
-        )
-        s1 = mf.cauchy_integral_real(
-            self.nint,
-            self.ncoef,
-            self.thetas,
-            lambda z: self.frac1.calc_omega(z, exclude=self),
-            lambda chi: gf.map_chi_to_z_line(chi, self.endpoints1),
-        )
-
-        s = np.real(
-            (self.frac0.t * s1 - self.frac1.t * s0) / (self.frac0.t + self.frac1.t)
-        )
-        s[0] = (
-            0  # Set the first coefficient to zero (constant embedded in discharge matrix)
-        )
-
-        self.error = np.max(np.abs(s - self.coef))
-        self.coef = s
-
     def check_boundary_condition(self, n=10):
         """
         Check if the intersection satisfies the boundary conditions.

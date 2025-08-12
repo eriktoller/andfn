@@ -17,7 +17,7 @@ dtype_constants = np.dtype(
         ("SE_FACTOR", np.float64),
         ("MAX_ITERATIONS", np.int32),
         ("MAX_ERROR", np.float64),
-        ("MAX_COEF", np.int32),
+        ("MAX_NCOEF", np.int32),
         ("COEF_INCREASE", np.int32),
         ("COEF_RATIO", np.float64),
         ("MAX_ELEMENTS", np.int32),
@@ -86,18 +86,18 @@ class Constants:
         # create the array
         self.constants = np.array(
             (
-                1000.0,  # Density of water in kg/m^3
-                9.81,  # Gravitational acceleration in m/s^2
-                1.0,  # SE factor (shortening element length)
-                50,  # Maximum number of iterations
-                1e-6,  # Maximum error
-                150,  # Maximum number of coefficients
-                5,  # Coefficient increase factor
-                0.05,  # Coefficient ratio
-                150,  # Maximum number of elements
-                5,  # Number of coefficients (default)
-                10,  # Number of integration points (default)
-                -1,  # Number of threads (default -1 = use all available threads)
+                1000.0, # Density of water in kg/m^3
+                9.81,   # Gravitational acceleration in m/s^2
+                1.0,    # SE factor (shortening element length)
+                50,     # Maximum number of iterations
+                1e-6,   # Maximum error
+                150,    # Maximum number of coefficients
+                5,      # Coefficient increase factor
+                0.05,   # Coefficient ratio
+                150,    # Maximum number of elements
+                5,      # Number of coefficients (default)
+                10,     # Number of integration points (default)
+                -1,     # Number of threads (default -1 = use all available threads)
             ),
             dtype=dtype_constants,
         )
@@ -115,7 +115,7 @@ class Constants:
         logger.info(f"      SE_FACTOR: {self.constants['SE_FACTOR']}")
         logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
         logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
-        logger.info(f"       MAX_COEF: {self.constants['MAX_COEF']}")
+        logger.info(f"      MAX_NCOEF: {self.constants['MAX_NCOEF']}")
         logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
         logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
         logger.info(f"   MAX_ELEMENTS: {self.constants['MAX_ELEMENTS']}")
@@ -129,7 +129,7 @@ class Constants:
         logger.info("Solver Constants:")
         logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
         logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
-        logger.info(f"       MAX_COEF: {self.constants['MAX_COEF']}")
+        logger.info(f"       MAX_NCOEF: {self.constants['MAX_NCOEF']}")
         logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
         logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
         logger.info(
@@ -148,7 +148,7 @@ class Constants:
             - SE_FACTOR: Shortening element length factor
             - MAX_ITERATIONS: Maximum number of iterations
             - MAX_ERROR: Maximum error
-            - MAX_COEF: Maximum number of coefficients
+            - MAX_NCOEF: Maximum number of coefficients
             - COEF_INCREASE: Coefficient increase factor
             - COEF_RATIO: Coefficient ratio
             - MAX_ELEMENTS: Maximum number of elements
@@ -169,13 +169,21 @@ class Constants:
                     if value <= 0:
                         raise ValueError("Number of threads must be greater than 0")
                     set_num_threads(value)
-                if key == "MAX_COEF":
+                if key == "MAX_NCOEF":
                     from .element import MAX_NCOEF
 
-                    # Ensure MAX_COEF is not greater than what is set in the code
+                    # Ensure MAX_NCOEF is not greater than what is set in the code
                     if value > MAX_NCOEF:
                         raise ValueError(
-                            f"MAX_COEF cannot be greater than {MAX_NCOEF}. I you need a higher value set the MAX_NCOEF using the .andfn_config.yaml file instead."
+                            f"MAX_NCOEF cannot be greater than {MAX_NCOEF}. I you need a higher value set the MAX_NCOEF using the .andfn_config.yaml file instead."
+                        )
+                if key == "MAX_ELEMENTS":
+                    from .element import MAX_ELEMENTS
+
+                    # Ensure MAX_ELEMENTS is not greater than what is set in the code
+                    if value > MAX_ELEMENTS:
+                        raise ValueError(
+                            f"MAX_ELEMENTS cannot be greater than {MAX_ELEMENTS}. If you need a higher value set the MAX_ELEMENTS using the .andfn_config.yaml file instead."
                         )
                 self.constants[key] = value
 

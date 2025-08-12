@@ -11,6 +11,8 @@ from andfn.const_head import ConstantHeadLine
 from . import BoundingCircle, Intersection
 from .impermeable_object import ImpermeableLine
 
+STRUCTURES_COLOR = {0: "FF0000", 1: "0000FF"}
+
 
 class Structure:
     """
@@ -35,13 +37,24 @@ class Structure:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def __str__(self):
+        """
+        Returns the string representation of the element.
+
+        Returns
+        -------
+        str
+            The string representation of the element.
+        """
+        return f"{self.__class__.__name__}: {self.label}"
+
 
 class RegularPolygonPrism(Structure):
     """
     Base class for polygonal underground structures.
     """
 
-    def __init__(self, label, radius, start, end, n_sides, **kwargs):
+    def __init__(self, label, radius, start, end, n_sides, _structure_type, **kwargs):
         """
         Initializes the polygonal underground structures class.
 
@@ -65,6 +78,7 @@ class RegularPolygonPrism(Structure):
         if n_sides < 3:
             raise ValueError("n_sides must be at least 3 for a tunnel.")
         self.n_sides = n_sides
+        self._structure_type = _structure_type
         self.head = 0
 
         # Calculate the vertices of the tunnel
@@ -156,21 +170,24 @@ class RegularPolygonPrism(Structure):
         """
         pl.add_points(
             np.array([self.start, self.end]),
-            color="black",
-            point_size=4,
+            color=STRUCTURES_COLOR[self._structure_type],
+            point_size=10,
             render_points_as_spheres=True,
+            edge_color=STRUCTURES_COLOR[self._structure_type],
         )
         # Create a polygon for the first 4 vertices
         poly = pv.PolyData(self.vertices, self.faces)
         # Add the polygon to the plotter
         pl.add_mesh(
             poly,
-            color="#FFFFFF",
             show_edges=True,
             show_vertices=True,
-            edge_color="black",
+            vertex_color=STRUCTURES_COLOR[self._structure_type],
+            color=STRUCTURES_COLOR[self._structure_type],
             edge_opacity=1.0,
             opacity=opacity,
+            render_points_as_spheres=True,
+            point_size=5,
         )
 
     def possible_intersections(self, frac, pl):
@@ -215,7 +232,7 @@ class RegularPolygonPrism(Structure):
         Returns
         -------
         bool
-            True if the tunnel intersects with the fracture, False otherwise.
+            True if the tunnel elements are added to the fracture, False otherwise.
         """
         if not isinstance(fractures, list):
             fractures = [fractures]
@@ -491,7 +508,9 @@ class ConstantHeadPrism(RegularPolygonPrism):
         n_sides : int, optional
             The number of sides of the tunnel. Default is -1 (circular tunnel).
         """
-        super().__init__(label, radius, start, end, n_sides, **kwargs)
+        super().__init__(
+            label, radius, start, end, n_sides, _structure_type=0, **kwargs
+        )
         self.head = head
 
     def assign_elements(self, frac, pnts_inside, pnts):
@@ -533,7 +552,7 @@ class ConstantHeadPrism(RegularPolygonPrism):
         self.fracs.append(frac)
 
 
-class ImpermeablePrims(RegularPolygonPrism):
+class ImpermeablePrism(RegularPolygonPrism):
     """
     Class for impermeable regular polygonal prims.
     """
@@ -555,7 +574,9 @@ class ImpermeablePrims(RegularPolygonPrism):
         n_sides : int, optional
             The number of sides of the tunnel. Default is -1 (circular tunnel).
         """
-        super().__init__(label, radius, start, end, n_sides, **kwargs)
+        super().__init__(
+            label, radius, start, end, n_sides, _structure_type=1, **kwargs
+        )
 
     def assign_elements(self, frac, pnts_inside, pnts):
         """

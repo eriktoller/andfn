@@ -22,6 +22,7 @@ from .hpc.hpc_fracture import (
     get_flow_nets as hpc_get_flow_nets,
     get_heads as hpc_get_heads,
 )
+from .structures import STRUCTURES_COLOR
 from .well import Well
 from .impermeable_object import ImpermeableCircle, ImpermeableLine
 from .const_head import ConstantHeadLine
@@ -34,6 +35,7 @@ from .element import (
     fracture_index_dtype,
     element_dtype_hpc,
     fracture_dtype_hpc,
+    ELEMENT_COLORS,
 )
 
 # Custom colormaps
@@ -206,6 +208,7 @@ class DFN(Constants):
         self.label = label
         self.discharge_int = discharge_int
         self.fractures = []
+        self.structures = []
         self.elements = None
 
         # Initialize the discharge matrix
@@ -629,6 +632,30 @@ class DFN(Constants):
         self.discharge_matrix = None
         self.elements = None
         self.discharge_elements = None
+
+    def add_structure(self, new_structure):
+        """
+        Adds a structure to the DFN.
+
+        Parameters
+        ----------
+        new_structure : ConstantHeadPrism | ImpermeablePrims | list
+            The structure to add to the DFN.
+        """
+        if isinstance(new_structure, list):
+            if len(new_structure) == 1:
+                self.structures.append(new_structure[0])
+                new_structure[0].frac_intersections(self.fractures)
+                logger.info(f"Added {new_structure[0]} fracture to the DFN.")
+            else:
+                self.structures.extend(new_structure)
+                for s in new_structure:
+                    s.frac_intersections(self.fractures)
+                logger.info(f"Added {len(new_structure)} fractures to the DFN.")
+        else:
+            self.structures.append(new_structure)
+            new_structure.frac_intersections(self.fractures)
+            logger.info(f"Added {new_structure} fracture to the DFN.")
 
     def import_fractures_from_file(
         self,
@@ -1095,7 +1122,7 @@ class DFN(Constants):
             lighting=lighting,
             off_screen=off_screen,
             notebook=notebook,
-            title='AnDFN'
+            title="AnDFN",
         )
         if axis:
             _ = pl.add_axes(
@@ -1138,6 +1165,48 @@ class DFN(Constants):
             if f.get_total_discharge() / q_dfn > cond:
                 fracs.append(f)
         return fracs
+
+    def plot_input(self, pl=None, line_width=3.0):
+        """
+        Plots the input of the DFN, i.e. the fractures and elements.
+
+        Parameters
+        ----------
+        pl : pyvista.Plotter, optional
+            The plotter object to use. If None, a new plotter is created and shown.
+        line_width : float
+            The line width of the elements in the plot. Default is 3.0.
+
+        Returns
+        -------
+        None
+            The function plots the input of the DFN.
+        """
+        show = False
+        if pl is None:
+            pl = self.initiate_plotter()
+            show = True
+        self.plot_fractures(pl)
+        labels = {}
+        for s in self.structures:
+            s.plot(pl)
+            labels[f" {s.__class__.__name__}"] = STRUCTURES_COLOR[s._structure_type]
+        if self.elements is not None:
+            for e in self.elements:
+                e.plot(pl, line_width=line_width)
+                labels[f" {e.__class__.__name__}"] = ELEMENT_COLORS[e._type]
+
+        # Add the legend
+        # First convert the dict to a list of tuples
+        labels = list(labels.items())
+        pl.add_legend(
+            labels,
+            face="rectangle",
+            loc="upper left",
+        )
+
+        if show:
+            pl.show()
 
     def plot_fractures(
         self,
