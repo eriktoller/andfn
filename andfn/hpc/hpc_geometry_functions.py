@@ -98,6 +98,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
     """
     return chi * r + center
 
+
 @nb.njit()
 def map_2d_to_3d(self_, z, pnts):
     """
@@ -122,7 +123,10 @@ def map_2d_to_3d(self_, z, pnts):
     """
 
     for i in range(len(z)):
-        pnts[i] = np.real(z[i]) * self_["x_vector"] + np.imag(z[i]) * self_["y_vector"] + self_["center"]
-
+        pnts[i] = (
+            np.real(z[i]) * self_["x_vector"]
+            + np.imag(z[i]) * self_["y_vector"]
+            + self_["center"]
+        )
 
     return pnts

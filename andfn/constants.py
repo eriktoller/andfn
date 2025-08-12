@@ -86,18 +86,18 @@ class Constants:
         # create the array
         self.constants = np.array(
             (
-                1000.0, # Density of water in kg/m^3
-                9.81,   # Gravitational acceleration in m/s^2
-                1.0,    # SE factor (shortening element length)
-                50,     # Maximum number of iterations
-                1e-6,   # Maximum error
-                150,    # Maximum number of coefficients
-                5,      # Coefficient increase factor
-                0.05,   # Coefficient ratio
-                150,    # Maximum number of elements
-                5,      # Number of coefficients (default)
-                10,     # Number of integration points (default)
-                -1,     # Number of threads (default -1 = use all available threads)
+                1000.0,  # Density of water in kg/m^3
+                9.81,  # Gravitational acceleration in m/s^2
+                1.0,  # SE factor (shortening element length)
+                50,  # Maximum number of iterations
+                1e-6,  # Maximum error
+                150,  # Maximum number of coefficients
+                5,  # Coefficient increase factor
+                0.05,  # Coefficient ratio
+                150,  # Maximum number of elements
+                5,  # Number of coefficients (default)
+                10,  # Number of integration points (default)
+                -1,  # Number of threads (default -1 = use all available threads)
             ),
             dtype=dtype_constants,
         )

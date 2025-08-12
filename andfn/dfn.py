@@ -1282,9 +1282,9 @@ class DFN(Constants):
         opacity : float
             The opacity of the fractures in the flownet.
         """
+        # Check if the fractures have been consolidated
         if self.fractures_struc_array_hpc is None:
             self.consolidate_dfn(hpc=True)
-        fracs = self.fractures
 
         # Calculate the flow net for each fracture
         omegas, pnts_3d = hpc_get_flow_nets(
@@ -1295,34 +1295,33 @@ class DFN(Constants):
 
         # Create the PyVista meshes and plot for all fractures
         for i, pnts in enumerate(pnts_3d):
-            logger.debug(f"Plotting flow net: {i + 1} / {len(fracs)}")
+            logger.debug(f"Plotting flow net: {i + 1} / {len(self.fractures)}")
             surf = pv.PolyData(pnts)
             # Apply 2D Delaunay triangulation
             mesh = surf.delaunay_2d()
             # Add the mesh with scalar coloring
             pl.add_mesh(
                 mesh,
-                color="white",
+                color="FFFFFF",
                 opacity=opacity,
                 show_edges=False,
                 line_width=line_width,
             )
-            # Add contour lines to the mesh
+            # Add contour lines, i.e. equipotential lines and streamlines
             contours_re = mesh.contour(isosurfaces=lvs, scalars=np.real(omegas[i]))
             pl.add_mesh(
                 contours_re,
-                color="red",
+                color="FF0000",
                 line_width=line_width,
                 opacity=opacity,
             )
             contours_im = mesh.contour(isosurfaces=lvs, scalars=np.imag(omegas[i]))
             pl.add_mesh(
                 contours_im,
-                color="blue",
+                color="0000FF",
                 line_width=line_width,
                 opacity=opacity,
             )
-
 
         logger.debug("")
 
@@ -1362,11 +1361,11 @@ class DFN(Constants):
         colorbar : bool
             Whether to plot the color bar.
         """
+        # Check if the fractures have been consolidated
         if self.fractures_struc_array_hpc is None:
             self.consolidate_dfn(hpc=True)
-        fracs = self.fractures
 
-        # Calculate the hydraulic head for each fracture
+        # Calculate the hydraulic head for each fracture and get the mapped 3d points
         heads, pnts_3d = hpc_get_heads(
             self.fractures_struc_array_hpc,
             n_points,
@@ -1375,7 +1374,8 @@ class DFN(Constants):
 
         # Create the PyVista meshes and plot for all fractures
         for i, pnts in enumerate(pnts_3d):
-            logger.debug(f"Plotting hydraulic head: {i + 1} / {len(fracs)}")
+            logger.debug(f"Plotting hydraulic head: {i + 1} / {len(self.fractures)}")
+            # Create a PyVista surface from the points
             surf = pv.PolyData(pnts)
             # Apply 2D Delaunay triangulation
             mesh = surf.delaunay_2d()
@@ -1400,7 +1400,6 @@ class DFN(Constants):
                     line_width=line_width,
                     opacity=opacity,
                 )
-
 
         # Remove the color bar if not needed
         if not colorbar:

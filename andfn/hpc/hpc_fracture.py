@@ -16,6 +16,7 @@ from andfn.hpc import (
 )
 from andfn.hpc import hpc_geometry_functions as gf
 
+
 @nb.njit(cache=CACHE)
 def sunflower_spiral(n):
     """
@@ -34,7 +35,7 @@ def sunflower_spiral(n):
     indices = np.arange(0, n, dtype=np.float64) + 0.5
 
     r = np.sqrt(indices / n)
-    theta = np.pi * (1 + 5 ** 0.5) * indices
+    theta = np.pi * (1 + 5**0.5) * indices
 
     # Convert polar coordinates to complex numbers
     z = r * np.cos(theta) + 1j * r * np.sin(theta)
@@ -63,8 +64,10 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
     omega : complex
         The complex potential for the fracture.
     """
+    # Initialize omega with the constant value
     omega = self_["constant"] + 0.0j
 
+    # Loop through the elements of the fracture
     for e in range(self_["nelements"]):
         el = self_["elements"][e]
         if el != exclude:
@@ -150,28 +153,6 @@ def calc_flow_net(self_, flow_net, n_points, z_array, element_struc_array):
         flow_net[i] = calc_omega(self_, z_array[i], element_struc_array)
 
 
-def head_from_phi(self_, phi):
-    """
-    Calculates the head net for the fracture.
-
-    Parameters
-    ----------
-    self_ : np.ndarray[fracture_dtype]
-        The fracture element.
-    phi : float
-        The discharge potential for the fracture.
-
-    Returns
-    -------
-    head : np.ndarray[complex]
-        The head net for the fracture.
-    """
-    # Create the z array
-    head = phi / self_["t"]
-
-    return head
-
-
 @nb.njit(cache=CACHE)
 def calc_heads(self_, heads, n_points, z_array, element_struc_array):
     """
@@ -195,10 +176,10 @@ def calc_heads(self_, heads, n_points, z_array, element_struc_array):
     None
          Modifies the heads array in place.
     """
-    # Create the z array
+    # Calculate the head net for the fracture
     for i in range(n_points):
-          phi = np.real(calc_omega(self_, z_array[i], element_struc_array))
-          heads[i] = phi / self_["t"]
+        phi = np.real(calc_omega(self_, z_array[i], element_struc_array))
+        heads[i] = phi / self_["t"]
 
 
 @nb.njit(cache=CACHE, parallel=True)
@@ -224,13 +205,21 @@ def get_flow_nets(fracture_struc_array, n_points, element_struc_array):
     flow_nets = np.zeros(
         (len(fracture_struc_array), n_points, n_points), dtype=np.complex128
     )
+
+    # Create the 3D points arrays and its working z arrays
+    pnts_3d = np.zeros((len(fracture_struc_array), n_points, 3), dtype=np.float64)
     z_arrays = np.zeros((len(fracture_struc_array), n_points), dtype=np.complex128)
     z_array = sunflower_spiral(n_points)
-    pnts_3d = np.zeros((len(fracture_struc_array), n_points, 3), dtype=np.float64)
+
+    # Calculate the flow nets for each fracture
     for i in nb.prange(len(fracture_struc_array)):
         z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
         calc_flow_net(
-            fracture_struc_array[i], flow_nets[i], n_points, z_arrays[i], element_struc_array
+            fracture_struc_array[i],
+            flow_nets[i],
+            n_points,
+            z_arrays[i],
+            element_struc_array,
         )
         # Map the 2D points to 3D
         gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
@@ -259,13 +248,21 @@ def get_heads(fracture_struc_array, n_points, element_struc_array):
     """
     # Create the heads arrays
     heads = np.zeros((len(fracture_struc_array), n_points), dtype=np.float64)
+
+    # Create the 3D points arrays and its working z arrays
+    pnts_3d = np.zeros((len(fracture_struc_array), n_points, 3), dtype=np.float64)
     z_arrays = np.zeros((len(fracture_struc_array), n_points), dtype=np.complex128)
     z_array = sunflower_spiral(n_points)
-    pnts_3d = np.zeros((len(fracture_struc_array),n_points, 3), dtype=np.float64)
+
+    # Calculate the heads for each fracture
     for i in nb.prange(len(fracture_struc_array)):
         z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
         calc_heads(
-            fracture_struc_array[i], heads[i], n_points, z_arrays[i], element_struc_array
+            fracture_struc_array[i],
+            heads[i],
+            n_points,
+            z_arrays[i],
+            element_struc_array,
         )
         # Map the 2D points to 3D
         gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
