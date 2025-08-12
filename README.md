@@ -29,12 +29,12 @@ pip uninstall andfn
 - `pandas`
 - `scipy`
 - `pyvista`
-- `matplotlib`
 - `numba`
 - `h5py`
 
 and the following optional dependencies:
 - `pyyaml` (for using the YAML configuration file)
+- `matplotlib` (for some optional plots)
 
 ## Functionality
 AnDFN currently have the following functionality:

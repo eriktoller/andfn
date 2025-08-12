@@ -97,3 +97,32 @@ def map_chi_to_z_circle(chi, r, center=0.0):
         The corresponding point in the complex z-plane
     """
     return chi * r + center
+
+@nb.njit()
+def map_2d_to_3d(self_, z, pnts):
+    """
+    Function that maps a point in the complex z-plane to a point in the 3D plane
+
+    .. math::
+            x_i = x u_i + y v_i + x_{i,0}
+
+    Parameters
+    ----------
+    self_ : np.ndarray[fracture_dtype]
+        The fracture element.
+    z : np.ndarray[np.complex128]
+        A point in the complex z-plane
+    pnts : np.ndarray[np.float64]
+        An array to store the resulting points in the 3D plane
+
+    Returns
+    -------
+    point : np.ndarray[np.float64]
+        The corresponding point in the 3D plane
+    """
+
+    for i in range(len(z)):
+        pnts[i] = np.real(z[i]) * self_["x_vector"] + np.imag(z[i]) * self_["y_vector"] + self_["center"]
+
+
+    return pnts

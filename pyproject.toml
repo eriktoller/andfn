@@ -19,7 +19,6 @@ keywords = ["hydrology", "groundwater", "model", "analytic element method", "dis
 
 dependencies = [
     "numpy",
-    "matplotlib~=3.10.1",
     "pyvista~=0.44.2",
     "scipy",
     "numba~=0.61.2",
@@ -36,7 +35,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-all = ["pyyaml", "pandas"]
+all = ["pyyaml", "pandas", "matplotlib"]
 
 [project.urls]
 Homepage = "https://eriktoller.github.io/andfn/n"

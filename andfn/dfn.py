@@ -10,7 +10,6 @@ solve the DFN.
 import numpy as np
 import os
 import pyvista as pv
-import matplotlib.pyplot as plt
 import scipy as sp
 import h5py
 
@@ -1265,7 +1264,7 @@ class DFN(Constants):
                 logger.debug(f"Plotting fractures: {i + 1} / {len(self.fractures)}")
 
     def plot_fractures_flow_net(
-        self, pl, lvs=20, n_points=100, line_width=2, margin=0.01, only_flow=False
+        self, pl, lvs=20, n_points=100, line_width=2, opacity=1.0
     ):
         """
         Plots the flow net for the fractures in the DFN.
@@ -1280,53 +1279,51 @@ class DFN(Constants):
             The number of points to use for the flow net (n_points x n_points).
         line_width : float
             The line width of the flow net.
-        margin : float
-            The margin around the fracture to use for the flow net.
-        only_flow : bool
-            Whether to plot only the fractures with flow.
+        opacity : float
+            The opacity of the fractures in the flownet.
         """
         if self.fractures_struc_array_hpc is None:
             self.consolidate_dfn(hpc=True)
-        if only_flow:
-            fracs = self.get_flow_fractures()
-            self.plot_fractures(pl, fracs=fracs)
-        else:
-            fracs = self.fractures
+        fracs = self.fractures
 
         # Calculate the flow net for each fracture
-        omegas, x_arrays, y_arrays = hpc_get_flow_nets(
+        omegas, pnts_3d = hpc_get_flow_nets(
             self.fractures_struc_array_hpc,
             n_points,
-            margin,
             self.elements_struc_array_hpc,
         )
 
-        # Get the levels for the flow net
-        lvs_re, lvs_im = get_lvs(lvs, omegas)
-
-        # Plot the flow net for each fracture
-        for i, f in enumerate(fracs):
+        # Create the PyVista meshes and plot for all fractures
+        for i, pnts in enumerate(pnts_3d):
             logger.debug(f"Plotting flow net: {i + 1} / {len(fracs)}")
-            # plot the flow net using matplotlib
-            contours_re = plt.contour(
-                x_arrays[i], y_arrays[i], np.real(omegas[i]), levels=lvs_re
+            surf = pv.PolyData(pnts)
+            # Apply 2D Delaunay triangulation
+            mesh = surf.delaunay_2d()
+            # Add the mesh with scalar coloring
+            pl.add_mesh(
+                mesh,
+                color="white",
+                opacity=opacity,
+                show_edges=False,
+                line_width=line_width,
             )
-            contours_im = plt.contour(
-                x_arrays[i], y_arrays[i], np.imag(omegas[i]), levels=lvs_im
+            # Add contour lines to the mesh
+            contours_re = mesh.contour(isosurfaces=lvs, scalars=np.real(omegas[i]))
+            pl.add_mesh(
+                contours_re,
+                color="red",
+                line_width=line_width,
+                opacity=opacity,
             )
-            # Extract the contour line and plot them in 3D, real and imaginary parts
-            for contour in contours_re.allsegs:
-                for seg in contour:
-                    if len(seg) == 0:
-                        continue
-                    plot_line_3d(seg, f, pl, "red", line_width=line_width)
-            for contour in contours_im.allsegs:
-                for seg in contour:
-                    if len(seg) == 0:
-                        continue
-                    plot_line_3d(seg, f, pl, "blue", line_width=line_width)
+            contours_im = mesh.contour(isosurfaces=lvs, scalars=np.imag(omegas[i]))
+            pl.add_mesh(
+                contours_im,
+                color="blue",
+                line_width=line_width,
+                opacity=opacity,
+            )
 
-        plt.close()
+
         logger.debug("")
 
     def plot_fractures_head(
@@ -1335,12 +1332,9 @@ class DFN(Constants):
         lvs=20,
         n_points=100,
         line_width=2,
-        margin=1e-3,
         opacity=1.0,
-        only_flow=False,
         color_map="jet",
         limits=None,
-        color_fracs=True,
         contour=True,
         colorbar=True,
     ):
@@ -1357,18 +1351,12 @@ class DFN(Constants):
             The number of points to use for the flow net (n_points x n_points).
         line_width : float
             The line width of the flow net.
-        margin : float
-            The margin around the fracture to use for the flow net.
         opacity : float
             The opacity of the fractures in the flownet.
-        only_flow : bool
-            Whether to plot only the fractures with flow.
         color_map : str
             The color map to use for the flow net. For a constant color, use a string with the same value for the color.
         limits : list | tuple
             Custom limits for the flow net, overwrites the calculated limits.
-        color_fracs : bool
-            Whether to color the fractures according to their mean head.
         contour : bool
             Whether to plot the contour lines.
         colorbar : bool
@@ -1376,106 +1364,48 @@ class DFN(Constants):
         """
         if self.fractures_struc_array_hpc is None:
             self.consolidate_dfn(hpc=True)
-        if only_flow:
-            fracs = self.get_flow_fractures()
-        else:
-            fracs = self.fractures
+        fracs = self.fractures
 
-        # Calculate the flow net for each fracture
-        max_min_head_list = []
-        heads, x_arrays, y_arrays = hpc_get_heads(
+        # Calculate the hydraulic head for each fracture
+        heads, pnts_3d = hpc_get_heads(
             self.fractures_struc_array_hpc,
             n_points,
-            margin,
             self.elements_struc_array_hpc,
         )
-        for i, f in enumerate(fracs):
-            max_min_head = f.get_max_min_head()
-            if max_min_head[0] is not None:
-                max_min_head_list.append(max_min_head)
 
-        # Get the levels for the flow net
-        head_max, head_min = np.nanmax(heads), np.nanmin(heads)
-        if head_max < np.max(max_min_head_list):
-            head_max = np.max(max_min_head_list)
-        if head_min > np.min(max_min_head_list):
-            head_min = np.min(max_min_head_list)
-        if limits is not None:
-            head_min, head_max = limits
-        # Create the levels for the equipotential contours
-        lvs_re = np.linspace(head_min, head_max, lvs)
-
-        if color_map in plt.colormaps():
-            cmap = plt.colormaps[color_map]
-        else:
-            cmap = _constant_cmap(color_map, color_map, 256)
-        colors = cmap(np.linspace(0, 1, lvs))
-
-        # Plot the flow net for each fracture
-        for i, f in enumerate(fracs):
-            # Plot the fractures
-            if color_fracs:
-                mean_head = np.nanmean(heads[i])
-                pos_frac = np.where(
-                    np.abs(lvs_re - mean_head) == np.min(np.abs(lvs_re - mean_head))
-                )[0][0]
-                color_frac = colors[pos_frac]
-                self.plot_fractures(
-                    pl,
-                    filled=True,
-                    color=color_frac,
-                    opacity=opacity,
-                    show_edges=True,
-                    line_width=2.0,
-                    fracs=[f],
-                )
-
-            if contour:
-                # plot the contour lines using matplotlib
-                contours_re = plt.contour(
-                    x_arrays[i], y_arrays[i], heads[i], levels=lvs_re
-                )
-
-                # Extract the contour line and plot them in 3D, real and imaginary parts
-                for contour in contours_re.allsegs:
-                    for seg in contour:
-                        if len(seg) == 0:
-                            continue
-                        loc = int(len(seg) / 4)
-                        oms = f.calc_omega(
-                            np.array(
-                                [
-                                    seg[loc][0] + seg[loc][1] * 1j,
-                                    seg[loc * 2][0] + seg[loc * 2][1] * 1j,
-                                    seg[loc * 3][0] + seg[loc * 3][1] * 1j,
-                                ]
-                            )
-                        )
-                        mean_omega = np.real(np.nanmean(oms))
-                        if np.isnan(mean_omega):
-                            continue
-                        head = f.head_from_phi(mean_omega)
-                        pos = np.where(
-                            np.abs(lvs_re - head) == np.min(np.abs(lvs_re - head))
-                        )[0][0]
-                        color = colors[pos]
-                        plot_line_3d(seg, f, pl, color, line_width=line_width)
+        # Create the PyVista meshes and plot for all fractures
+        for i, pnts in enumerate(pnts_3d):
             logger.debug(f"Plotting hydraulic head: {i + 1} / {len(fracs)}")
-
-        # Add the color bar
-        if colorbar:
-            # Create a sample mesh
-            mesh = pv.Sphere(radius=0.001, center=self.get_dfn_center())
-            # Create a scalar array ranging from 10 to 20
-            scalars = np.linspace(np.floor(head_min), np.ceil(head_max), mesh.n_points)
-            # Add the scalar array to the mesh
-            mesh.point_data["Hydraulic head"] = scalars
-            # Add the mesh to the plotter
-            _ = pl.add_mesh(mesh, opacity=0.0, show_scalar_bar=False, cmap=cmap)
-            _ = pl.add_scalar_bar(
-                "Hydraulic head", interactive=True, vertical=False, fmt="%10.1f"
+            surf = pv.PolyData(pnts)
+            # Apply 2D Delaunay triangulation
+            mesh = surf.delaunay_2d()
+            # Add the mesh with scalar coloring
+            pl.add_mesh(
+                mesh,
+                scalars=heads[i],
+                cmap=color_map,
+                opacity=opacity,
+                show_edges=False,
+                line_width=line_width,
+                scalar_bar_args={"title": "Hydraulic Head"},
+                name=f"head_{i}",
+                clim=limits if limits is not None else None,
             )
-        plt.close()
+            # Add contour lines to the mesh
+            if contour:
+                contours = mesh.contour(isosurfaces=lvs, scalars=heads[i])
+                pl.add_mesh(
+                    contours,
+                    color="black",
+                    line_width=line_width,
+                    opacity=opacity,
+                )
+
+
+        # Remove the color bar if not needed
+        if not colorbar:
+            pl.remove_scalar_bar()
+
         logger.debug("")
 
     def plot_elements(self, pl, elements=None, line_width=3.0, const_elements=False):
@@ -1522,6 +1452,14 @@ class DFN(Constants):
         -------
         None
         """
+        # Check if matplotlib is installed
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError(
+                "Matplotlib is required to plot the sparse matrix. Please install matplotlib."
+            )
+
         # Check if the discharge matrix has been built
         if self.discharge_matrix is None:
             self.build_discharge_matrix()
@@ -1568,6 +1506,14 @@ class DFN(Constants):
         -------
         None
         """
+        # Check if matplotlib is installed
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError(
+                "Matplotlib is required to plot the ncoef plot. Please install matplotlib."
+            )
+
         ncoef = []
         for e in self.elements:
             ncoef.append(e.ncoef)

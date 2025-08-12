@@ -14,6 +14,32 @@ from andfn.hpc import (
     hpc_imp_object,
     CACHE,
 )
+from andfn.hpc import hpc_geometry_functions as gf
+
+@nb.njit(cache=CACHE)
+def sunflower_spiral(n):
+    """
+    Generate n points in a sunflower spiral pattern.
+
+    Parameters
+    ----------
+    n : int
+        Number of points to generate.
+
+    Returns
+    -------
+    z : np.ndarray[np.complex128]
+        An array of shape (n,) containing the complex coordinates of the points in the sunflower spiral.
+    """
+    indices = np.arange(0, n, dtype=np.float64) + 0.5
+
+    r = np.sqrt(indices / n)
+    theta = np.pi * (1 + 5 ** 0.5) * indices
+
+    # Convert polar coordinates to complex numbers
+    z = r * np.cos(theta) + 1j * r * np.sin(theta)
+
+    return z
 
 
 @nb.njit()
@@ -98,7 +124,7 @@ def calc_w(self_, z, element_struc_array, exclude=-1):
 
 
 @nb.njit(cache=CACHE)
-def calc_flow_net(self_, n_points, margin, element_struc_array):
+def calc_flow_net(self_, flow_net, n_points, z_array, element_struc_array):
     """
     Calculates the flow net for the fracture.
 
@@ -106,10 +132,12 @@ def calc_flow_net(self_, n_points, margin, element_struc_array):
     ----------
     self_ : np.ndarray[fracture_dtype]
         The fracture element.
+    flow_net : np.ndarray[complex]
+        The flow net to be calculated.
     n_points : int
         Number of points in the flow net.
-    margin : float
-        Margin for the flow net.
+    z_array : np.ndarray[np.complex128]
+        Array of complex coordinates for the points in the sunflower spiral multiplied with the fracture radius.
     element_struc_array : np.ndarray[element_dtype]
         Array of elements.
 
@@ -118,21 +146,8 @@ def calc_flow_net(self_, n_points, margin, element_struc_array):
     flow_net : np.ndarray[complex]
         The flow net for the fracture.
     """
-    # Create the z array
-    flow_net = np.zeros((n_points, n_points), dtype=np.complex128)
-    radius_margin = self_["radius"] * (1 + margin)
-    radius2 = self_["radius"] * self_["radius"]
-    x_array = np.linspace(-radius_margin, radius_margin, n_points)
-    y_array = np.linspace(-radius_margin, radius_margin, n_points)
     for i in range(n_points):
-        for j in range(n_points):
-            z = x_array[i] + 1j * y_array[j]
-            if np.real(z * np.conj(z)) > radius2:
-                flow_net[j, i] = np.nan
-            else:
-                flow_net[j, i] = calc_omega(self_, z, element_struc_array)
-
-    return flow_net, x_array, y_array
+        flow_net[i] = calc_omega(self_, z_array[i], element_struc_array)
 
 
 def head_from_phi(self_, phi):
@@ -158,7 +173,7 @@ def head_from_phi(self_, phi):
 
 
 @nb.njit(cache=CACHE)
-def calc_heads(self_, n_points, margin, element_struc_array):
+def calc_heads(self_, heads, n_points, z_array, element_struc_array):
     """
     Calculates the head net for the fracture.
 
@@ -166,39 +181,28 @@ def calc_heads(self_, n_points, margin, element_struc_array):
     ----------
     self_ : np.ndarray[fracture_dtype]
         The fracture element.
+    heads : np.ndarray[np.float64]
+        Array to store the head net for the fracture.
     n_points : int
         Number of points in the flow net.
-    margin : float
-        Margin for the flow net.
+    z_array : np.ndarray[np.complex128]
+        Array of complex coordinates for the points in the sunflower spiral multiplied with the fracture radius.
     element_struc_array : np.ndarray[element_dtype]
         Array of elements.
 
     Returns
     -------
-    heads : np.ndarray[complex]
-        The head net for the fracture.
+    None
+         Modifies the heads array in place.
     """
     # Create the z array
-    heads = np.zeros((n_points, n_points), dtype=np.float64)
-    radius_margin = self_["radius"] * (1 + margin)
-    radius2 = self_["radius"] * self_["radius"]
-    x_array = np.linspace(-radius_margin, radius_margin, n_points)
-    y_array = np.linspace(-radius_margin, radius_margin, n_points)
-    t = self_["t"]
     for i in range(n_points):
-        for j in range(n_points):
-            z = x_array[i] + 1j * y_array[j]
-            if np.real(z * np.conj(z)) > radius2:
-                heads[j, i] = np.nan
-            else:
-                phi = np.real(calc_omega(self_, z, element_struc_array))
-                heads[j, i] = phi / t
-
-    return heads, x_array, y_array
+          phi = np.real(calc_omega(self_, z_array[i], element_struc_array))
+          heads[i] = phi / self_["t"]
 
 
 @nb.njit(cache=CACHE, parallel=True)
-def get_flow_nets(fracture_struc_array, n_points, margin, element_struc_array):
+def get_flow_nets(fracture_struc_array, n_points, element_struc_array):
     """
     Get the flow nets for all fractures.
 
@@ -208,8 +212,6 @@ def get_flow_nets(fracture_struc_array, n_points, margin, element_struc_array):
         The fracture structure array.
     n_points : int
         Number of points in the flow net.
-    margin : float
-        Margin for the flow net.
     element_struc_array : np.ndarray[element_dtype]
         Array of elements.
 
@@ -222,21 +224,22 @@ def get_flow_nets(fracture_struc_array, n_points, margin, element_struc_array):
     flow_nets = np.zeros(
         (len(fracture_struc_array), n_points, n_points), dtype=np.complex128
     )
-    x_arrays = np.zeros((len(fracture_struc_array), n_points), dtype=np.float64)
-    y_arrays = np.zeros((len(fracture_struc_array), n_points), dtype=np.float64)
+    z_arrays = np.zeros((len(fracture_struc_array), n_points), dtype=np.complex128)
+    z_array = sunflower_spiral(n_points)
+    pnts_3d = np.zeros((len(fracture_struc_array), n_points, 3), dtype=np.float64)
     for i in nb.prange(len(fracture_struc_array)):
-        flow_net, x_array, y_array = calc_flow_net(
-            fracture_struc_array[i], n_points, margin, element_struc_array
+        z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
+        calc_flow_net(
+            fracture_struc_array[i], flow_nets[i], n_points, z_arrays[i], element_struc_array
         )
-        flow_nets[i] = flow_net
-        x_arrays[i] = x_array
-        y_arrays[i] = y_array
+        # Map the 2D points to 3D
+        gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
 
-    return flow_nets, x_arrays, y_arrays
+    return flow_nets, pnts_3d
 
 
 @nb.njit(cache=CACHE, parallel=True)
-def get_heads(fracture_struc_array, n_points, margin, element_struc_array):
+def get_heads(fracture_struc_array, n_points, element_struc_array):
     """
     Get the heads for all fractures.
 
@@ -246,8 +249,6 @@ def get_heads(fracture_struc_array, n_points, margin, element_struc_array):
         The fracture structure array.
     n_points : int
         Number of points in the flow net.
-    margin : float
-        Margin for the flow net.
     element_struc_array : np.ndarray[element_dtype]
         Array of elements.
 
@@ -257,15 +258,16 @@ def get_heads(fracture_struc_array, n_points, margin, element_struc_array):
         List of heads for each fracture.
     """
     # Create the heads arrays
-    heads = np.zeros((len(fracture_struc_array), n_points, n_points), dtype=np.float64)
-    x_arrays = np.zeros((len(fracture_struc_array), n_points), dtype=np.float64)
-    y_arrays = np.zeros((len(fracture_struc_array), n_points), dtype=np.float64)
+    heads = np.zeros((len(fracture_struc_array), n_points), dtype=np.float64)
+    z_arrays = np.zeros((len(fracture_struc_array), n_points), dtype=np.complex128)
+    z_array = sunflower_spiral(n_points)
+    pnts_3d = np.zeros((len(fracture_struc_array),n_points, 3), dtype=np.float64)
     for i in nb.prange(len(fracture_struc_array)):
-        head, x_array, y_array = calc_heads(
-            fracture_struc_array[i], n_points, margin, element_struc_array
+        z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
+        calc_heads(
+            fracture_struc_array[i], heads[i], n_points, z_arrays[i], element_struc_array
         )
-        heads[i] = head
-        x_arrays[i] = x_array
-        y_arrays[i] = y_array
+        # Map the 2D points to 3D
+        gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
 
-    return heads, x_arrays, y_arrays
+    return heads, pnts_3d
