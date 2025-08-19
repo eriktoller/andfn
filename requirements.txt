@@ -1,0 +1,12 @@
+sphinx
+sphinx-book-theme
+sphinx-copybutton
+ghp-import
+numpy
+pandas
+matplotlib
+pyvista
+scipy
+numba
+h5py
+pyyaml

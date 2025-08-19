@@ -1,0 +1,2 @@
+PARALLEL = True
+CACHE = True
