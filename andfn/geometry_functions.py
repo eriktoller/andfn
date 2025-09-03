@@ -417,7 +417,7 @@ def generate_fractures(
 
 
 def get_connected_fractures(
-    fractures, se_factor, ncoef=5, nint=10, fracture_surface=None
+    fractures, se_factor, ncoef=5, nint=10, fracture_surface=None, tolerance=-1
 ):
     """
     Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
@@ -462,9 +462,9 @@ def get_connected_fractures(
                 endpoints0, endpoints1 = fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
                     if fr2 not in []:
-                        # length = np.linalg.norm(endpoints0[0] - endpoints0[1])
-                        # if length < 1e-1*fr.radius or length < 1e-1*fr2.radius:
-                        #    continue
+                        length = np.linalg.norm(endpoints0[0] - endpoints0[1])
+                        if length < tolerance*fr.radius or length < tolerance*fr2.radius:
+                            continue
                         endpoints01 = shorten_line(
                             endpoints0[0], endpoints0[1], se_factor
                         )
@@ -480,8 +480,6 @@ def get_connected_fractures(
                             ncoef,
                             nint,
                         )
-                        fr.add_element(intersections)
-                        fr2.add_element(intersections)
                         if fr2 not in connected_fractures:
                             connected_fractures.append(fr2)
                             fracture_list_it_temp.append(fr2)
@@ -499,7 +497,7 @@ def get_connected_fractures(
     return connected_fractures
 
 
-def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10):
+def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance=-1):
     """
     Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
     a given fracture, the function iterates through the list of fractures and finds all connected fractures.
@@ -514,6 +512,10 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10):
         The number of coefficients for the intersection elements.
     nint : int
         The number of integration points for the intersection elements.
+    tolerance : float, optional
+        The minimum length of the intersection line as a fraction of the fracture radius. Intersections shorter than
+        this value will be ignored. If -1, no tolerance is applied. Default is -1.
+
 
     Returns
     -------
@@ -521,6 +523,9 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10):
         A list of connected fractures.
     """
     for i, fr in enumerate(fractures):
+        # Get the celltreeboxes
+        # celltree = numba_celltree.CellTree3d(vertices3d, boxes)
+        # overlapping_i, overlapping_j = celltree.locate_boxes(box_bbounds)
         for fr2 in fractures[i + 1 :]:
             if fr == fr2:
                 continue
@@ -529,6 +534,9 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10):
             endpoints0, endpoints1 = fracture_intersection(fr, fr2)
             if endpoints0 is not None:
                 if fr2 not in []:
+                    length = np.linalg.norm(endpoints0[0] - endpoints0[1])
+                    if length < tolerance * fr.radius or length < tolerance * fr2.radius:
+                        continue
                     endpoints01 = shorten_line(endpoints0[0], endpoints0[1], se_factor)
                     endpoints11 = shorten_line(endpoints1[0], endpoints1[1], se_factor)
                     intersections = intersection.Intersection(

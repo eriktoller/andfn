@@ -211,7 +211,7 @@ def get_faces(pnts):
 
 
 class DFN(Constants):
-    def __init__(self, label, discharge_int=10, **kwargs):
+    def __init__(self, label, discharge_int=50, **kwargs):
         """
         Initializes the DFN class.
 
@@ -263,6 +263,21 @@ class DFN(Constants):
         """
         Changes the attributes of the DFN.
 
+        The following constants can be changed:
+            - RHO: Density of water in kg/m^3
+            - G: Gravitational acceleration in m/s^2
+            - PI: Pi
+            - SE_FACTOR: Shortening element length factor
+            - MAX_ITERATIONS: Maximum number of iterations
+            - MAX_ERROR: Maximum error
+            - MAX_NCOEF: Maximum number of coefficients
+            - COEF_INCREASE: Coefficient increase factor
+            - COEF_RATIO: Coefficient ratio
+            - MAX_ELEMENTS: Maximum number of elements
+            - NCOEF: Number of coefficients
+            - NINT: Number of integration points
+            - NUM_THREADS: Number of threads to use for Numba (default -1 = use all available threads)
+
         Parameters
         ----------
         kwargs : **kwargs
@@ -277,7 +292,7 @@ class DFN(Constants):
     ####################################################################################################################
     #                      Load and save                                                                               #
     ####################################################################################################################
-    def save_dfn(self, filename):
+    def save_dfn(self, filename, overwrite=False):
         """
         Saves the DFN to a h5 file.
 
@@ -286,16 +301,29 @@ class DFN(Constants):
         filename : str
             The name of the file to save the DFN to.
         """
-        # Remove the .h5 if it is in the filename
-        if filename[-3:] == ".h5":
-            filename = filename[:-3]
+        # Check the filename extension
+        ext = os.path.splitext(filename)[1]
+        if ext == "":
+            filename += ".h5"
+        elif ext not in [".h5"]:
+            raise ValueError(
+                f"Unsupported file extension: {ext}. Supported extensions are .h5."
+            )
+
+        # Check if the file already exists
+        if os.path.exists(f"{filename}") and not overwrite:
+            logger.warning(
+                f"The file {filename} already exists. To overwrite the existing file set the argument 'overwrite' to True."
+            )
+            return
+
 
         # Check if the elements and fractures have been consolidated
         if self.elements_struc_array is None or self.fractures_struc_array is None:
             self.consolidate_dfn()
 
         # Save the elements
-        with h5py.File(f"{filename}.h5", "w") as hf:
+        with h5py.File(f"{filename}", "w") as hf:
             grp = [
                 hf.create_group("elements/properties"),
                 hf.create_group("fractures/properties"),
@@ -322,7 +350,7 @@ class DFN(Constants):
                         continue
                     grp[j].create_dataset(name, data=array[name])
 
-        logger.info(f"Saved DFN to {filename}.h5")
+        logger.info(f"Saved DFN to {filename}")
 
     def load_dfn(self, filename):
         """
@@ -333,17 +361,22 @@ class DFN(Constants):
         filename : str
             The name of the file to load the DFN from.
         """
-
-        if filename[-3:] == ".h5":
-            filename = filename[:-3]
+        # Check the filename extension
+        ext = os.path.splitext(filename)[1]
+        if ext == "":
+            filename += ".h5"
+        elif ext not in [".h5"]:
+            raise ValueError(
+                f"Unsupported file extension: {ext}. Supported extensions are .h5."
+            )
 
         # Check if the file exists
-        if not os.path.exists(f"{filename}.h5"):
-            raise FileNotFoundError(f"The file {filename}.h5 does not exist.")
+        if not os.path.exists(f"{filename}"):
+            raise FileNotFoundError(f"The file {filename} does not exist.")
 
-        logger.info(f"Loading DFN from {filename}.h5")
+        logger.info(f"Loading DFN from {filename}")
 
-        with h5py.File(f"{filename}.h5", "r") as hf:
+        with h5py.File(f"{filename}", "r") as hf:
             # Load the fractures
             fracs = []
             for i in range(len(hf["fractures/index/label"])):
@@ -674,6 +707,9 @@ class DFN(Constants):
             new_structure.frac_intersections(self.fractures)
             logger.info(f"Added {new_structure} fracture to the DFN.")
 
+        # Update the elements
+        self.get_elements()
+
     def import_fractures_from_file(
         self,
         path,
@@ -689,6 +725,7 @@ class DFN(Constants):
         plunge_str=None,
         starting_frac=None,
         remove_isolated=True,
+        remove_tolerance=-1,
     ):
         """
         Imports fractures from a csv file. More formatting options can be added later.
@@ -721,6 +758,8 @@ class DFN(Constants):
             The fracture to use as the starting point for the connected fractures. The default is None.
         remove_isolated : bool, optional
             If True, removes isolated fractures from the DFN. The default is True.
+        remove_tolerance : float, optional
+            The tolerance to use when removing isolated fractures. The default is -1 (no tolerance).
 
         Returns
         -------
@@ -793,6 +832,7 @@ class DFN(Constants):
                 ncoef=self.constants["NCOEF"],
                 nint=self.constants["NINT"],
                 fracture_surface=frac[starting_frac],
+                tolerance=remove_tolerance,
             )
         else:
             fracs = gf.get_fracture_intersections(
@@ -800,6 +840,7 @@ class DFN(Constants):
                 self.constants["SE_FACTOR"],
                 ncoef=self.constants["NCOEF"],
                 nint=self.constants["NINT"],
+                tolerance=remove_tolerance,
             )
 
         if remove_isolated:
@@ -916,6 +957,9 @@ class DFN(Constants):
                         )
                         fr.add_element(i0)
                         fr2.add_element(i0)
+
+        # Update the elements in the DFN
+        self.get_elements()
 
     def get_dfn_center(self):
         """
@@ -1074,7 +1118,7 @@ class DFN(Constants):
 
         self.discharge_matrix = matrix
 
-    def solve(self):
+    def solve(self, unconsolidate=False):
         """
         Solves the DFN on a HPC.
 
@@ -1085,11 +1129,18 @@ class DFN(Constants):
         logger.info("Starting HPC solve...")
         logger.info("---------------------------------------")
         logger.info("Collecting elements and fractures...")
+        t0 = time.time()
         self.get_elements()
+        t1 = time.time()
+        logger.debug(f"Time to collect elements and fractures: {t1 - t0:.2f} seconds")
         logger.info("Consolidating DFN...")
         self.consolidate_dfn(hpc=True)
+        t2 = time.time()
+        logger.debug(f"Time to consolidate DFN: {t2 - t1:.2f} seconds")
         logger.info("Building discharge matrix...")
         self.build_discharge_matrix()
+        t3 = time.time()
+        logger.debug(f"Time to build discharge matrix: {t3 - t2:.2f} seconds")
 
         logger.info(f"Number of elements: {len(self.elements)}")
         logger.info(f"Number of fractures: {len(self.fractures)}")
@@ -1104,7 +1155,9 @@ class DFN(Constants):
             self.discharge_int,
             self.constants,
         )
-        self.unconsolidate_dfn(hpc=True)
+        if unconsolidate:
+            logger.info("Unconsolidating DFN...")
+            self.unconsolidate_dfn(hpc=True)
 
     ####################################################################################################################
     #                    Plotting functions                                                                            #
@@ -1454,7 +1507,10 @@ class DFN(Constants):
         for i, pnts in enumerate(pnts_3d):
             poly = pv.PolyData(pnts, faces)
             poly.point_data["head"] = heads[i]
+            #if np.max(heads[i]) < 400 or np.min(heads[i]) > 0:
+            #    continue
             meshes.append(poly)
+            #print(f"Prepared mesh for fracture {i}")
         s2 = time.time()
         mesh = pv.merge(meshes)
         pl.add_mesh(
@@ -1596,6 +1652,8 @@ class DFN(Constants):
             raise ImportError(
                 "Matplotlib is required to plot the ncoef plot. Please install matplotlib."
             )
+
+        self.unconsolidate_dfn(hpc=True)
 
         ncoef = []
         for e in self.elements:

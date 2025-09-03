@@ -13,9 +13,11 @@ from .constants import load_yaml_config
 config = load_yaml_config()
 MAX_NCOEF = 200
 MAX_ELEMENTS = 300
+MAX_DISCHARGE_INT = 1000
 if config:
     MAX_NCOEF = config.get("MAX_NCOEF", 200)
     MAX_ELEMENTS = config.get("MAX_ELEMENTS", 300)
+    MAX_DISCHARGE_INT = config.get("MAX_DISCHARGE_INT", 1000)
 
 element_dtype = np.dtype(
     [
@@ -61,6 +63,7 @@ element_dtype_hpc = np.dtype(
         ("dpsi_corr", np.float64, MAX_NCOEF * 2),
         ("error", np.float64),
         ("error_old", np.float64),
+        ("error_old2", np.float64),
     ]
 )
 """
@@ -247,9 +250,9 @@ class Element:
         self.ncoef = 5
         self.nint = 10
         self.coef = np.zeros(self.ncoef, dtype=complex)
-        self.thetas = np.linspace(
-            start=0, stop=2 * np.pi, num=self.nint, endpoint=False
-        )
+        #self.thetas = np.linspace(
+        #    start=0, stop=2 * np.pi, num=self.nint, endpoint=False
+        #)
 
         # Assign the fractures if provided
         self.frac0 = frac0

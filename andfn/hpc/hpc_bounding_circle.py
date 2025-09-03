@@ -131,6 +131,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     )
     work_array["coef"][: self_["ncoef"]] = -work_array["coef"][: self_["ncoef"]]
     # self_['error'] = np.max(np.abs(work_array['coef'][:self_['ncoef']] - work_array['old_coef'][:self_['ncoef']]))
+    self_["error_old2"] = self_["error_old"]
     self_["error_old"] = self_["error"]
     self_["error"] = mf.calc_error(
         work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]

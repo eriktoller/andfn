@@ -89,7 +89,6 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
                 omega += hpc_imp_object.calc_omega_circle(element, z)
             elif element["_type"] == 5:  # Impermeable line
                 omega += hpc_imp_object.calc_omega_line(element, z)
-
     return omega
 
 

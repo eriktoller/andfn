@@ -21,7 +21,7 @@ from andfn.hpc import (
     PARALLEL,
     CACHE,
 )
-from andfn.element import MAX_NCOEF, MAX_ELEMENTS
+from andfn.element import MAX_NCOEF, MAX_ELEMENTS, MAX_DISCHARGE_INT
 
 dtype_work = np.dtype(
     [
@@ -40,6 +40,7 @@ dtype_work = np.dtype(
         ("len_discharge_element", np.int64),
         ("exp_array_m", np.complex128, MAX_NCOEF * 2),
         ("exp_array_p", np.complex128, MAX_NCOEF * 2),
+        ("z_integral", np.complex128, MAX_NCOEF * 2),
     ]
 )
 
@@ -118,6 +119,7 @@ def solve(
         thetas = e["thetas"]
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_m"], -1)
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_p"], 1)
+        mf.fill_z_integral(e, work_array[i])
 
     error = np.float64(1.0)
     nit = 0
@@ -165,15 +167,18 @@ def solve(
 
         # print info
         if nit < 10:
-            logger.info(f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}")
+            logger.info(f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}")
             logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
             )
         else:
-            logger.info(f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}")
+            logger.info(f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}")
             logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
             )
+            e = element_struc_array[_id]
+            print(
+                f"Error increasing for element {e['_id']}, type {e['_type']}, fractures {e['frac0']} and {e['frac1']}, error: {e['error']}, error_old: {e['error_old']}, error_old2: {e['error_old2']}, ncoef: {e['ncoef']}")
 
         if cnt_bnd > 1:
             element_solver(
@@ -386,44 +391,59 @@ def element_solver2(
         nit_el += 1
 
         # Solve the elements
-        cnt = element_solver(
-            num_elements,
-            element_struc_array,
-            fracture_struc_array,
-            work_array,
-            max_error,
-            nit,
-            cnt_error,
-        )
+        if nit <= 2000:
+            cnt = element_solver(
+                num_elements,
+                element_struc_array,
+                fracture_struc_array,
+                work_array,
+                max_error,
+                nit,
+                cnt_error,
+            )
+
 
         error, _id = get_error(element_struc_array)
+
+        ncc = 3 # Number of coefficients to check the ratio
 
         # Get the coefficients from the work array
         if nit < 2:
             continue
         for i in nb.prange(num_elements):
+            # TODO: check if I can use sum(coef) and look if the change in sum due to the last 3 is significant,
+            #  maybe also check if the error is continously increasing for an element (possibly track error history)
+            set_zero = False
             e = element_struc_array[i]
             if e["_type"] == 2:  # Well
                 continue
             coefs = e["coef"][: e["ncoef"]]
-            coef0 = np.max(np.abs(coefs[1:3]))
-            coef1 = np.max(np.abs(coefs[-2:]))
+            coef0 = np.mean(np.abs(coefs[1:ncc])) # CHANGED
+            coef1 = np.max(np.abs(coefs[-ncc:]))
             if coef0 == 0.0:
                 coef_ratio = 0.0
             else:
-                coef_ratio = coef1 / coef0
+                coef_ratio = coef1 / coef0 * 0
             if np.max(np.abs(coefs[1:2])) < max_error / 1e10:
                 coef_ratio = 0.0
+            if e["error"] > e["error_old"] and e["error"] > e["error_old2"] and e["error"] > max_error and nit > 5:
+                set_zero = True
+                #coef_ratio = max_coef_ratio + 1.0
+            if np.abs(np.sum(coefs[-ncc:]) / np.sum(coefs[:-ncc])) > max_coef_ratio:
+                coef_ratio = max_coef_ratio + 1.0
             cnt = 0
+            ncoef_in = e["ncoef"]
 
             # Increase the number of coefficients if the ratio is too high
+            max_cnt = 5
             while (
                 coef_ratio > max_coef_ratio
                 and e["ncoef"] < max_coef
-                and cnt < 5
+                and cnt < max_cnt
                 and nit > 1
             ):
                 cnt += 1
+
                 e["ncoef"] = int(e["ncoef"] + coef_increase)
                 e["nint"] = e["ncoef"] * 2
 
@@ -435,6 +455,7 @@ def element_solver2(
                 mf.fill_exp_array(
                     e["nint"], e["thetas"], work_array[i]["exp_array_p"], 1
                 )
+                mf.fill_z_integral(e, work_array[i])
 
                 if e["_type"] == 0:  # Intersection
                     hpc_intersection.solve(
@@ -459,13 +480,36 @@ def element_solver2(
                         e, fracture_struc_array, element_struc_array, work_array[i]
                     )
                 coefs = work_array[i]["coef"][: e["ncoef"]]
-                coef0 = np.max(np.abs(coefs[1:3]))
-                coef1 = np.max(np.abs(coefs[-2:]))
+                coef0 = np.mean(np.abs(coefs[1:ncc]))
+                coef1 = np.max(np.abs(coefs[-ncc:]))
                 coef_ratio = coef1 / coef0
+                #if e["error"] > e["error_old"] and e["error"] > e["error_old2"] and e["error"] > max_error and nit > 5:
+                #    coef_ratio = max_coef_ratio + 1.0
+                if np.abs(np.sum(coefs[-ncc:]) / np.sum(coefs[:-ncc])) > max_coef_ratio:
+                    coef_ratio = max_coef_ratio + 1.0
+                # The coefficients needs to be reset to zero if the number of coefficients is increased, otherwise the
+                # error might grow if the discharge are computed with faulty coefficients
+                if cnt == max_cnt:
+                    set_zero = True
+                #print(f"Element {e['_id']} of type {e['_type']} has been set to zero coefficients due to high coefficient ratio.")
+            if set_zero:
+                work_array[i]["coef"][: e["ncoef"]] = 0.0  # TODO: Calculate the error again here?
 
         for i in nb.prange(num_elements):
             e = element_struc_array[i]
             e["coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
+
+        # Solve the elements
+        if nit <= -2000:
+            cnt = element_solver(
+                num_elements,
+                element_struc_array,
+                fracture_struc_array,
+                work_array,
+                max_error,
+                nit,
+                cnt_error,
+            )
 
     return cnt
 
@@ -572,9 +616,12 @@ def pre_matrix_solve(
 
     # Set the discharges equal to zero
     for i in nb.prange(len(element_struc_array)):
-        e = element_struc_array[i]
-        if e["_type"] in {0, 2, 3}:  # Intersection, Well, Constant head line
-            e["q"] = 0.0
+        element_struc_array[i]["q"] = 0.0
+    #    if e["_type"] in {0, 2, 3}:  # Intersection, Well, Constant head line
+    #        e["q"] = 0.0
+    #for i in nb.prange(len(discharge_elements)):
+    #    discharge_elements[i]["q"] = 0.0
+
 
     # Set the constants equal to zero
     for i in nb.prange(len(fractures_struc_array)):
@@ -664,19 +711,19 @@ def build_head_matrix(
         e = discharge_elements[j]
         frac0 = fractures_struc_array[e["frac0"]]
         z0 = z_int["z0"][j][:discharge_int]
-        omega_vec = np.zeros(discharge_int, dtype=np.complex128)
+        omega = 0.0 + 0.0j
         for i in range(discharge_int):
-            omega_vec[i] = hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
-        omega = np.sum(omega_vec) / discharge_int
+            omega += hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
+        omega = omega / discharge_int
         if e["_type"] == 0:  # Intersection
             frac1 = fractures_struc_array[e["frac1"]]
             z1 = z_int["z1"][j][:discharge_int]
-            omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
+            omega1 = 0.0 + 0.0j
             for i in range(discharge_int):
-                omega1_vec[i] = hpc_fracture.calc_omega(
+                omega1 += hpc_fracture.calc_omega(
                     frac1, z1[i], element_struc_array
                 )
-            omega1 = np.sum(omega1_vec) / discharge_int
+            omega1 = omega1 / discharge_int
             head_matrix[j] = np.real(omega1) / frac1["t"] - np.real(omega) / frac0["t"]
         elif e["_type"] in [2, 3]:  # Well or Constant head line
             head_matrix[j] = e["phi"] - np.real(omega)

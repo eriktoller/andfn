@@ -189,6 +189,7 @@ def cauchy_integral_real(
         # chi = np.exp(1j * thetas[ii])
         chi = work_array["exp_array_p"][ii]
         z = gf.map_chi_to_z_line(chi, endpoints0)
+        #z = work_array["z_integral"][ii]
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["phi"][ii] = np.real(omega)
     for jj in range(m):
@@ -534,12 +535,15 @@ def calc_error(coef, coef_ref):
         The error
     """
     error = 0.0
-    max_coef = np.max(np.abs(coef))
-    if max_coef == 0:
-        max_coef = 1
-    for i in range(len(coef)):
-        error += np.abs((coef[i] - coef_ref[i]))
-    return error / len(coef)
+    #for i in range(len(coef)):
+    n = len(coef)
+    if n > 20:
+        n = 20
+    for i in range(n): #TODO: limit to first 20 coefficients for stability (?)
+        dcoef = np.abs((coef[i] - coef_ref[i]))
+        error += dcoef
+    error /= len(coef)
+    return error
 
 
 @nb.njit()
@@ -593,6 +597,16 @@ def fill_exp_array(n, thetas, exp_array, sign):
     """
     for ii in range(n):
         exp_array[ii] = np.exp(sign * 1j * thetas[ii])
+
+@nb.njit()
+def fill_z_integral(_self, work_array):
+    _type = _self["_type"]
+    n = _self["nint"]
+    if _type == 0:  # If intersection
+        endpoints0 = _self["endpoints0"]
+        for ii in range(n):
+            chi = work_array["exp_array_p"][ii]
+            work_array["z_integral"][ii] = gf.map_chi_to_z_line(chi, endpoints0)
 
 
 ########################################################################################################################

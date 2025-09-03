@@ -69,6 +69,7 @@ if os.path.exists(".andfn_config.yaml"):
     config = load_yaml_config()
     if config.get("LOG_LEVEL"):
         logger.setLevel(config["LOG_LEVEL"])
+        logger.info(f"Log level set to {config['LOG_LEVEL']}")
     if config.get("LOG_FILE"):
         file_handler = logging.FileHandler(config["LOG_FILE"], mode="w")
         formatter = logging.Formatter(
