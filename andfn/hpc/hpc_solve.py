@@ -178,9 +178,12 @@ def solve(
             )
             e = element_struc_array[_id]
             print(
-                f"Error increasing for element {e['_id']}, type {e['_type']}, fractures {e['frac0']} and {e['frac1']}, error: {e['error']}, error_old: {e['error_old']}, error_old2: {e['error_old2']}, ncoef: {e['ncoef']}")
+                f"Error increasing for element {e['_id']}, type {e['_type']}, fractures {e['frac0']} and {e['frac1']}, "
+                f"error: {e['error']}, error_old: {e['error_old']}, error_old2: {e['error_old2']}, ncoef: {e['ncoef']}, "
+                f"\ncoef[:5]:    {e['coef'][:5]}, \nold_coef[:5]: {work_array[_id]['old_coef'][:5]}"
+                f"\npercent change: {np.abs(np.sum(np.abs(e['coef']))-np.sum(np.abs(work_array[_id]['old_coef'])))/np.sum(np.abs(work_array[_id]['old_coef'][:5]))*100 if np.sum(np.abs(work_array[_id]['old_coef'][:5])) > 0 else np.nan}")
 
-        if cnt_bnd > 1:
+        if cnt_bnd > 1 or nit == max_iterations:
             element_solver(
                 num_elements,
                 element_struc_array,
@@ -190,7 +193,7 @@ def solve(
                 nit,
                 cnt_error,
             )
-            error = 1.0
+            #error = 1.0
 
         if error < max_error and error_q < max_error:
             cnt_error += 1
@@ -493,7 +496,9 @@ def element_solver2(
                     set_zero = True
                 #print(f"Element {e['_id']} of type {e['_type']} has been set to zero coefficients due to high coefficient ratio.")
             if set_zero:
-                work_array[i]["coef"][: e["ncoef"]] = 0.0  # TODO: Calculate the error again here?
+                #work_array[i]["old_coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
+                work_array[i]["coef"][: e["ncoef"]] = 0.0  # TODO: Calculate the error again here? DO!!!
+                e["error_old"] = 1e30
 
         for i in nb.prange(num_elements):
             e = element_struc_array[i]

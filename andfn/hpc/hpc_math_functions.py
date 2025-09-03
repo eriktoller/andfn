@@ -535,6 +535,8 @@ def calc_error(coef, coef_ref):
         The error
     """
     error = 0.0
+    if np.sum(np.abs(coef_ref[:5])) < 1e-15: #TODO: check if this is a good idea
+        return error
     #for i in range(len(coef)):
     n = len(coef)
     if n > 20:
