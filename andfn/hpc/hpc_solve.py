@@ -116,6 +116,7 @@ def solve(
     # fill work array ex_array
     for i, e in enumerate(element_struc_array):
         n = e["nint"]
+        mf.calc_thetas(n, e["_type"], e["thetas"][: n])
         thetas = e["thetas"]
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_m"], -1)
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_p"], 1)
@@ -180,8 +181,9 @@ def solve(
             print(
                 f"Error increasing for element {e['_id']}, type {e['_type']}, fractures {e['frac0']} and {e['frac1']}, "
                 f"error: {e['error']}, error_old: {e['error_old']}, error_old2: {e['error_old2']}, ncoef: {e['ncoef']}, "
-                f"\ncoef[:5]:    {e['coef'][:5]}, \nold_coef[:5]: {work_array[_id]['old_coef'][:5]}"
-                f"\npercent change: {np.abs(np.sum(np.abs(e['coef']))-np.sum(np.abs(work_array[_id]['old_coef'])))/np.sum(np.abs(work_array[_id]['old_coef'][:5]))*100 if np.sum(np.abs(work_array[_id]['old_coef'][:5])) > 0 else np.nan}")
+                f"\n   coef[:5]:    {e['coef'][:5]}, \nold_coef[:5]: {work_array[_id]['old_coef'][:5]}"
+                f"\ncoef[:-5]:    {e['coef'][e['ncoef']-5:e['ncoef']]}, \nold_coef[:-5]: {work_array[_id]['old_coef'][e['ncoef']-5:e['ncoef']]}"
+                f"\npercent change: {np.abs(np.sum(np.abs(e['coef']))-np.sum(np.abs(work_array[_id]['old_coef'])))/np.sum(np.abs(work_array[_id]['old_coef']))*100 if np.sum(np.abs(work_array[_id]['old_coef'])) > 0 else np.nan}")
 
         if cnt_bnd > 1 or nit == max_iterations:
             element_solver(
@@ -421,7 +423,7 @@ def element_solver2(
             if e["_type"] == 2:  # Well
                 continue
             coefs = e["coef"][: e["ncoef"]]
-            coef0 = np.mean(np.abs(coefs[1:ncc])) # CHANGED
+            coef0 = np.mean(np.abs(coefs[1:ncc])) + 1e-30 # CHANGED
             coef1 = np.max(np.abs(coefs[-ncc:]))
             if coef0 == 0.0:
                 coef_ratio = 0.0
@@ -432,7 +434,7 @@ def element_solver2(
             if e["error"] > e["error_old"] and e["error"] > e["error_old2"] and e["error"] > max_error and nit > 5:
                 set_zero = True
                 #coef_ratio = max_coef_ratio + 1.0
-            if np.abs(np.sum(coefs[-ncc:]) / np.sum(coefs[:-ncc])) > max_coef_ratio:
+            if np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc])  + 1e-30)) > max_coef_ratio:
                 coef_ratio = max_coef_ratio + 1.0
             cnt = 0
             ncoef_in = e["ncoef"]
@@ -443,7 +445,7 @@ def element_solver2(
                 coef_ratio > max_coef_ratio
                 and e["ncoef"] < max_coef
                 and cnt < max_cnt
-                and nit > 1
+                and nit > 5
             ):
                 cnt += 1
 
@@ -483,12 +485,12 @@ def element_solver2(
                         e, fracture_struc_array, element_struc_array, work_array[i]
                     )
                 coefs = work_array[i]["coef"][: e["ncoef"]]
-                coef0 = np.mean(np.abs(coefs[1:ncc]))
+                coef0 = np.mean(np.abs(coefs[1:ncc])) + 1e-30
                 coef1 = np.max(np.abs(coefs[-ncc:]))
                 coef_ratio = coef1 / coef0
                 #if e["error"] > e["error_old"] and e["error"] > e["error_old2"] and e["error"] > max_error and nit > 5:
                 #    coef_ratio = max_coef_ratio + 1.0
-                if np.abs(np.sum(coefs[-ncc:]) / np.sum(coefs[:-ncc])) > max_coef_ratio:
+                if np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc])  + 1e-30)) > max_coef_ratio:
                     coef_ratio = max_coef_ratio + 1.0
                 # The coefficients needs to be reset to zero if the number of coefficients is increased, otherwise the
                 # error might grow if the discharge are computed with faulty coefficients
