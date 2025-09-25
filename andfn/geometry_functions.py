@@ -12,6 +12,7 @@ import andfn
 from . import fracture
 from . import intersection
 from . import const_head
+import andfn.hpc.hpc_geometry_functions as hpc_gf
 
 
 def map_z_line_to_chi(z, endpoints):
@@ -38,11 +39,13 @@ def map_z_line_to_chi(z, endpoints):
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
-    big_z = np.vectorize(
-        lambda zz: (2 * zz - endpoints[0] - endpoints[1])
-        / (endpoints[1] - endpoints[0])
-    )(z)
-    return big_z + np.sqrt(big_z - 1) * np.sqrt(big_z + 1)
+    if np.isscalar(z):
+        return hpc_gf.map_z_line_to_chi(z, endpoints)
+    else:
+        chi = np.empty_like(z, dtype=np.complex128)
+        for i, z0 in enumerate(z):
+            chi[i] = hpc_gf.map_z_line_to_chi(z0, endpoints)
+        return chi
 
 
 def map_chi_to_z_line(chi, endpoints):
@@ -463,7 +466,10 @@ def get_connected_fractures(
                 if endpoints0 is not None:
                     if fr2 not in []:
                         length = np.linalg.norm(endpoints0[0] - endpoints0[1])
-                        if length < tolerance*fr.radius or length < tolerance*fr2.radius:
+                        if (
+                            length < tolerance * fr.radius
+                            or length < tolerance * fr2.radius
+                        ):
                             continue
                         endpoints01 = shorten_line(
                             endpoints0[0], endpoints0[1], se_factor
@@ -471,7 +477,7 @@ def get_connected_fractures(
                         endpoints11 = shorten_line(
                             endpoints1[0], endpoints1[1], se_factor
                         )
-                        intersections = intersection.Intersection(
+                        intersection.Intersection(
                             f"{fr.label}_{fr2.label}",
                             endpoints01,
                             endpoints11,
@@ -535,7 +541,10 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
             if endpoints0 is not None:
                 if fr2 not in []:
                     length = np.linalg.norm(endpoints0[0] - endpoints0[1])
-                    if length < tolerance * fr.radius or length < tolerance * fr2.radius:
+                    if (
+                        length < tolerance * fr.radius
+                        or length < tolerance * fr2.radius
+                    ):
                         continue
                     endpoints01 = shorten_line(endpoints0[0], endpoints0[1], se_factor)
                     endpoints11 = shorten_line(endpoints1[0], endpoints1[1], se_factor)
@@ -569,7 +578,11 @@ def remove_isolated_fractures(fractures):
     fractures : list
         A list of fractures with isolated fractures removed.
     """
-    return [fr for fr in fractures if any(isinstance(el, intersection.Intersection) for el in fr.elements)]
+    return [
+        fr
+        for fr in fractures
+        if any(isinstance(el, intersection.Intersection) for el in fr.elements)
+    ]
 
 
 def set_head_boundary(

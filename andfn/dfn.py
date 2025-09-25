@@ -21,7 +21,6 @@ from .hpc.hpc_solve import solve as hpc_solve
 from .hpc.hpc_fracture import (
     get_flow_nets as hpc_get_flow_nets,
     get_heads as hpc_get_heads,
-    sunflower_spiral
 )
 from .structures import STRUCTURES_COLOR
 from .well import Well
@@ -316,7 +315,6 @@ class DFN(Constants):
                 f"The file {filename} already exists. To overwrite the existing file set the argument 'overwrite' to True."
             )
             return
-
 
         # Check if the elements and fractures have been consolidated
         if self.elements_struc_array is None or self.fractures_struc_array is None:
@@ -1123,6 +1121,11 @@ class DFN(Constants):
         Solves the DFN on a HPC.
 
         To change the solver constants, use the set_kwargs method.
+
+        Parameters
+        ----------
+        unconsolidate : bool
+            If True, the DFN is unconsolidated after the solve. Default is False.
         """
         logger.info("\n")
         logger.info("---------------------------------------")
@@ -1137,21 +1140,14 @@ class DFN(Constants):
         self.consolidate_dfn(hpc=True)
         t2 = time.time()
         logger.debug(f"Time to consolidate DFN: {t2 - t1:.2f} seconds")
-        logger.info("Building discharge matrix...")
-        self.build_discharge_matrix()
-        t3 = time.time()
-        logger.debug(f"Time to build discharge matrix: {t3 - t2:.2f} seconds")
-
-        logger.info(f"Number of elements: {len(self.elements)}")
-        logger.info(f"Number of fractures: {len(self.fractures)}")
-        logger.info(
-            f"Number of entries in discharge matrix: {self.discharge_matrix.getnnz()}"
-        )
+        # logger.info("Building discharge matrix...")
+        # self.build_discharge_matrix()
+        # t3 = time.time()
+        # logger.debug(f"Time to build discharge matrix: {t3 - t2:.2f} seconds")
         self.print_solver_constants()
         self.elements_struc_array = hpc_solve(
             self.fractures_struc_array_hpc,
             self.elements_struc_array_hpc,
-            self.discharge_matrix,
             self.discharge_int,
             self.constants,
         )
@@ -1280,7 +1276,7 @@ class DFN(Constants):
             labels[f" {s.__class__.__name__}"] = STRUCTURES_COLOR[s._structure_type]
         if self.elements is not None:
             for e in self.elements:
-                if e._type == 1: # Bounding circle
+                if e._type == 1:  # Bounding circle
                     continue
                 e.plot(pl, line_width=line_width, color=None)
                 labels[f" {e.__class__.__name__}"] = ELEMENT_COLORS[e._type]
@@ -1343,7 +1339,11 @@ class DFN(Constants):
             # plot the fractures
             pl.add_mesh(
                 pv.Polygon(
-                    center=f.center, radius=f.radius, normal=f.normal, n_sides=num_side, fill=filled
+                    center=f.center,
+                    radius=f.radius,
+                    normal=f.normal,
+                    n_sides=num_side,
+                    fill=filled,
                 ),
                 color=color,
                 opacity=opacity,
@@ -1354,7 +1354,16 @@ class DFN(Constants):
                 logger.debug(f"Plotting fractures: {i + 1} / {len(self.fractures)}")
 
     def plot_fractures_flow_net(
-        self, pl, lvs=20, n_points=2000, n_boundary_points=50, line_width=2, opacity=1.0, fill=True, contour_re=True, contour_im=True
+        self,
+        pl,
+        lvs=20,
+        n_points=2000,
+        n_boundary_points=50,
+        line_width=2,
+        opacity=1.0,
+        fill=True,
+        contour_re=True,
+        contour_im=True,
     ):
         """
         Plots the flow net for the fractures in the DFN.
@@ -1380,7 +1389,6 @@ class DFN(Constants):
         contour_im : bool
             Whether to plot the streamlines (imaginary part).
         """
-
 
         # Check if the fractures have been consolidated
         if self.fractures_struc_array_hpc is None:
@@ -1441,10 +1449,11 @@ class DFN(Constants):
         n_boundary_points=50,
         line_width=2,
         opacity=1.0,
-        color_map="jet",
+        color_map="viridis",
         limits=None,
         contour=True,
         colorbar=True,
+        debug=False,
     ):
         """
         Plots the flow net for the fractures in the DFN.
@@ -1471,10 +1480,18 @@ class DFN(Constants):
             Whether to plot the contour lines.
         colorbar : bool
             Whether to plot the color bar.
+        debug : bool
+            This will only plot fractures with a head outside the limits.
         """
 
         # Start timer
         start = time.time()
+
+        # Asset debug and limits
+        if debug:
+            assert limits is not None, "For debug mode, limits must be provided."
+            min_lim, max_lim = limits
+            limits = None
 
         # Check if the fractures have been consolidated
         if self.fractures_struc_array_hpc is None:
@@ -1504,14 +1521,21 @@ class DFN(Constants):
         print(f"Creating faces took {s1 - s0:.2f} seconds.")
 
         meshes = []
-        for i, pnts in enumerate(pnts_3d):
-            poly = pv.PolyData(pnts, faces)
-            poly.point_data["head"] = heads[i]
-            #if np.max(heads[i]) < 400 or np.min(heads[i]) > 0:
-            #    continue
-            meshes.append(poly)
-            #print(f"Prepared mesh for fracture {i}")
-        s2 = time.time()
+        if debug:
+            logger.debug(
+                "Debug mode: Only plotting fractures with head outside limits."
+            )
+            for i, pnts in enumerate(pnts_3d):
+                if np.nanmin(heads[i]) < min_lim or np.nanmax(heads[i]) > max_lim:
+                    logger.debug(f"Fracture {i} has head outside limits, plotting.")
+                    poly = pv.PolyData(pnts, faces)
+                    poly.point_data["head"] = heads[i]
+                    meshes.append(poly)
+        else:
+            for i, pnts in enumerate(pnts_3d):
+                poly = pv.PolyData(pnts, faces)
+                poly.point_data["head"] = heads[i]
+                meshes.append(poly)
         mesh = pv.merge(meshes)
         pl.add_mesh(
             mesh,
@@ -1525,7 +1549,6 @@ class DFN(Constants):
             clim=limits,
         )
         # Add contour lines, i.e. equipotential lines
-        s3 = time.time()
         if contour:
             contours = mesh.contour(isosurfaces=lvs, scalars="head")
             if contours.n_points > 0:
@@ -1545,7 +1568,9 @@ class DFN(Constants):
         logger.info(f"Plotting hydraulic head took {end - start:.2f} seconds.")
         logger.debug("")
 
-    def plot_elements(self, pl, color=None, elements=None, line_width=3.0, const_elements=False):
+    def plot_elements(
+        self, pl, color=None, elements=None, line_width=3.0, const_elements=False
+    ):
         """
         Plots the elements in the DFN.
 
@@ -1561,9 +1586,9 @@ class DFN(Constants):
             The line width of the elements.
         """
         # Check if the elements have been stored in the DFN
-        assert self.elements is not None and len(self.elements) > 0, (
-            "The elements have not been stored in the DFN. Use the get_elements method."
-        )
+        assert (
+            self.elements is not None and len(self.elements) > 0
+        ), "The elements have not been stored in the DFN. Use the get_elements method."
         # Plot the elements
         if elements is None:
             elements = self.elements

@@ -12,6 +12,30 @@ from . import hpc_geometry_functions as gf
 
 
 @nb.njit()
+def discharge_term(self_, z):
+    """
+    Calculate the discharge term for the constant head line.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The constant head line element
+    z : np.ndarray
+        The points to calculate the discharge term at
+
+    Returns
+    -------
+    float
+        The discharge term
+    """
+    phi = 0.0
+    for z0 in z:
+        chi = gf.map_z_line_to_chi(z0, self_["endpoints0"])
+        phi += np.real(mf.well_chi(chi, 1.0))
+    return phi / len(z)
+
+
+@nb.njit()
 def solve(self_, fracture_struc_array, element_struc_array, work_array):
     """
     Solves the constant head line element.

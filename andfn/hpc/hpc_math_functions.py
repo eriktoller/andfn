@@ -138,7 +138,7 @@ def well_chi(chi, q):
     ----------
     chi : complex
         A point in the complex chi plane
-    q : np.float64
+    q : float
         The discharge eof the well.
 
     Returns
@@ -189,7 +189,7 @@ def cauchy_integral_real(
         # chi = np.exp(1j * thetas[ii])
         chi = work_array["exp_array_p"][ii]
         z = gf.map_chi_to_z_line(chi, endpoints0)
-        #z = work_array["z_integral"][ii]
+        # z = work_array["z_integral"][ii]
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["phi"][ii] = np.real(omega)
     for jj in range(m):
@@ -535,16 +535,16 @@ def calc_error(coef, coef_ref):
         The error
     """
     error = 0.0
-    if np.sum(np.abs(coef_ref[:5])) < 1e-15: #TODO: check if this is a good idea
+    if np.sum(np.abs(coef_ref[:5])) < 1e-15:  # TODO: check if this is a good idea
         return error
-    #for i in range(len(coef)):
+    # for i in range(len(coef)):
     n = len(coef)
-    if n > 20:
-        n = 20
-    for i in range(n): #TODO: limit to first 20 coefficients for stability (?)
-        dcoef = np.abs((coef[i] - coef_ref[i]))
-        error += dcoef
-    error /= len(coef)
+    coef0 = 0.0 + 0.0j
+    coef1 = 0.0 + 0.0j
+    for i in range(n):  # TODO: limit to first 20 coefficients for stability (?)
+        coef0 += coef_ref[i]
+        coef1 += coef[i]
+    error = np.abs(coef0 - coef1)  # / np.abs(coef0+1e-16)
     return error
 
 
@@ -599,6 +599,7 @@ def fill_exp_array(n, thetas, exp_array, sign):
     """
     for ii in range(n):
         exp_array[ii] = np.exp(sign * 1j * thetas[ii])
+
 
 @nb.njit()
 def fill_z_integral(_self, work_array):

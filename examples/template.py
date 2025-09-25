@@ -66,8 +66,8 @@ if __name__ == "__main__":
     const_head1 = andfn.const_head.ConstantHeadLine(
         "const_head1", np.array([-0.4 - 0.1j, -0.3 - 0.3j]), 2.0, frac0, ncoef, nint
     )
-    frac3.add_element(const_head0)  # add constant head line "const_head0" to fracture 3
-    frac0.add_element(const_head1)  # add constant head line "const_head1" to fracture 0
+    # Add a well
+    well0 = andfn.well.Well("well0", 0.05, -0.005 + 0.002j, 5.0, frac2)
 
     print("\n")
     print("--------------------------------------------------------------------")
@@ -93,7 +93,6 @@ if __name__ == "__main__":
     print("\t PLOT THE RESULTS")
     print("--------------------------------------------------------------------")
     p1 = dfn.initiate_plotter()  # initiate the plotter
-    dfn.plot_fractures(p1)  # plot the fractures
     dfn.plot_elements(p1)  # plot the elements
     dfn.plot_fractures_head(p1)  # plot the hydraulic head in the fractures
     p1.show()  # show the plot
