@@ -544,7 +544,7 @@ def calc_error(coef, coef_ref):
     for i in range(n):  # TODO: limit to first 20 coefficients for stability (?)
         coef0 += coef_ref[i]
         coef1 += coef[i]
-    error = np.abs(coef0 - coef1)  # / np.abs(coef0+1e-16)
+    error = np.abs(coef0 - coef1) / np.abs(coef0 + 1e-16)
     return error
 
 

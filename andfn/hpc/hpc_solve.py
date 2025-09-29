@@ -41,6 +41,7 @@ dtype_work = np.dtype(
         ("exp_array_m", np.complex128, MAX_NCOEF * 2),
         ("exp_array_p", np.complex128, MAX_NCOEF * 2),
         ("z_integral", np.complex128, MAX_NCOEF * 2),
+        ("set_zero", np.bool),
     ]
 )
 
@@ -145,6 +146,8 @@ def solve(
     cnt_bnd = 0
     error_q = 1.0
     start = time.time()
+    sum_timee = 0.0
+    sum_timeq = 0.0
     while cnt_error < 2 and nit < max_iterations:
         nit += 1
         # Solve the discharge matrix
@@ -172,7 +175,7 @@ def solve(
 
         # Solve the elements
         starte = time.time()
-        element_solver2(
+        cnt_set_zero = element_solver2(
             num_elements,
             element_struc_array,
             fracture_struc_array,
@@ -185,6 +188,8 @@ def solve(
             coef_increase,
         )
         timee = time.time() - starte
+        sum_timee += timee
+        sum_timeq += timeq
 
         error, _id = get_error(element_struc_array)
 
@@ -194,14 +199,16 @@ def solve(
                 f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
             )
             logger.debug(
-                f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
+                f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f}), "
+                f"Elements set to zero: {cnt_set_zero}"
             )
         else:
             logger.info(
                 f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
             )
             logger.debug(
-                f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
+                f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f}), "
+                f"Elements set to zero: {cnt_set_zero}"
             )
             e = element_struc_array[_id]
             # print(
@@ -232,6 +239,8 @@ def solve(
     logger.info("Solver results")
     logger.info("---------------------------------------")
     logger.info(f"Iterations: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, ")
+    logger.debug(f"Total element solve time: {sum_timee:.2f} sec")
+    logger.debug(f"Total matrix solve time: {sum_timeq:.2f} sec")
     solve_time = time.time() - start
     days, rem = divmod(solve_time, 86400)
     hours, rem = divmod(rem, 3600)
@@ -260,12 +269,8 @@ def get_error(element_struc_array):
     _id : int
         The id of the element with the maximum error
     """
-    error = 0.0
-    _id = 0
-    for e in element_struc_array:
-        if e["error"] > error:
-            error = e["error"]
-            _id = e["_id"]
+    error = np.max(element_struc_array["error"])
+    _id = np.argmax(element_struc_array["error"])
     return error, _id
 
 
@@ -422,9 +427,9 @@ def element_solver2(
         nit_el += 1
 
         # Solve the elements
-        if nit <= 2000:
+        if nit <= 200:
             for _ in range(1):
-                cnt = element_solver(
+                element_solver(
                     num_elements,
                     element_struc_array,
                     fracture_struc_array,
@@ -444,7 +449,7 @@ def element_solver2(
         for i in nb.prange(num_elements):
             # TODO: check if I can use sum(coef) and look if the change in sum due to the last 3 is significant,
             #  maybe also check if the error is continously increasing for an element (possibly track error history)
-            set_zero = False
+            work_array[i]["set_zero"] = False
             e = element_struc_array[i]
             if e["_type"] == 2:  # Well
                 continue
@@ -463,7 +468,7 @@ def element_solver2(
                 and e["error"] > max_error
                 and nit > 5
             ):
-                set_zero = True
+                work_array[i]["set_zero"] = True
                 # coef_ratio = max_coef_ratio + 1.0
             if (
                 np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc]) + 1e-30))
@@ -531,33 +536,32 @@ def element_solver2(
                 # The coefficients needs to be reset to zero if the number of coefficients is increased, otherwise the
                 # error might grow if the discharge are computed with faulty coefficients
                 if cnt == max_cnt:
-                    set_zero = True
+                    work_array[i]["set_zero"] = True
                 # print(f"Element {e['_id']} of type {e['_type']} has been set to zero coefficients due to high coefficient ratio.")
-            if set_zero:
-                # work_array[i]["old_coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
-                # work_array[i]["coef"][: e["ncoef"]] = 0.0  # TODO: Calculate the error again here? DO!!!
-                work_array[i]["coef"][: e["ncoef"]] = (
-                    work_array[i]["coef"][: e["ncoef"]] / 10.0
-                )
-                e["error_old"] = 1e30
 
         for i in nb.prange(num_elements):
             e = element_struc_array[i]
+            if work_array[i]["set_zero"]:
+                work_array[i]["coef"][: e["ncoef"]] = (
+                    work_array[i]["coef"][: e["ncoef"]] / 100.0
+                )
+                e["error_old"] = 1e30
             e["coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
 
         # Solve the elements
         if nit <= -2000:
-            cnt = element_solver(
-                num_elements,
-                element_struc_array,
-                fracture_struc_array,
-                work_array,
-                max_error,
-                nit,
-                cnt_error,
-            )
+            for _ in range(1):
+                element_solver(
+                    num_elements,
+                    element_struc_array,
+                    fracture_struc_array,
+                    work_array,
+                    max_error,
+                    nit,
+                    cnt_error,
+                )
 
-    return cnt
+    return np.sum(work_array["set_zero"])
 
 
 def solve_discharge_matrix(
