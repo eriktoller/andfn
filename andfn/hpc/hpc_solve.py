@@ -46,7 +46,7 @@ dtype_work = np.dtype(
 )
 
 dtype_z_arrays = np.dtype(
-    [("z0", complex, MAX_ELEMENTS), ("z1", complex, MAX_ELEMENTS)]
+    [("z0", complex, MAX_NCOEF * 2), ("z1", complex, MAX_NCOEF * 2)]
 )
 
 logger = logging.getLogger("andfn")
@@ -152,7 +152,7 @@ def solve(
         nit += 1
         # Solve the discharge matrix
         startq = time.time()
-        if error_q > max_error or cnt_error > 0:
+        if error_q > max_error / 1e30:
             discharges_old[:] = discharges[:]
             solve_discharge_matrix(
                 fracture_struc_array,
@@ -232,6 +232,7 @@ def solve(
 
         if error < max_error and error_q < max_error:
             cnt_error += 1
+            error_q = 1e30
             # error = 1.0
 
     # Print the solver results
@@ -343,7 +344,7 @@ def element_solver(
     # Solve the elements
     for i in nb.prange(num_elements):
         e = element_struc_array[i]
-        if e["error"] < max_error and nit > 30 and cnt_error == 0:
+        if e["error"] < max_error * 0 and nit > 30 and cnt_error == 0:
             cnt += 1
             continue
         if e["_type"] == 0:  # Intersection
@@ -427,7 +428,7 @@ def element_solver2(
         nit_el += 1
 
         # Solve the elements
-        if nit <= 200:
+        if nit <= 20000:
             for _ in range(1):
                 element_solver(
                     num_elements,
@@ -469,10 +470,12 @@ def element_solver2(
                 and nit > 5
             ):
                 work_array[i]["set_zero"] = True
-                # coef_ratio = max_coef_ratio + 1.0
+                work_array[i]["set_zero"] = False
+                coef_ratio = max_coef_ratio + 1.0
             if (
                 np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc]) + 1e-30))
                 > max_coef_ratio
+                and e["error"] > max_error
             ):
                 coef_ratio = max_coef_ratio + 1.0
             cnt = 0
@@ -537,15 +540,20 @@ def element_solver2(
                 # error might grow if the discharge are computed with faulty coefficients
                 if cnt == max_cnt:
                     work_array[i]["set_zero"] = True
+                    work_array[i]["set_zero"] = False
                 # print(f"Element {e['_id']} of type {e['_type']} has been set to zero coefficients due to high coefficient ratio.")
 
         for i in nb.prange(num_elements):
             e = element_struc_array[i]
             if work_array[i]["set_zero"]:
                 work_array[i]["coef"][: e["ncoef"]] = (
-                    work_array[i]["coef"][: e["ncoef"]] / 100.0
+                    work_array[i]["coef"][: e["ncoef"]] / 100.0 * 0
                 )
                 e["error_old"] = 1e30
+            # if e["_type"] == 0:  # Intersection
+            #    work_array[i]["coef"][: e["ncoef"]] = (
+            #            work_array[i]["coef"][: e["ncoef"]]* 0
+            #    )
             e["coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
 
         # Solve the elements
@@ -854,7 +862,7 @@ def get_discharge_matrix_arrays(
     # Add the discharge for each discharge element
     for j in nb.prange(discharge_elements.size):
         e = discharge_elements[j]
-        cnt_par = discharge_elements.size * j
+        cnt_par = size * j
         row = j
         if e["_type"] == 0:  # Intersection
             z0 = z_int["z0"][j][:discharge_int]
@@ -964,10 +972,11 @@ def get_discharge_matrix_arrays(
     for j in nb.prange(fractures_struc_array.size):
         f = fractures_struc_array[j]
         row = discharge_elements.size + j
-        cnt_par = (
-            discharge_elements.size * discharge_elements.size
-            + fractures_struc_array.size * j
-        )
+        cnt_par = size * discharge_elements.size + size * j
+        # if there are only one (or less) discharge element in the fracture, skip
+        # num_discharge_el = sum([e in discharge_elements["_id"] for e in f["elements"][: f["nelements"]]])
+        # if num_discharge_el <= 1:
+        #    continue
         # fill the matrix for the fractures
         for e in element_struc_array[f["elements"][: f["nelements"]]]:
             if e["_type"] in [0, 2, 3]:  # Intersection, Well, Constant head line

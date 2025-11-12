@@ -12,6 +12,7 @@ import andfn
 from . import fracture
 from . import intersection
 from . import const_head
+from .impermeable_object import ImpermeableLine
 import andfn.hpc.hpc_geometry_functions as hpc_gf
 
 
@@ -561,6 +562,146 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
                     fr2.add_element(intersections)
 
     return fractures
+
+
+def split_crossing_elements(fractures):
+    """
+    Function that splits crossing intersection elements in a list of fractures. If two intersection elements cross each
+    other, they are split into four new intersection elements.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+
+    Returns
+    -------
+    fractures : list
+        A list of fractures with crossing intersection elements split.
+    """
+
+    def check_crossing(el, el2, frac):
+        if el.frac0 == frac:
+            z0 = el.endpoints0[0]
+            z1 = el.endpoints0[1]
+        else:
+            z0 = el.endpoints1[0]
+            z1 = el.endpoints1[1]
+        if el2.frac0 == frac:
+            z2 = el2.endpoints0[0]
+            z3 = el2.endpoints0[1]
+        else:
+            z2 = el2.endpoints1[0]
+            z3 = el2.endpoints1[1]
+
+        z = line_line_intersection(
+            el.endpoints0[0], el.endpoints0[1], el2.endpoints0[0], el2.endpoints0[1]
+        )
+        if z is None:
+            return False
+        atol = 1e-12
+        if np.abs(np.abs(z - z0) + np.abs(z1 - z) - np.abs(z0 - z1)) > atol:
+            return False
+
+        if np.abs(np.abs(z - z2) + np.abs(z - z3) - np.abs(z2 - z3)) > atol:
+            return False
+        ltol = 1e-10
+        if (
+            (np.abs(z - z0) < ltol)
+            or (np.abs(z - z1) < ltol)
+            or (np.abs(z - z2) < ltol)
+            or (np.abs(z - z3) < ltol)
+        ):
+            return False
+        return z
+
+    def create_new_element(frac, el, new_endpoints0, new_endpoints1):
+        if isinstance(el, intersection.Intersection):
+            # map endpoints to correct fractures
+            if el.frac0 == frac:
+                z3d = map_2d_to_3d(new_endpoints0, frac)
+                new_endpoints1 = map_3d_to_2d(z3d, el.frac1)
+            else:
+                z3d = map_2d_to_3d(new_endpoints1, frac)
+                new_endpoints0 = map_3d_to_2d(z3d, el.frac0)
+            intersection.Intersection(
+                f"{el.label}_part",
+                new_endpoints0,
+                new_endpoints1,
+                el.frac0,
+                el.frac1,
+                el.ncoef,
+                el.nint,
+            )
+        elif isinstance(el, const_head.ConstantHeadLine):
+            const_head.ConstantHeadLine(
+                f"{el.label}_part",
+                new_endpoints0,
+                el.head,
+                el.frac,
+                el.ncoef,
+                el.nint,
+            )
+        elif isinstance(el, ImpermeableLine):
+            ImpermeableLine(
+                f"{el.label}_part",
+                new_endpoints0,
+                el.frac,
+                el.ncoef,
+                el.nint,
+            )
+
+    def split_element_at_point(frac, el, el2, z):
+        if el.frac0 == frac:
+            z0 = el.endpoints0[0]
+            z1 = el.endpoints0[1]
+        else:
+            z0 = el.endpoints1[0]
+            z1 = el.endpoints1[1]
+        if el2.frac0 == frac:
+            z2 = el2.endpoints0[0]
+            z3 = el2.endpoints0[1]
+        else:
+            z2 = el2.endpoints1[0]
+            z3 = el2.endpoints1[1]
+        # Split el
+        new_el1_endpoints0 = np.array([z0, z])
+        new_el2_endpoints0 = np.array([z, z1])
+        # Split el2
+        new_el1_endpoints1 = np.array([z2, z])
+        new_el2_endpoints1 = np.array([z, z3])
+        create_new_element(frac, el, new_el1_endpoints0, new_el1_endpoints1)
+        create_new_element(frac, el, new_el2_endpoints0, new_el2_endpoints1)
+        create_new_element(frac, el2, new_el1_endpoints1, new_el1_endpoints0)
+        create_new_element(frac, el2, new_el2_endpoints1, new_el2_endpoints0)
+
+        # Remove old elements
+        frac.delete_element(el)
+        frac.delete_element(el2)
+
+    for fr in fractures:
+        cond = True
+        while cond:
+            cond = False
+            elements = [
+                el
+                for el in fr.elements
+                if isinstance(el, intersection.Intersection)
+                or isinstance(el, const_head.ConstantHeadLine)
+                or isinstance(el, ImpermeableLine)
+            ]
+            n_elements = len(elements)
+            for i in range(n_elements):
+                el = elements[i]
+                for j in range(i + 1, n_elements):
+                    el2 = elements[j]
+                    z = check_crossing(el, el2, fr)
+                    if z is not False:
+                        cond = True
+                        split_element_at_point(fr, el, el2, z)
+                        break
+
+    print("coming here")
 
 
 def remove_isolated_fractures(fractures):

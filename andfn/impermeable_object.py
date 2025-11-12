@@ -4,10 +4,10 @@ Notes
 This module contains the impermeable object classes.
 """
 
-import numpy as np
-from .element import Element
 from . import math_functions as mf
 from . import geometry_functions as gf
+import numpy as np
+from .element import Element
 
 
 class _ImpermeableEllipse:
@@ -77,7 +77,6 @@ class ImpermeableCircle(Element):
         # Set the kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
-
 
     def __str__(self):
         return f"Impermeable circle: {self.label}"
@@ -179,7 +178,6 @@ class ImpermeableLine(Element):
         # Set the kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
-
 
     def __str__(self):
         return f"Impermeable line: {self.label}"

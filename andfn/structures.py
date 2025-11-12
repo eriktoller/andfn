@@ -364,7 +364,7 @@ class RegularPolygonPrism(Structure):
             # Create constant head elements for the tunnel in this fracture
             self.assign_elements(frac, pnts_inside, pnts)
             # Check if there are any other elements in the fracture that are inside the tunnel
-            self.check_internal_elements(frac)
+            # self.check_internal_elements(frac)
 
     def assign_elements(self, frac, pnts_inside, pnts):
         """

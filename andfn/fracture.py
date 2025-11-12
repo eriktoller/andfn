@@ -226,6 +226,24 @@ class Fracture:
         else:
             self.elements.append(new_element)
 
+    def delete_element(self, element):
+        """
+        Deletes an element from the fracture.
+
+        Parameters
+        ----------
+        element : Element
+            The element to delete from the fracture.
+        """
+        if element in self.elements:
+            if isinstance(element, Intersection):
+                element.frac0.elements.remove(element)
+                element.frac1.elements.remove(element)
+            else:
+                self.elements.remove(element)
+        else:
+            print("Element not in fracture.")
+
     def get_discharge_elements(self):
         """
         Returns the elements in the fracture that have a discharge.

@@ -596,6 +596,12 @@ class DFN(Constants):
         """
         Gets the elements from the fractures and add store them in the DFN.
         """
+        # reset the discharge matrix and elements
+        self.discharge_matrix = None
+        self.elements = None
+        self.discharge_elements = None
+        self.lup = None
+
         elements = []
         for f in self.fractures:
             if f.elements is None or len(f.elements) == 0:
@@ -603,6 +609,11 @@ class DFN(Constants):
             for e in f.elements:
                 if e not in elements:
                     elements.append(e)
+        # sort the elements by their type
+        bounding = [e for e in elements if isinstance(e, BoundingCircle)]
+        intersections = [e for e in elements if isinstance(e, Intersection)]
+        const_head_lines = [e for e in elements if isinstance(e, ConstantHeadLine)]
+        elements = bounding + const_head_lines + intersections
         self.elements = elements
         logger.info(f"Added {len(self.elements)} elements to the DFN.")
 
@@ -1249,7 +1260,7 @@ class DFN(Constants):
                 fracs.append(f)
         return fracs
 
-    def plot_input(self, pl=None, line_width=3.0):
+    def plot_input(self, pl=None, line_width=3.0, point_size=5.0):
         """
         Plots the input of the DFN, i.e. the fractures and elements.
 
@@ -1259,6 +1270,8 @@ class DFN(Constants):
             The plotter object to use. If None, a new plotter is created and shown.
         line_width : float
             The line width of the elements in the plot. Default is 3.0.
+        point_size : float
+            The point size of the elements in the plot. Default is 5.0.
 
         Returns
         -------
@@ -1269,7 +1282,7 @@ class DFN(Constants):
         if pl is None:
             pl = self.initiate_plotter()
             show = True
-        self.plot_fractures(pl)
+        self.plot_fractures(pl, opacity=0.2, line_width=line_width)
         labels = {}
         for s in self.structures:
             s.plot(pl)
@@ -1278,7 +1291,7 @@ class DFN(Constants):
             for e in self.elements:
                 if e._type == 1:  # Bounding circle
                     continue
-                e.plot(pl, line_width=line_width, color=None)
+                e.plot(pl, line_width=line_width, color=None, point_size=point_size)
                 labels[f" {e.__class__.__name__}"] = ELEMENT_COLORS[e._type]
 
         # Add the legend
@@ -1462,7 +1475,7 @@ class DFN(Constants):
         ----------
         pl : pyvista.Plotter
             The plotter object.
-        lvs : int
+        lvs : int | bool
             The number of levels to contour for the flow net.
         n_points : int
             The number of points to use for the flow net.
@@ -1511,7 +1524,8 @@ class DFN(Constants):
             logger.debug(f"Calculated limits for the color map: {limits}")
 
         # Calculate the levels for the contours
-        lvs = np.linspace(limits[0], limits[1], lvs)
+        if lvs is not False:
+            lvs = np.linspace(limits[0], limits[1], lvs)
 
         # Create the PyVista meshes and plot for all fractures
         # Get the faces for the Delaunay triangulation (since we use the same triangulation for all fractures)
@@ -1601,7 +1615,9 @@ class DFN(Constants):
             logger.debug(f"Plotting elements: {i + 1} / {len(self.elements)}")
         logger.debug("")
 
-    def plot_sparse_matrix(self, save=False, name="sparse_matrix.png"):
+    def plot_sparse_matrix(
+        self, save=False, filename="sparse_matrix.png", black_bg=True
+    ):
         """
         Plots the sparse matrix of the DFN.
 
@@ -1609,8 +1625,10 @@ class DFN(Constants):
         ----------
         save : bool
             Whether to save the plot.
-        name : str
+        filename : str
             The name of the plot.
+        black_bg : bool
+            Whether to use a black background.
 
         Returns
         -------
@@ -1630,16 +1648,27 @@ class DFN(Constants):
 
         # Set up the figure
         fig, ax = plt.subplots(figsize=(10, 10))
-        # set background color of plot surface
-        fig.set_facecolor("black")
-        ax.set_facecolor("black")
+        if black_bg:
+            fig.set_facecolor("black")
+            ax.set_facecolor("black")
+            tick_color = "white"
+            title_color = "white"
+            spine_color = "white"
+            spy_color = "white"
+        else:
+            fig.set_facecolor("white")
+            ax.set_facecolor("white")
+            tick_color = "black"
+            title_color = "black"
+            spine_color = "black"
+            spy_color = "black"
         # set tick and title color and axis box
-        ax.tick_params(axis="x", colors="white")
-        ax.tick_params(axis="y", colors="white")
-        ax.title.set_color("white")
+        ax.tick_params(axis="x", colors=tick_color)
+        ax.tick_params(axis="y", colors=tick_color)
+        ax.title.set_color(title_color)
         for spine in ["top", "left", "right", "bottom"]:
-            ax.spines[spine].set_color("white")
-        ax.spy(self.discharge_matrix, markersize=0.5, color="white")
+            ax.spines[spine].set_color(spine_color)
+        ax.spy(self.discharge_matrix, markersize=0.5, color=spy_color)
         # Equal axis
         ax.set_aspect("equal")
 
@@ -1652,7 +1681,7 @@ class DFN(Constants):
             f"{num_zeros - num_entries}\nFilled percentage: {num_entries / num_zeros * 100:.2f}%"
         )
         if save:
-            plt.savefig(name)
+            plt.savefig(filename)
         plt.show()
 
     def plot_ncoef(self, save=False, name="ncoef.png"):
@@ -1685,6 +1714,8 @@ class DFN(Constants):
             ncoef.append(e.ncoef)
         fig, ax = plt.subplots(figsize=(10, 5), tight_layout=True)
         nbins = np.ceil((max(ncoef) - min(ncoef)) / 5).astype(int)
+        if nbins < 1:
+            nbins = 1
         counts, edges, bars = ax.hist(
             ncoef, bins=nbins, color="grey", edgecolor="black"
         )
