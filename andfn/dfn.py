@@ -610,10 +610,16 @@ class DFN(Constants):
                 if e not in elements:
                     elements.append(e)
         # sort the elements by their type
-        bounding = [e for e in elements if isinstance(e, BoundingCircle)]
-        intersections = [e for e in elements if isinstance(e, Intersection)]
-        const_head_lines = [e for e in elements if isinstance(e, ConstantHeadLine)]
-        elements = bounding + const_head_lines + intersections
+        intersections = [e for e in elements if getattr(e, "_type", None) == 0]
+        bounding = [e for e in elements if getattr(e, "_type", None) == 1]
+        wells = [e for e in elements if getattr(e, "_type", None) == 2]
+        const_head_lines = [e for e in elements if getattr(e, "_type", None) == 3]
+        imp_circle = [e for e in elements if getattr(e, "_type", None) == 4]
+        imp_line = [e for e in elements if getattr(e, "_type", None) == 5]
+
+        elements = (
+            bounding + imp_circle + imp_line + const_head_lines + wells + intersections
+        )
         self.elements = elements
         logger.info(f"Added {len(self.elements)} elements to the DFN.")
 
@@ -691,6 +697,9 @@ class DFN(Constants):
         self.discharge_matrix = None
         self.elements = None
         self.discharge_elements = None
+
+        for f in self.fractures:
+            f.set_id(self.fractures.index(f))
 
     def add_structure(self, new_structure):
         """
@@ -970,7 +979,7 @@ class DFN(Constants):
         # Update the elements in the DFN
         self.get_elements()
 
-    def get_dfn_center(self):
+    def center(self):
         """
         Gets the center of the DFN.
         """
@@ -978,6 +987,39 @@ class DFN(Constants):
         for f in self.fractures:
             center += f.center
         return center / len(self.fractures)
+
+    def size(self):
+        """
+        Gets the size of the DFN.
+        """
+        min_x = np.inf
+        max_x = -np.inf
+        min_y = np.inf
+        max_y = -np.inf
+        min_z = np.inf
+        max_z = -np.inf
+
+        for f in self.fractures:
+            c = f.center
+            r = f.radius
+            min_x = min(min_x, c[0] - r)
+            max_x = max(max_x, c[0] + r)
+            min_y = min(min_y, c[1] - r)
+            max_y = max(max_y, c[1] + r)
+            min_z = min(min_z, c[2] - r)
+            max_z = max(max_z, c[2] + r)
+
+        return np.array([max_x - min_x, max_y - min_y, max_z - min_z])
+
+    def smallest_fracture_radius(self):
+        """
+        Gets the smallest fracture radius in the DFN.
+        """
+        min_radius = np.inf
+        for f in self.fractures:
+            if f.radius < min_radius:
+                min_radius = f.radius
+        return min_radius
 
     def set_constant_head_boundary(
         self,
@@ -1016,6 +1058,94 @@ class DFN(Constants):
             label,
             self.constants["SE_FACTOR"],
         )
+
+    def shorten_elements(self, factor=None):
+        """
+        Shortens the elements in the DFN based on the SE_FACTOR constant. Only applicable to line elements.
+
+        Parameters
+        ----------
+        factor : float, optional
+            The factor to shorten the elements by. If None, uses the SE_FACTOR constant. If provided, overrides the SE_FACTOR constant.
+        """
+        if self.elements is None:
+            self.get_elements()
+
+        if factor is not None:
+            self.constants["SE_FACTOR"] = factor
+
+        for e in self.elements:
+            if isinstance(e, (ConstantHeadLine, ImpermeableLine)):
+                endpoints = e.endpoints0
+                new_endpoints = gf.shorten_line(endpoints, self.constants["SE_FACTOR"])
+                e.endpoints0 = new_endpoints
+            elif isinstance(e, Intersection):
+                endpoints0 = e.endpoints0
+                endpoints1 = e.endpoints1
+                new_endpoints0 = gf.shorten_line(
+                    endpoints0, self.constants["SE_FACTOR"]
+                )
+                new_endpoints1 = gf.shorten_line(
+                    endpoints1, self.constants["SE_FACTOR"]
+                )
+                e.endpoints0 = new_endpoints0
+                e.endpoints1 = new_endpoints1
+
+    def remove_small_elements(self, min_length):
+        """
+        Removes elements from the DFN that are smaller than the specified minimum length.
+
+        Parameters
+        ----------
+        min_length : float
+            The minimum length of the elements to keep.
+        """
+        if self.elements is None:
+            self.get_elements()
+
+        cnt = 0
+        for f in self.fractures:
+            elements_to_remove = []
+            for e in f.elements:
+                if isinstance(e, Intersection):
+                    length = np.linalg.norm(e.endpoints0[1] - e.endpoints0[0])
+                    if length < min_length:
+                        elements_to_remove.append(e)
+                elif isinstance(e, (ConstantHeadLine, ImpermeableLine)):
+                    length = np.linalg.norm(e.endpoints0[1] - e.endpoints0[0])
+                    if length < min_length:
+                        elements_to_remove.append(e)
+            for e in elements_to_remove:
+                f.delete_element(e)
+                del e
+                cnt += 1
+        logger.info(f"Removed {cnt} elements smaller than {min_length} units.")
+
+        # Check if fractures have no elements and remove them
+        flen = len(self.fractures)
+        fracs = gf.remove_isolated_fractures(self.fractures)
+        self.fractures = []
+        self.add_fracture(fracs)
+        rlen = flen - len(self.fractures)
+        if rlen > 0:
+            logger.info(f"Removed {rlen} fractures with no elements.")
+
+        # Update the elements in the DFN
+        self.get_elements()
+
+    def check_connectivity(self):
+        """
+        Checks the connectivity of the DFN and removes isolated fractures.
+        """
+
+        connectivity, remove_fracs = gf.check_connectivity(self.fractures)
+        if not connectivity:
+            for f in remove_fracs:
+                self.delete_fracture(f)
+            logger.info(f"Removed {len(remove_fracs)} isolated fractures from the DFN.")
+
+        # Update the elements in the DFN
+        self.get_elements()
 
     ####################################################################################################################
     #                      Solve functions                                                                             #
@@ -1260,7 +1390,9 @@ class DFN(Constants):
                 fracs.append(f)
         return fracs
 
-    def plot_input(self, pl=None, line_width=3.0, point_size=5.0):
+    def plot_input(
+        self, pl=None, line_width=3.0, point_size=5.0, opacity_fractures=0.2
+    ):
         """
         Plots the input of the DFN, i.e. the fractures and elements.
 
@@ -1272,6 +1404,8 @@ class DFN(Constants):
             The line width of the elements in the plot. Default is 3.0.
         point_size : float
             The point size of the elements in the plot. Default is 5.0.
+        opacity_fractures : float
+            The opacity of the fractures in the plot. Default is 0.2.
 
         Returns
         -------
@@ -1282,7 +1416,7 @@ class DFN(Constants):
         if pl is None:
             pl = self.initiate_plotter()
             show = True
-        self.plot_fractures(pl, opacity=0.2, line_width=line_width)
+        self.plot_fractures(pl, opacity=opacity_fractures, line_width=line_width)
         labels = {}
         for s in self.structures:
             s.plot(pl)

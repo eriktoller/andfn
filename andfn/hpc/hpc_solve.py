@@ -141,6 +141,7 @@ def solve(
     logger.info(f"Number of entries in discharge matrix: {discharge_matrix.getnnz()}")
 
     error = np.float64(1.0)
+    error_coef = np.float64(1.0)
     nit = 0
     cnt_error = 0
     cnt_bnd = 0
@@ -192,11 +193,12 @@ def solve(
         sum_timeq += timeq
 
         error, _id = get_error(element_struc_array)
+        error_coef = np.max(element_struc_array["error_coef"])
 
         # print info
         if nit < 10:
             logger.info(
-                f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
+                f"Iteration: 0{nit}, Error E: {error:.3e}, Coef: {error_coef:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
             )
             logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f}), "
@@ -204,7 +206,7 @@ def solve(
             )
         else:
             logger.info(
-                f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
+                f"Iteration: {nit}, Error E: {error:.3e}, Coef: {error_coef:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
             )
             logger.debug(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f}), "
@@ -230,7 +232,7 @@ def solve(
             )
             # error = 1.0
 
-        if error < max_error and error_q < max_error:
+        if error_coef < max_error and error_q < max_error:
             cnt_error += 1
             error_q = 1e30
             # error = 1.0
@@ -428,7 +430,7 @@ def element_solver2(
         nit_el += 1
 
         # Solve the elements
-        if nit <= 20000:
+        if nit <= 2000000000000:
             for _ in range(1):
                 element_solver(
                     num_elements,
@@ -481,7 +483,7 @@ def element_solver2(
             cnt = 0
 
             # Increase the number of coefficients if the ratio is too high
-            max_cnt = 5
+            max_cnt = 1
             while (
                 coef_ratio > max_coef_ratio
                 and e["ncoef"] < max_coef
@@ -968,7 +970,7 @@ def get_discharge_matrix_arrays(
             inds[cnt_par] = 1
             cnt_par += 1
 
-    # Add the constants for each fracture
+    # Add the continuity of flow conditions for each fracture
     for j in nb.prange(fractures_struc_array.size):
         f = fractures_struc_array[j]
         row = discharge_elements.size + j

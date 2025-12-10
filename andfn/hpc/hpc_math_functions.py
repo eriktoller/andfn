@@ -552,6 +552,33 @@ def calc_error(coef, coef_ref):
     return error
 
 
+@nb.njit(inline="always")
+def calc_coef_error(coef, coef_ref):
+    """
+    Function that calculates the error between two sets of coefficients.
+
+    Parameters
+    ----------
+    coef : np.ndarray
+        The coefficients to compare
+    coef_ref : np.ndarray
+        The reference coefficients
+
+    Return
+    ------
+    error : float
+        The error
+    """
+    error = 0.0
+    if np.sum(np.abs(coef_ref[:5])) < 1e-15:
+        return error
+    # for i in range(len(coef)):
+    n = len(coef)
+    for i in range(n):
+        error += np.abs(coef[i] - coef_ref[i])
+    return error / n
+
+
 @nb.njit()
 def calc_thetas(n, _type, thetas):
     """

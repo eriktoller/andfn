@@ -64,6 +64,7 @@ element_dtype_hpc = np.dtype(
         ("error", np.float64),
         ("error_old", np.float64),
         ("error_old2", np.float64),
+        ("error_coef", np.float64),
     ]
 )
 """
@@ -433,22 +434,9 @@ class Element:
             5,
         ]:  # Intersection, Constant Head Line, Impermeable Line
             line = gf.map_2d_to_3d(self.endpoints0, self.frac0)
-            if self._type == 0:  # Intersection
-                """
-                line1 = gf.map_2d_to_3d(self.endpoints1, self.frac1) - np.array([0, 0, 500])
-                pl.add_mesh(
-                    pv.Line(line1[0], line1[1]),
-                    color=color if color is not None else "#{:06x}".format(np.random.randint(0, 0xFFFFFF)),
-                    line_width=line_width*10,
-                    show_edges=True,
-                    render_points_as_spheres=True,
-                    point_size=point_size,
-                    show_vertices=True,
-                )
-                """
             pl.add_mesh(
                 pv.Line(line[0], line[1]),
-                # color=color if color is not None else ELEMENT_COLORS[self._type],
+                color=color if color is not None else ELEMENT_COLORS[self._type],
                 line_width=line_width,
                 show_edges=True,
                 render_points_as_spheres=True,

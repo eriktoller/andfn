@@ -11,7 +11,8 @@ import numpy as np
 import andfn
 from . import fracture
 from . import intersection
-from . import const_head
+from .const_head import ConstantHeadLine
+from .well import Well
 from .impermeable_object import ImpermeableLine
 import andfn.hpc.hpc_geometry_functions as hpc_gf
 
@@ -472,12 +473,8 @@ def get_connected_fractures(
                             or length < tolerance * fr2.radius
                         ):
                             continue
-                        endpoints01 = shorten_line(
-                            endpoints0[0], endpoints0[1], se_factor
-                        )
-                        endpoints11 = shorten_line(
-                            endpoints1[0], endpoints1[1], se_factor
-                        )
+                        endpoints01 = shorten_line(endpoints0, se_factor)
+                        endpoints11 = shorten_line(endpoints1, se_factor)
                         intersection.Intersection(
                             f"{fr.label}_{fr2.label}",
                             endpoints01,
@@ -547,8 +544,8 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
                         or length < tolerance * fr2.radius
                     ):
                         continue
-                    endpoints01 = shorten_line(endpoints0[0], endpoints0[1], se_factor)
-                    endpoints11 = shorten_line(endpoints1[0], endpoints1[1], se_factor)
+                    endpoints01 = shorten_line(endpoints0, se_factor)
+                    endpoints11 = shorten_line(endpoints1, se_factor)
                     intersections = intersection.Intersection(
                         f"{fr.label}_{fr2.label}",
                         endpoints01,
@@ -633,8 +630,8 @@ def split_crossing_elements(fractures):
                 el.ncoef,
                 el.nint,
             )
-        elif isinstance(el, const_head.ConstantHeadLine):
-            const_head.ConstantHeadLine(
+        elif isinstance(el, ConstantHeadLine):
+            ConstantHeadLine(
                 f"{el.label}_part",
                 new_endpoints0,
                 el.head,
@@ -687,7 +684,7 @@ def split_crossing_elements(fractures):
                 el
                 for el in fr.elements
                 if isinstance(el, intersection.Intersection)
-                or isinstance(el, const_head.ConstantHeadLine)
+                or isinstance(el, ConstantHeadLine)
                 or isinstance(el, ImpermeableLine)
             ]
             n_elements = len(elements)
@@ -767,30 +764,91 @@ def set_head_boundary(
             continue
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
-            endpoints = shorten_line(endpoints1[0], endpoints1[1], se_factor)
-            const_head.ConstantHeadLine(
-                f"{label}_{fr2.label}", endpoints, head, fr2, ncoef, nint
-            )
+            endpoints = shorten_line(endpoints1, se_factor)
+            ConstantHeadLine(f"{label}_{fr2.label}", endpoints, head, fr2, ncoef, nint)
 
 
-def shorten_line(z0, z1, se_factor):
+def shorten_line(endpoints, se_factor):
     """
     Function that shortens a line segment by a given se_factor and keeps the same center point.
 
     Parameters
     ----------
-    z0 : complex
-    z1 : complex
+    endpoints : np.ndarray
+        The endpoints of the line segment.
     se_factor : float
 
     Returns
     -------
     np.ndarray
     """
+    z0 = endpoints[0]
+    z1 = endpoints[1]
     center = (z0 + z1) / 2
     z0 = center + (z0 - center) * se_factor
     z1 = center + (z1 - center) * se_factor
     return np.array([z0, z1])
+
+
+def check_connectivity(fractures):
+    """
+    Function that checks the connectivity of a list of fractures. The function returns
+    any fractures that are not connected to a constant head boundary.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+
+    Returns
+    -------
+    bool
+        True if all fractures are connected, False otherwise.
+    """
+    boundary_fracs = []
+    for f in fractures:
+        for el in f.elements:
+            if isinstance(el, (ConstantHeadLine, Well)):
+                boundary_fracs.append(f)
+                break
+
+    # Get all connected fractures to the boundary fractures
+    fracture_list_it = boundary_fracs.copy()
+    connected_fractures = boundary_fracs.copy()
+    fracture_list_it_temp = []
+    fracture_list = [f for f in fractures if f not in connected_fractures]
+    while fracture_list_it:
+        for i, fr in enumerate(fracture_list_it):
+            if any(isinstance(el, intersection.Intersection) for el in fr.elements):
+                fracture_list_it_temp.extend(
+                    [
+                        el.frac1
+                        for el in fr.elements
+                        if isinstance(el, intersection.Intersection)
+                        and el.frac1 in fracture_list
+                        and el.frac1 not in fracture_list_it_temp
+                    ]
+                )
+                fracture_list_it_temp.extend(
+                    [
+                        el.frac0
+                        for el in fr.elements
+                        if isinstance(el, intersection.Intersection)
+                        and el.frac0 in fracture_list
+                        and el.frac0 not in fracture_list_it_temp
+                    ]
+                )
+
+        fracture_list_it = [
+            f for f in fracture_list_it_temp if f not in connected_fractures
+        ]
+        connected_fractures.extend(fracture_list_it)
+        fracture_list_it_temp = []
+        fracture_list = [f for f in fractures if f not in connected_fractures]
+
+    remove_list = [f for f in fractures if f not in connected_fractures]
+
+    return len(remove_list) == 0, remove_list
 
 
 def convert_trend_plunge_to_normal(trend, plunge):
