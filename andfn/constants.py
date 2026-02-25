@@ -89,7 +89,7 @@ class Constants:
             (
                 1000.0,  # Density of water in kg/m^3
                 9.81,  # Gravitational acceleration in m/s^2
-                1.0,  # SE factor (shortening element length)
+                0.9,  # SE factor (shortening element length)
                 50,  # Maximum number of iterations
                 1e-6,  # Maximum error
                 150,  # Maximum number of coefficients
@@ -192,3 +192,11 @@ class Constants:
         if os.path.exists(".andfn_config.yaml"):
             config = load_yaml_config()
             self.change_constants(**config)
+
+    @staticmethod
+    def change_log_level(level):
+        """
+        Change the log level of the logger
+        :param level: The new log level
+        """
+        logger.setLevel(level)

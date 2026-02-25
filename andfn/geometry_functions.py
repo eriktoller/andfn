@@ -635,7 +635,7 @@ def split_crossing_elements(fractures):
                 f"{el.label}_part",
                 new_endpoints0,
                 el.head,
-                el.frac,
+                el.frac0,
                 el.ncoef,
                 el.nint,
             )
@@ -643,7 +643,7 @@ def split_crossing_elements(fractures):
             ImpermeableLine(
                 f"{el.label}_part",
                 new_endpoints0,
-                el.frac,
+                el.frac0,
                 el.ncoef,
                 el.nint,
             )
@@ -765,7 +765,54 @@ def set_head_boundary(
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
             endpoints = shorten_line(endpoints1, se_factor)
+            if np.linalg.norm(endpoints0[0] - endpoints0[1]) < 1e-10:
+                continue
             ConstantHeadLine(f"{label}_{fr2.label}", endpoints, head, fr2, ncoef, nint)
+
+
+def set_impermeable_boundary(
+    fractures, ncoef, nint, center, radius, normal, label, se_factor
+):
+    """
+    Function that sets an impermeable boundary condition on the intersection line between a fracture and a defined
+    fracture. The impermeable lines are added to the fractures in the list.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+    ncoef : int
+        The number of coefficients for the constant head line.
+    nint : int
+        The number of integration points for the constant head line.
+    center : np.ndarray
+        The center of the constant head fracture plane.
+    radius : float
+        The radius of the constant head fracture plane.
+    normal : np.ndarray
+        The normal vector of the constant head fracture plane.
+    label : str
+        The label of the constant head fracture plane.
+    se_factor : float
+        The shortening element factor. This is used to shorten the constant head line.
+
+    Returns
+    -------
+    None
+    """
+    fracture_surface = andfn.Fracture(label, 1, radius, center, normal, ncoef, nint)
+    fr = fracture_surface
+    for fr2 in fractures:
+        if fr == fr2:
+            continue
+        if np.linalg.norm(fr.center - fr2.center) > fr.radius + fr2.radius:
+            continue
+        endpoints0, endpoints1 = fracture_intersection(fr, fr2)
+        if endpoints0 is not None:
+            endpoints = shorten_line(endpoints1, se_factor)
+            if np.linalg.norm(endpoints0[0] - endpoints0[1]) < 1e-10:
+                continue
+            ImpermeableLine(f"{label}_{fr2.label}", endpoints, fr2, ncoef, nint)
 
 
 def shorten_line(endpoints, se_factor):

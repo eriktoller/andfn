@@ -920,7 +920,9 @@ class DFN(Constants):
         # Add the fractures to the DFN
         self.add_fracture(frac_list)
 
-    def get_fracture_intersections(self, ncoef=5, nint=10, new_frac=None):
+    def get_fracture_intersections(
+        self, ncoef=5, nint=10, new_frac=None, se_factor=None
+    ):
         """
         Finds the intersections between the fractures in the DFN and adds them to the DFN.
 
@@ -932,7 +934,13 @@ class DFN(Constants):
             The number of integration points to use for the intersection elements
         new_frac : Fracture
             The fracture to calculate the intersections for.
+        se_factor : float
+            The shortening element factor to use for the intersection elements.
         """
+
+        if se_factor is None:
+            se_factor = self.constants["SE_FACTOR"]
+
         # Compute intersections between fractures only for frac_surface
         if new_frac is not None:
             fr = new_frac
@@ -942,6 +950,8 @@ class DFN(Constants):
                     continue
                 endpoints0, endpoints1 = gf.fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
+                    endpoints0 = gf.shorten_line(endpoints0, se_factor)
+                    endpoints1 = gf.shorten_line(endpoints1, se_factor)
                     i0 = Intersection(
                         f"{fr.label}_{fr2.label}",
                         endpoints0,
@@ -964,6 +974,8 @@ class DFN(Constants):
                         continue
                     endpoints0, endpoints1 = gf.fracture_intersection(fr, fr2)
                     if endpoints0 is not None:
+                        endpoints0 = gf.shorten_line(endpoints0, se_factor)
+                        endpoints1 = gf.shorten_line(endpoints1, se_factor)
                         i0 = Intersection(
                             f"{fr.label}_{fr2.label}",
                             endpoints0,
@@ -1030,6 +1042,7 @@ class DFN(Constants):
         label="Constant Head Boundary",
         ncoef=5,
         nint=10,
+        se_factor=None,
     ):
         """
         Adds a constant head boundary to the DFN.
@@ -1046,7 +1059,15 @@ class DFN(Constants):
             The head of the constant head boundary.
         label : str
             The label of the constant head boundary.
+        ncoef : int
+            The number of coefficients to use for the constant head boundary elements.
+        nint : int
+            The number of integration points to use for the constant head boundary elements.
+        se_factor : float
+            The shortening element factor to use for the constant head boundary elements.
         """
+        if se_factor is None:
+            se_factor = self.constants["SE_FACTOR"]
         gf.set_head_boundary(
             self.fractures,
             ncoef,
@@ -1056,7 +1077,52 @@ class DFN(Constants):
             radius,
             normal,
             label,
-            self.constants["SE_FACTOR"],
+            se_factor,
+        )
+
+    def set_impermeable_boundary(
+        self,
+        center,
+        normal,
+        radius,
+        label="Impermeable Boundary",
+        ncoef=5,
+        nint=10,
+        se_factor=None,
+    ):
+        """
+        Adds a constant head boundary to the DFN.
+
+        Parameters
+        ----------
+        center : np.ndarray
+            The center of the constant head boundary.
+        normal : np.ndarray
+            The normal of the constant head boundary.
+        radius : float
+            The radius of the constant head boundary.
+        head : float
+            The head of the constant head boundary.
+        label : str
+            The label of the constant head boundary.
+        ncoef : int
+            The number of coefficients to use for the constant head boundary elements.
+        nint : int
+            The number of integration points to use for the constant head boundary elements.
+        se_factor : float
+            The shortening element factor to use for the constant head boundary elements.
+        """
+        if se_factor is None:
+            se_factor = self.constants["SE_FACTOR"]
+        gf.set_impermeable_boundary(
+            self.fractures,
+            ncoef,
+            nint,
+            center,
+            radius,
+            normal,
+            label,
+            se_factor,
         )
 
     def shorten_elements(self, factor=None):
@@ -1601,6 +1667,7 @@ class DFN(Constants):
         contour=True,
         colorbar=True,
         debug=False,
+        fractures=None,
     ):
         """
         Plots the flow net for the fractures in the DFN.
@@ -1629,6 +1696,8 @@ class DFN(Constants):
             Whether to plot the color bar.
         debug : bool
             This will only plot fractures with a head outside the limits.
+        fractures : list
+            The list of fractures to plot. If None, all fractures are plotted.
         """
 
         # Start timer
@@ -1644,9 +1713,23 @@ class DFN(Constants):
         if self.fractures_struc_array_hpc is None:
             self.consolidate_dfn(hpc=True)
 
+        # Only compute fracture that are given in fracs
+        if fractures is not None:
+            fracture_dtype_hpc = self.fractures_struc_array_hpc.dtype
+            self.fractures_struc_array_hpc_fracs = np.empty(
+                len(fractures), dtype=fracture_dtype_hpc
+            )
+            for i, f in enumerate(fractures):
+                idx = self.fractures.index(f)
+                self.fractures_struc_array_hpc_fracs[i] = (
+                    self.fractures_struc_array_hpc[idx]
+                )
+        else:
+            self.fractures_struc_array_hpc_fracs = self.fractures_struc_array_hpc
+
         # Calculate the hydraulic head for each fracture and get the mapped 3d points
         heads, pnts_3d = hpc_get_heads(
-            self.fractures_struc_array_hpc,
+            self.fractures_struc_array_hpc_fracs,
             n_points,
             n_boundary_points,
             self.elements_struc_array_hpc,
@@ -1692,7 +1775,7 @@ class DFN(Constants):
             opacity=opacity,
             show_edges=False,
             line_width=line_width,
-            scalar_bar_args={"title": "Hydraulic Head"},
+            scalar_bar_args=dict(title="Hydraulic Head", shadow=True),
             name=f"head_{i}",
             clim=limits,
         )
@@ -1980,7 +2063,7 @@ class DFN(Constants):
         # just outside the boundary of the element
         while cond:
             # set the ds proportional to the fracture size
-            ds_frac = frac.radius / ds
+            ds_frac = frac.radius * ds
             # get the current number of points
             length = sum([len(s) for s in streamline])
             # Start the tracking process
@@ -2086,10 +2169,10 @@ class DFN(Constants):
         # Check if elevation is below the divide
         if elevation < divide:
             elevation /= divide  # new elevation
-            return down, z0, elevation * 0 + 0.5
+            return down, z0, elevation
 
         elevation = (elevation - divide) / (1 - divide)
-        return up, z0, elevation * 0 + 0.5
+        return up, z0, elevation
 
     @staticmethod
     def runge_kutta(z0, frac, ds, backward, tolerance=1e-6, max_it=10):
