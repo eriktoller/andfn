@@ -55,8 +55,6 @@ class Intersection(Element):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-
-
     def length(self):
         """
         Calculate the length of the intersection

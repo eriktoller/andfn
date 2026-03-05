@@ -126,10 +126,12 @@ class RegularPolygonPrism(Structure):
 
         # Create the vertices in the local coordinate system
         z = x0 + 1j * x1  # Complex representation of the circle in the xy-plane
-        x2_vec = np.array([0, 0, 1])  # z-axis vector
+        x2_vec = np.array([0.0, 0.0, 1.0])  # z-axis vector
         x0_vec = np.cross(direction, x2_vec)  # Perpendicular vector in the xy-plane
         if np.linalg.norm(x0_vec) < 1e-6:  # If the direction is aligned with z-axis
-            x0_vec = np.array([1, 0, 0])
+            x0_vec = np.array([1.0, 0.0, 0.0])
+            x2 = np.cross(direction, x0_vec)
+            x2_vec = x2 / np.linalg.norm(x2)
         x0_vec /= np.linalg.norm(x0_vec)  # Normalize the vector
 
         # Map the xy coordinates to the 3D space
@@ -364,7 +366,7 @@ class RegularPolygonPrism(Structure):
             # Create constant head elements for the tunnel in this fracture
             self.assign_elements(frac, pnts_inside, pnts)
             # Check if there are any other elements in the fracture that are inside the tunnel
-            self.check_internal_elements(frac)
+            # self.check_internal_elements(frac)
 
     def assign_elements(self, frac, pnts_inside, pnts):
         """

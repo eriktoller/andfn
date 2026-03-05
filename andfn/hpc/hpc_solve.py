@@ -21,7 +21,7 @@ from andfn.hpc import (
     PARALLEL,
     CACHE,
 )
-from andfn.element import MAX_NCOEF, MAX_ELEMENTS, MAX_DISCHARGE_INT
+from andfn.element import MAX_NCOEF, MAX_ELEMENTS
 
 dtype_work = np.dtype(
     [
@@ -41,11 +41,12 @@ dtype_work = np.dtype(
         ("exp_array_m", np.complex128, MAX_NCOEF * 2),
         ("exp_array_p", np.complex128, MAX_NCOEF * 2),
         ("z_integral", np.complex128, MAX_NCOEF * 2),
+        ("set_zero", np.bool),
     ]
 )
 
 dtype_z_arrays = np.dtype(
-    [("z0", complex, MAX_ELEMENTS), ("z1", complex, MAX_ELEMENTS)]
+    [("z0", complex, MAX_NCOEF * 2), ("z1", complex, MAX_NCOEF * 2)]
 )
 
 logger = logging.getLogger("andfn")
@@ -54,7 +55,6 @@ logger = logging.getLogger("andfn")
 def solve(
     fracture_struc_array,
     element_struc_array,
-    discharge_matrix,
     discharge_int,
     constants,
 ):
@@ -67,8 +67,6 @@ def solve(
         Array of fractures
     element_struc_array : np.ndarray[element_dtype]
         Array of elements
-    discharge_matrix : np.ndarray
-        The discharge matrix
     discharge_int : int
         The number of integration points
     constants : np.ndarray[constants_dtype]
@@ -86,6 +84,7 @@ def solve(
     coef_ratio = constants["COEF_RATIO"]
     max_coef = constants["MAX_NCOEF"]
     coef_increase = constants["COEF_INCREASE"]
+    damping = float(constants["DAMPING"])
 
     # get the discharge elements
     logger.info("Compiling HPC code...")
@@ -97,15 +96,31 @@ def solve(
     # head matrix
     size = discharge_elements.size + fracture_struc_array.size
     head_matrix = np.zeros(size)
-    discharges = np.zeros(size)
+    discharges = get_old_discharges(
+        element_struc_array, fracture_struc_array, discharge_elements
+    )
     discharges_old = np.zeros(size)
     z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
     get_z_int_array(z_int, discharge_elements, discharge_int)
     z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
     get_z_int_array(z_int_error, element_struc_array, discharge_int)
 
+    # Discharge matrix
+    logger.info("Building discharge matrix...")
+    startdm = time.time()
+    discharge_matrix = build_discharge_matrix(
+        fracture_struc_array,
+        element_struc_array,
+        discharge_elements,
+        discharge_int,
+        z_int,
+    )
+    logger.debug(f"Discharge matrix build time: {time.time() - startdm}")
+
     # LU-factorization
+    startlu = time.time()
     lu_matrix = sp.sparse.linalg.splu(discharge_matrix)
+    logger.debug(f"LU factorization time: {time.time() - startlu}")
 
     # Set old error
     for i in nb.prange(num_elements):
@@ -116,23 +131,30 @@ def solve(
     # fill work array ex_array
     for i, e in enumerate(element_struc_array):
         n = e["nint"]
-        mf.calc_thetas(n, e["_type"], e["thetas"][: n])
+        mf.calc_thetas(n, e["_type"], e["thetas"][:n])
         thetas = e["thetas"]
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_m"], -1)
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_p"], 1)
         mf.fill_z_integral(e, work_array[i])
 
+    logger.info(f"Number of elements: {len(element_struc_array)}")
+    logger.info(f"Number of fractures: {len(fracture_struc_array)}")
+    logger.info(f"Number of entries in discharge matrix: {discharge_matrix.getnnz()}")
+
     error = np.float64(1.0)
+    error_coef = np.float64(1.0)
     nit = 0
     cnt_error = 0
     cnt_bnd = 0
     error_q = 1.0
     start = time.time()
+    sum_timee = 0.0
+    sum_timeq = 0.0
     while cnt_error < 2 and nit < max_iterations:
         nit += 1
         # Solve the discharge matrix
         startq = time.time()
-        if error_q > max_error or cnt_error > 0:
+        if error_q > max_error / 1e30:
             discharges_old[:] = discharges[:]
             solve_discharge_matrix(
                 fracture_struc_array,
@@ -141,16 +163,21 @@ def solve(
                 discharge_int,
                 head_matrix,
                 discharges,
+                discharges_old,
                 z_int,
                 lu_matrix,
             )
             error_q = np.max(np.abs(discharges - discharges_old))
-            error_q = np.mean(np.abs(discharges - discharges_old))
+            error_q = np.mean(np.abs((discharges - discharges_old)))
+            error_q = np.max(
+                np.abs(discharges - discharges_old)
+                / (np.max(np.abs(discharges_old)) + 1e-16)
+            )
         timeq = time.time() - startq
 
         # Solve the elements
         starte = time.time()
-        element_solver2(
+        cnt_set_zero = element_solver2(
             num_elements,
             element_struc_array,
             fracture_struc_array,
@@ -161,29 +188,39 @@ def solve(
             coef_ratio,
             max_coef,
             coef_increase,
+            damping,
         )
         timee = time.time() - starte
+        sum_timee += timee
+        sum_timeq += timeq
 
         error, _id = get_error(element_struc_array)
+        error_coef = np.max(element_struc_array["error_coef"])
 
         # print info
         if nit < 10:
-            logger.info(f"Iteration: 0{nit}, Error E: {error:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}")
+            logger.info(
+                f"Iteration: 0{nit}, Error E: {error:.3e}, Coef: {error_coef:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
+            )
             logger.debug(
-                f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
+                f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f}), "
+                f"Elements set to zero: {cnt_set_zero}"
             )
         else:
-            logger.info(f"Iteration: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}")
+            logger.info(
+                f"Iteration: {nit}, Error E: {error:.3e}, Coef: {error_coef:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
+            )
             logger.debug(
-                f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f})"
+                f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f}), "
+                f"Elements set to zero: {cnt_set_zero}"
             )
             e = element_struc_array[_id]
-            print(
-                f"Error increasing for element {e['_id']}, type {e['_type']}, fractures {e['frac0']} and {e['frac1']}, "
-                f"error: {e['error']}, error_old: {e['error_old']}, error_old2: {e['error_old2']}, ncoef: {e['ncoef']}, "
-                f"\n   coef[:5]:    {e['coef'][:5]}, \nold_coef[:5]: {work_array[_id]['old_coef'][:5]}"
-                f"\ncoef[:-5]:    {e['coef'][e['ncoef']-5:e['ncoef']]}, \nold_coef[:-5]: {work_array[_id]['old_coef'][e['ncoef']-5:e['ncoef']]}"
-                f"\npercent change: {np.abs(np.sum(np.abs(e['coef']))-np.sum(np.abs(work_array[_id]['old_coef'])))/np.sum(np.abs(work_array[_id]['old_coef']))*100 if np.sum(np.abs(work_array[_id]['old_coef'])) > 0 else np.nan}")
+            # print(
+            #    f"Error increasing for element {e['_id']}, type {e['_type']}, fractures {e['frac0']} and {e['frac1']}, "
+            #    f"error: {e['error']}, error_old: {e['error_old']}, error_old2: {e['error_old2']}, ncoef: {e['ncoef']}, "
+            #    f"\n   coef[:5]:    {e['coef'][:5]}, \nold_coef[:5]: {work_array[_id]['old_coef'][:5]}"
+            #    f"\ncoef[:-5]:    {e['coef'][e['ncoef']-5:e['ncoef']]}, \nold_coef[:-5]: {work_array[_id]['old_coef'][e['ncoef']-5:e['ncoef']]}"
+            #    f"\npercent change: {np.abs(np.sum(np.abs(e['coef']))-np.sum(np.abs(work_array[_id]['old_coef'])))/np.sum(np.abs(work_array[_id]['old_coef']))*100 if np.sum(np.abs(work_array[_id]['old_coef'])) > 0 else np.nan}")
 
         if cnt_bnd > 1 or nit == max_iterations:
             element_solver(
@@ -194,11 +231,13 @@ def solve(
                 max_error,
                 nit,
                 cnt_error,
+                damping,
             )
-            #error = 1.0
+            # error = 1.0
 
-        if error < max_error and error_q < max_error:
+        if error_coef < max_error and error_q < max_error:
             cnt_error += 1
+            error_q = 1e30
             # error = 1.0
 
     # Print the solver results
@@ -206,6 +245,8 @@ def solve(
     logger.info("Solver results")
     logger.info("---------------------------------------")
     logger.info(f"Iterations: {nit}, Error E: {error:.3e}, Q: {error_q:.3e}, ")
+    logger.debug(f"Total element solve time: {sum_timee:.2f} sec")
+    logger.debug(f"Total matrix solve time: {sum_timeq:.2f} sec")
     solve_time = time.time() - start
     days, rem = divmod(solve_time, 86400)
     hours, rem = divmod(rem, 3600)
@@ -234,12 +275,8 @@ def get_error(element_struc_array):
     _id : int
         The id of the element with the maximum error
     """
-    error = 0.0
-    _id = 0
-    for e in element_struc_array:
-        if e["error"] > error:
-            error = e["error"]
-            _id = e["_id"]
+    error = np.max(element_struc_array["error"])
+    _id = np.argmax(element_struc_array["error"])
     return error, _id
 
 
@@ -280,11 +317,11 @@ def element_solver(
     max_error,
     nit,
     cnt_error,
+    damping,
 ):
-    cnt = 0
     """
     Solves the elements and updates the coefficients in the work array.
-    
+
     Parameters
     ----------
     num_elements : int
@@ -301,18 +338,22 @@ def element_solver(
         The number of iterations
     cnt_error : int
         The number of completed iterations
-        
+    damping : float
+        The damping factor for the solver (default 0.5)
+
     Returns
     -------
     cnt : int
-        The number of elements that were solved    
-    
+        The number of elements that were solved
+
     """
+
+    cnt = 0
 
     # Solve the elements
     for i in nb.prange(num_elements):
         e = element_struc_array[i]
-        if e["error"] < max_error and nit > 30 and cnt_error == 0:
+        if e["error"] < max_error * 0 and nit > 30 and cnt_error == 0:
             cnt += 1
             continue
         if e["_type"] == 0:  # Intersection
@@ -342,7 +383,10 @@ def element_solver(
     # Get the coefficients from the work array
     for i in nb.prange(num_elements):
         e = element_struc_array[i]
-        e["coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
+        e["coef"][: e["ncoef"]] = (
+            damping * work_array[i]["coef"][: e["ncoef"]]
+            + (1 - damping) * e["coef"][: e["ncoef"]]
+        )
 
     return cnt
 
@@ -359,6 +403,7 @@ def element_solver2(
     max_coef_ratio,
     max_coef,
     coef_increase,
+    damping,
 ):
     """
     Solves the elements and updates the coefficients in the work array.
@@ -384,6 +429,8 @@ def element_solver2(
         The maximum number of coefficients
     coef_increase : int
         The coefficient increase
+    damping : float
+        The damping factor for the solver (default 0.5)
 
     Returns
     -------
@@ -396,21 +443,22 @@ def element_solver2(
         nit_el += 1
 
         # Solve the elements
-        if nit <= 2000:
-            cnt = element_solver(
-                num_elements,
-                element_struc_array,
-                fracture_struc_array,
-                work_array,
-                max_error,
-                nit,
-                cnt_error,
-            )
-
+        if nit <= 2000000000000:
+            for _ in range(1):
+                element_solver(
+                    num_elements,
+                    element_struc_array,
+                    fracture_struc_array,
+                    work_array,
+                    max_error,
+                    nit,
+                    cnt_error,
+                    damping,
+                )
 
         error, _id = get_error(element_struc_array)
 
-        ncc = 3 # Number of coefficients to check the ratio
+        ncc = 3  # Number of coefficients to check the ratio
 
         # Get the coefficients from the work array
         if nit < 2:
@@ -418,12 +466,12 @@ def element_solver2(
         for i in nb.prange(num_elements):
             # TODO: check if I can use sum(coef) and look if the change in sum due to the last 3 is significant,
             #  maybe also check if the error is continously increasing for an element (possibly track error history)
-            set_zero = False
+            work_array[i]["set_zero"] = False
             e = element_struc_array[i]
             if e["_type"] == 2:  # Well
                 continue
             coefs = e["coef"][: e["ncoef"]]
-            coef0 = np.mean(np.abs(coefs[1:ncc])) + 1e-30 # CHANGED
+            coef0 = np.mean(np.abs(coefs[1:ncc])) + 1e-30  # CHANGED
             coef1 = np.max(np.abs(coefs[-ncc:]))
             if coef0 == 0.0:
                 coef_ratio = 0.0
@@ -431,21 +479,30 @@ def element_solver2(
                 coef_ratio = coef1 / coef0 * 0
             if np.max(np.abs(coefs[1:2])) < max_error / 1e10:
                 coef_ratio = 0.0
-            if e["error"] > e["error_old"] and e["error"] > e["error_old2"] and e["error"] > max_error and nit > 5:
-                set_zero = True
-                #coef_ratio = max_coef_ratio + 1.0
-            if np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc])  + 1e-30)) > max_coef_ratio:
+            if (
+                e["error"] > e["error_old"]
+                and e["error"] > e["error_old2"]
+                and e["error"] > max_error
+                and nit > 5
+            ):
+                work_array[i]["set_zero"] = True
+                work_array[i]["set_zero"] = False
+                coef_ratio = max_coef_ratio + 1.0
+            if (
+                np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc]) + 1e-30))
+                > max_coef_ratio
+                and e["error"] > max_error
+            ):
                 coef_ratio = max_coef_ratio + 1.0
             cnt = 0
-            ncoef_in = e["ncoef"]
 
             # Increase the number of coefficients if the ratio is too high
-            max_cnt = 5
+            max_cnt = 1
             while (
                 coef_ratio > max_coef_ratio
                 and e["ncoef"] < max_coef
                 and cnt < max_cnt
-                and nit > 5
+                and nit > 1
             ):
                 cnt += 1
 
@@ -488,37 +545,51 @@ def element_solver2(
                 coef0 = np.mean(np.abs(coefs[1:ncc])) + 1e-30
                 coef1 = np.max(np.abs(coefs[-ncc:]))
                 coef_ratio = coef1 / coef0
-                #if e["error"] > e["error_old"] and e["error"] > e["error_old2"] and e["error"] > max_error and nit > 5:
+                # if e["error"] > e["error_old"] and e["error"] > e["error_old2"] and e["error"] > max_error and nit > 5:
                 #    coef_ratio = max_coef_ratio + 1.0
-                if np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc])  + 1e-30)) > max_coef_ratio:
+                if (
+                    np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc]) + 1e-30))
+                    > max_coef_ratio
+                ):
                     coef_ratio = max_coef_ratio + 1.0
                 # The coefficients needs to be reset to zero if the number of coefficients is increased, otherwise the
                 # error might grow if the discharge are computed with faulty coefficients
                 if cnt == max_cnt:
-                    set_zero = True
-                #print(f"Element {e['_id']} of type {e['_type']} has been set to zero coefficients due to high coefficient ratio.")
-            if set_zero:
-                #work_array[i]["old_coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
-                work_array[i]["coef"][: e["ncoef"]] = 0.0  # TODO: Calculate the error again here? DO!!!
-                e["error_old"] = 1e30
+                    work_array[i]["set_zero"] = True
+                    work_array[i]["set_zero"] = False
+                # print(f"Element {e['_id']} of type {e['_type']} has been set to zero coefficients due to high coefficient ratio.")
 
         for i in nb.prange(num_elements):
             e = element_struc_array[i]
-            e["coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
+            if work_array[i]["set_zero"]:
+                work_array[i]["coef"][: e["ncoef"]] = (
+                    work_array[i]["coef"][: e["ncoef"]] / 100.0 * 0
+                )
+                e["error_old"] = 1e30
+            # if e["_type"] == 0:  # Intersection
+            #    work_array[i]["coef"][: e["ncoef"]] = (
+            #            work_array[i]["coef"][: e["ncoef"]]* 0
+            #    )
+            e["coef"][: e["ncoef"]] = (
+                damping * work_array[i]["coef"][: e["ncoef"]]
+                + (1 - damping) * e["coef"][: e["ncoef"]]
+            )
 
         # Solve the elements
         if nit <= -2000:
-            cnt = element_solver(
-                num_elements,
-                element_struc_array,
-                fracture_struc_array,
-                work_array,
-                max_error,
-                nit,
-                cnt_error,
-            )
+            for _ in range(1):
+                element_solver(
+                    num_elements,
+                    element_struc_array,
+                    fracture_struc_array,
+                    work_array,
+                    max_error,
+                    nit,
+                    cnt_error,
+                    damping,
+                )
 
-    return cnt
+    return np.sum(work_array["set_zero"])
 
 
 def solve_discharge_matrix(
@@ -528,6 +599,7 @@ def solve_discharge_matrix(
     discharge_int,
     head_matrix,
     discharges,
+    discharges_old,
     z_int,
     lu_matrix,
 ):
@@ -548,6 +620,8 @@ def solve_discharge_matrix(
         The head matrix
     discharges : np.ndarray
         The discharges to be solved
+    discharges_old : np.ndarray
+        The old discharges
     z_int : np.ndarray[dtype_z_arrays]
         The z arrays for the discharge elements
     lu_matrix : scipy.sparse.linalg.splu
@@ -581,7 +655,11 @@ def solve_discharge_matrix(
     # post solver
     start0 = time.time()
     post_matrix_solve(
-        fractures_struc_array, element_struc_array, discharge_elements, discharges
+        fractures_struc_array,
+        element_struc_array,
+        discharge_elements,
+        discharges,
+        discharges_old,
     )
     logger.debug(f"Post solve time: {time.time() - start0}")
 
@@ -626,9 +704,8 @@ def pre_matrix_solve(
         element_struc_array[i]["q"] = 0.0
     #    if e["_type"] in {0, 2, 3}:  # Intersection, Well, Constant head line
     #        e["q"] = 0.0
-    #for i in nb.prange(len(discharge_elements)):
+    # for i in nb.prange(len(discharge_elements)):
     #    discharge_elements[i]["q"] = 0.0
-
 
     # Set the constants equal to zero
     for i in nb.prange(len(fractures_struc_array)):
@@ -647,7 +724,11 @@ def pre_matrix_solve(
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
 def post_matrix_solve(
-    fractures_struc_array, element_struc_array, discharge_elements, discharges
+    fractures_struc_array,
+    element_struc_array,
+    discharge_elements,
+    discharges,
+    discharges_old,
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -662,6 +743,8 @@ def post_matrix_solve(
         The discharge elements
     discharges : np.ndarray
         The discharges
+    discharges_old : np.ndarray
+        The old discharges
 
     Returns
     -------
@@ -674,10 +757,26 @@ def post_matrix_solve(
     for i in nb.prange(len(discharge_elements)):
         e = discharge_elements[i]
         element_struc_array[e["_id"]]["q"] = discharges[i]
+        # element_struc_array[e["_id"]]["q"] = (discharges[i] + discharges_old[i]) / 2.0
 
     # Set the constants for each fracture
     for i in nb.prange(len(fractures_struc_array)):
         fractures_struc_array[i]["constant"] = discharges[len(discharge_elements) + i]
+        # fractures_struc_array[i]["constant"] = (discharges[len(discharge_elements) + i] + discharges_old[len(discharge_elements) + i]) / 2.0
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
+def get_old_discharges(element_struc_array, fractures_struc_array, discharge_elements):
+    discharges_old = np.zeros(
+        len(discharge_elements) + np.max(element_struc_array["frac0"]) + 1
+    )
+    for i in nb.prange(len(discharge_elements)):
+        e = discharge_elements[i]
+        discharges_old[i] = element_struc_array[e["_id"]]["q"]
+    for i in nb.prange(len(fractures_struc_array)):
+        pos = len(discharge_elements) + i
+        discharges_old[pos] = fractures_struc_array[i]["constant"]
+    return discharges_old
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
@@ -727,21 +826,45 @@ def build_head_matrix(
             z1 = z_int["z1"][j][:discharge_int]
             omega1 = 0.0 + 0.0j
             for i in range(discharge_int):
-                omega1 += hpc_fracture.calc_omega(
-                    frac1, z1[i], element_struc_array
-                )
+                omega1 += hpc_fracture.calc_omega(frac1, z1[i], element_struc_array)
             omega1 = omega1 / discharge_int
             head_matrix[j] = np.real(omega1) / frac1["t"] - np.real(omega) / frac0["t"]
         elif e["_type"] in [2, 3]:  # Well or Constant head line
             head_matrix[j] = e["phi"] - np.real(omega)
 
+
 def build_discharge_matrix(
+    fractures_struc_array,
+    element_struc_array,
+    discharge_elements,
+    discharge_int,
+    z_int,
+):
+    """
+    Builds the discharge matrix for the DFN and adds it to the DFN.
+
+    """
+    data, rows, cols, size = get_discharge_matrix_arrays(
         fractures_struc_array,
         element_struc_array,
         discharge_elements,
         discharge_int,
-        discharge_matrix,
         z_int,
+    )
+
+    # create the csr sparse matrix
+    matrix = sp.sparse.csc_matrix((data, (rows, cols)), shape=(size, size))
+
+    return matrix
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
+def get_discharge_matrix_arrays(
+    fractures_struc_array,
+    element_struc_array,
+    discharge_elements,
+    discharge_int,
+    z_int,
 ):
     """
     Builds the discharge matrix for the DFN and adds it to the DFN.
@@ -751,112 +874,158 @@ def build_discharge_matrix(
 
     # Create a sparse matrix
     # create the row, col and data arrays
-    rows = []
-    cols = []
-    data = []
+    rows_np = np.zeros(size * size, dtype=np.int64)
+    cols_np = np.zeros(size * size, dtype=np.int64)
+    data_np = np.zeros(size * size, dtype=np.float64)
+    inds = np.zeros(size * size, dtype=np.bool)
 
     # Add the discharge for each discharge element
-    row = 0
     for j in nb.prange(discharge_elements.size):
         e = discharge_elements[j]
+        cnt_par = size * j
+        row = j
         if e["_type"] == 0:  # Intersection
             z0 = z_int["z0"][j][:discharge_int]
             z1 = z_int["z1"][j][:discharge_int]
             f0 = fractures_struc_array[e["frac0"]]
             el0 = f0["elements"]
             for k in range(f0["nelements"]):
-                ee = element_struc_array[el0[k]["_id"]]
-                if ee["_id"] == e["_id"]:
+                ee = element_struc_array[el0[k]]
+                if ee["_id"] == e["_id"] or ee["_type"] not in {
+                    0,
+                    2,
+                    3,
+                }:  # skip itself and elements not type 0,2,3
                     continue
                 # add the discharge term to the matrix for each element in the first fracture
-                pos = np.where(discharge_elements == ee)[0][0]
+                pos = np.where(discharge_elements["_id"] == ee["_id"])[0][0]
                 if ee["_type"] == 0:  # Intersection
-                    rows.append(row)
-                    cols.append(pos)
-                    data.append(
-                        e.frac0.head_from_phi(ee.discharge_term(z0, e.frac0))
+                    rows_np[cnt_par] = row
+                    cols_np[cnt_par] = pos
+                    data_np[cnt_par] = hpc_fracture.head_from_phi(
+                        f0, get_discharge_term(ee, z0, e["frac0"])
                     )
+                    inds[cnt_par] = 1
+                    cnt_par += 1
                 else:
-                    rows.append(row)
-                    cols.append(pos)
-                    data.append(e.frac0.head_from_phi(ee.discharge_term(z0)))
+                    rows_np[cnt_par] = row
+                    cols_np[cnt_par] = pos
+                    data_np[cnt_par] = hpc_fracture.head_from_phi(
+                        f0, get_discharge_term(ee, z0, e["frac0"])
+                    )
+                    inds[cnt_par] = 1
+                    cnt_par += 1
             f1 = fractures_struc_array[e["frac1"]]
             el1 = f1["elements"]
             for k in range(f1["nelements"]):
-                ee = element_struc_array[el1[k]["_id"]]
-                if ee["_id"] == e["_id"]:
+                ee = element_struc_array[el1[k]]
+                if ee["_id"] == e["_id"] or ee["_type"] not in {
+                    0,
+                    2,
+                    3,
+                }:  # skip itself and elements not type 0,2,3
                     continue
                 # add the discharge term to the matrix for each element in the second fracture
-                pos = np.where(discharge_elements == ee)[0][0]
+                pos = np.where(discharge_elements["_id"] == ee["_id"])[0][0]
                 if ee["_type"] == 0:  # Intersection
-                    rows.append(row)
-                    cols.append(pos)
-                    data.append(
-                        e.frac1.head_from_phi(-ee.discharge_term(z1, e.frac1))
+                    rows_np[cnt_par] = row
+                    cols_np[cnt_par] = pos
+                    data_np[cnt_par] = hpc_fracture.head_from_phi(
+                        f1, -get_discharge_term(ee, z1, e["frac1"])
                     )
+                    inds[cnt_par] = 1
+                    cnt_par += 1
                 else:
-                    rows.append(row)
-                    cols.append(pos)
-                    data.append(e.frac1.head_from_phi(-ee.discharge_term(z1)))
-            pos_f0 = self.fractures.index(e.frac0)
-            rows.append(row)
-            cols.append(len(self.discharge_elements) + pos_f0)
-            data.append(e.frac0.head_from_phi(1))
-            pos_f1 = self.fractures.index(e.frac1)
-            rows.append(row)
-            cols.append(len(self.discharge_elements) + pos_f1)
-            data.append(e.frac1.head_from_phi(-1))
+                    rows_np[cnt_par] = row
+                    cols_np[cnt_par] = pos
+                    data_np[cnt_par] = hpc_fracture.head_from_phi(
+                        f1, -get_discharge_term(ee, z1, e["frac1"])
+                    )
+                    inds[cnt_par] = 1
+                    cnt_par += 1
+            pos_f0 = e["frac0"]
+            rows_np[cnt_par] = row
+            cols_np[cnt_par] = len(discharge_elements) + pos_f0
+            data_np[cnt_par] = hpc_fracture.head_from_phi(f0, 1)
+            inds[cnt_par] = 1
+            cnt_par += 1
+            pos_f1 = e["frac1"]
+            rows_np[cnt_par] = row
+            cols_np[cnt_par] = len(discharge_elements) + pos_f1
+            data_np[cnt_par] = hpc_fracture.head_from_phi(f1, -1)
+            inds[cnt_par] = 1
+            cnt_par += 1
         else:
             z0 = z_int["z0"][j][:discharge_int]
             f0 = fractures_struc_array[e["frac0"]]
             el0 = f0["elements"]
             for k in range(f0["nelements"]):
-                ee = element_struc_array[el0[k]["_id"]]
-                if ee["_id"] == e["_id"]:
+                ee = element_struc_array[el0[k]]
+                if ee["_id"] == e["_id"] or ee["_type"] not in {
+                    0,
+                    2,
+                    3,
+                }:  # skip itself and elements not type 0,2,3
                     continue
                 # add the discharge term to the matrix for each element in the fracture
-                pos = np.where(discharge_elements == ee)[0][0]
+                pos = np.where(discharge_elements["_id"] == ee["_id"])[0][0]
                 if ee["_type"] == 0:  # Intersection
-                    rows.append(row)
-                    cols.append(pos)
-                    data.append(ee.discharge_term(z0, e.frac0))
+                    rows_np[cnt_par] = row
+                    cols_np[cnt_par] = pos
+                    data_np[cnt_par] = get_discharge_term(ee, z0, e["frac0"])
+                    inds[cnt_par] = 1
+                    cnt_par += 1
                 else:
-                    rows.append(row)
-                    cols.append(pos)
-                    data.append(ee.discharge_term(z0))
-            pos_f = self.fractures.index(e.frac0)
-            rows.append(row)
-            cols.append(len(self.discharge_elements) + pos_f)
-            data.append(1)
-        row += 1
+                    rows_np[cnt_par] = row
+                    cols_np[cnt_par] = pos
+                    data_np[cnt_par] = get_discharge_term(ee, z0, e["frac0"])
+                    inds[cnt_par] = 1
+                    cnt_par += 1
+            pos_f = e["frac0"]
+            rows_np[cnt_par] = row
+            cols_np[cnt_par] = len(discharge_elements) + pos_f
+            data_np[cnt_par] = 1
+            inds[cnt_par] = 1
+            cnt_par += 1
 
-    # Add the constants for each fracture
+    # Add the continuity of flow conditions for each fracture
     for j in nb.prange(fractures_struc_array.size):
         f = fractures_struc_array[j]
         row = discharge_elements.size + j
+        cnt_par = size * discharge_elements.size + size * j
+        # if there are only one (or less) discharge element in the fracture, skip
+        # num_discharge_el = sum([e in discharge_elements["_id"] for e in f["elements"][: f["nelements"]]])
+        # if num_discharge_el <= 1:
+        #    continue
         # fill the matrix for the fractures
-        for e in element_struc_array[f["elements"]]:
+        for e in element_struc_array[f["elements"][: f["nelements"]]]:
             if e["_type"] in [0, 2, 3]:  # Intersection, Well, Constant head line
                 # add the discharge term to the matrix for each element in the fracture
-                pos = np.where(discharge_elements == e)[0][0]
+                pos = np.where(discharge_elements["_id"] == e["_id"])[0][0]
                 if e["_type"] == 0:  # Intersection
                     if e["frac0"] == f["_id"]:
-                        rows.append(row)
-                        cols.append(pos)
-                        data.append(1)
+                        rows_np[cnt_par] = row
+                        cols_np[cnt_par] = pos
+                        data_np[cnt_par] = 1
+                        inds[cnt_par] = 1
+                        cnt_par += 1
                     else:
-                        rows.append(row)
-                        cols.append(pos)
-                        data.append(-1)
+                        rows_np[cnt_par] = row
+                        cols_np[cnt_par] = pos
+                        data_np[cnt_par] = -1
+                        inds[cnt_par] = 1
+                        cnt_par += 1
                 else:
-                    rows.append(row)
-                    cols.append(pos)
-                    data.append(1)
+                    rows_np[cnt_par] = row
+                    cols_np[cnt_par] = pos
+                    data_np[cnt_par] = 1
+                    inds[cnt_par] = 1
+                    cnt_par += 1
 
-    # create the csr sparse matrix
-    matrix = sp.sparse.csc_matrix((data, (rows, cols)), shape=(size, size))
-
-    self.discharge_matrix = matrix
+    rows = rows_np[inds]
+    cols = cols_np[inds]
+    data = data_np[inds]
+    return data, rows, cols, size
 
 
 # @nb.njit( parallel=PARALLEL, cache=CACHE)
@@ -1103,6 +1272,18 @@ def get_z_int_array(z_int, elements, discharge_int):
             z_int["z0"][j][:discharge_int] = hpc_const_head_line.z_array(
                 e, discharge_int
             )
+
+
+@nb.njit(cache=CACHE)
+def get_discharge_term(element, z, frac):
+    if element["_type"] == 0:  # Intersection
+        return hpc_intersection.discharge_term(element, z, frac)
+    elif element["_type"] == 2:  # Well
+        return hpc_well.discharge_term(element, z)
+    elif element["_type"] == 3:  # Constant head line
+        return hpc_const_head_line.discharge_term(element, z)
+    else:
+        return 0.0
 
 
 @nb.njit()

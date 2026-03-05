@@ -64,6 +64,7 @@ element_dtype_hpc = np.dtype(
         ("error", np.float64),
         ("error_old", np.float64),
         ("error_old2", np.float64),
+        ("error_coef", np.float64),
     ]
 )
 """
@@ -250,15 +251,13 @@ class Element:
         self.ncoef = 5
         self.nint = 10
         self.coef = np.zeros(self.ncoef, dtype=complex)
-        #self.thetas = np.linspace(
+        # self.thetas = np.linspace(
         #    start=0, stop=2 * np.pi, num=self.nint, endpoint=False
-        #)
+        # )
 
         # Assign the fractures if provided
         self.frac0 = frac0
         self.frac0.add_element(self)
-
-
 
     def __str__(self):
         """
@@ -299,12 +298,12 @@ class Element:
         -------
         None. The element is updated in place.
         """
-        assert all(key in element_dtype.names for key in kwargs.keys()), (
-            "Invalid property name."
-        )
-        assert all(key in element_index_dtype.names for key in kwargs.keys()), (
-            "Invalid property name."
-        )
+        assert all(
+            key in element_dtype.names for key in kwargs.keys()
+        ), "Invalid property name."
+        assert all(
+            key in element_index_dtype.names for key in kwargs.keys()
+        ), "Invalid property name."
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -409,7 +408,7 @@ class Element:
         for key in index_array.dtype.names:
             self.__dict__[key] = index_array[key]
 
-    def plot(self, pl, line_width, color):
+    def plot(self, pl, line_width, color, point_size=5):
         """
         Plot the element using the given plotter.
 
@@ -421,6 +420,8 @@ class Element:
             The width of the lines in the plot.
         color : str
             The color of the element in the plot, if None the default color will be used.
+        point_size : float
+            The size of the points in the plot.
 
         Returns
         -------
@@ -437,12 +438,20 @@ class Element:
                 pv.Line(line[0], line[1]),
                 color=color if color is not None else ELEMENT_COLORS[self._type],
                 line_width=line_width,
+                show_edges=True,
+                render_points_as_spheres=True,
+                point_size=5,
+                show_vertices=True,
             )
         elif self._type == 1:  # Bounding Circle
             point = gf.map_2d_to_3d(0 + 0j, self.frac0)
             pl.add_mesh(
                 pv.Polygon(
-                    center=point, radius=self.radius, normal=self.frac0.normal, n_sides=50, fill=False
+                    center=point,
+                    radius=self.radius,
+                    normal=self.frac0.normal,
+                    n_sides=50,
+                    fill=False,
                 ),
                 color=color if color is not None else ELEMENT_COLORS[self._type],
                 line_width=line_width,
@@ -451,7 +460,11 @@ class Element:
             point = gf.map_2d_to_3d(self.center, self.frac0)
             pl.add_mesh(
                 pv.Polygon(
-                    center=point, radius=self.radius, normal=self.frac0.normal, n_sides=50, fill=False
+                    center=point,
+                    radius=self.radius,
+                    normal=self.frac0.normal,
+                    n_sides=50,
+                    fill=False,
                 ),
                 color=color if color is not None else ELEMENT_COLORS[self._type],
                 line_width=line_width,

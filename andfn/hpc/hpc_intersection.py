@@ -13,8 +13,37 @@ from . import hpc_geometry_functions as gf
 @nb.njit()
 def z_array(self_, n, frac_is):
     if frac_is == self_["frac0"]:
-        return np.linspace(self_["endpoints0"][0], self_["endpoints0"][1], n)
-    return np.linspace(self_["endpoints1"][0], self_["endpoints1"][1], n)
+        return np.linspace(self_["endpoints0"][0], self_["endpoints0"][1], n + 2)[
+            1 : n + 1
+        ]
+    return np.linspace(self_["endpoints1"][0], self_["endpoints1"][1], n + 2)[1 : n + 1]
+
+
+@nb.njit()
+def discharge_term(self_, z, frac_is):
+    """
+    Calculate the discharge term for the intersection.
+
+    Parameters
+    ----------
+
+
+    Returns
+    -------
+    float
+        The discharge term
+    """
+    phi = 0.0
+    sign = 1.0
+    if frac_is == self_["frac0"]:
+        endpoints = self_["endpoints0"]
+    else:
+        sign = -1.0
+        endpoints = self_["endpoints1"]
+    for z0 in z:
+        chi = gf.map_z_line_to_chi(z0, endpoints)
+        phi += np.real(mf.well_chi(chi, sign))
+    return phi / len(z)
 
 
 @nb.njit()
@@ -76,6 +105,9 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     self_["error_old2"] = self_["error_old"]
     self_["error_old"] = self_["error"]
     self_["error"] = mf.calc_error(
+        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+    )
+    self_["error_coef"] = mf.calc_coef_error(
         work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
 
