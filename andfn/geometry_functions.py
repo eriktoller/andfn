@@ -527,6 +527,7 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
         A list of connected fractures.
     """
     for i, fr in enumerate(fractures):
+        print(f"\r{i + 1} / {len(fractures)} fractures processed", end="")
         # Get the celltreeboxes
         # celltree = numba_celltree.CellTree3d(vertices3d, boxes)
         # overlapping_i, overlapping_j = celltree.locate_boxes(box_bbounds)
@@ -546,7 +547,7 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
                         continue
                     endpoints01 = shorten_line(endpoints0, se_factor)
                     endpoints11 = shorten_line(endpoints1, se_factor)
-                    intersections = intersection.Intersection(
+                    intersection.Intersection(
                         f"{fr.label}_{fr2.label}",
                         endpoints01,
                         endpoints11,
@@ -555,8 +556,8 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
                         ncoef,
                         nint,
                     )
-                    fr.add_element(intersections)
-                    fr2.add_element(intersections)
+                    # fr.add_element(intersections)
+                    # fr2.add_element(intersections)
 
     return fractures
 

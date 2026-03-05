@@ -84,6 +84,7 @@ def solve(
     coef_ratio = constants["COEF_RATIO"]
     max_coef = constants["MAX_NCOEF"]
     coef_increase = constants["COEF_INCREASE"]
+    damping = float(constants["DAMPING"])
 
     # get the discharge elements
     logger.info("Compiling HPC code...")
@@ -187,6 +188,7 @@ def solve(
             coef_ratio,
             max_coef,
             coef_increase,
+            damping,
         )
         timee = time.time() - starte
         sum_timee += timee
@@ -229,6 +231,7 @@ def solve(
                 max_error,
                 nit,
                 cnt_error,
+                damping,
             )
             # error = 1.0
 
@@ -314,11 +317,11 @@ def element_solver(
     max_error,
     nit,
     cnt_error,
+    damping,
 ):
-    cnt = 0
     """
     Solves the elements and updates the coefficients in the work array.
-    
+
     Parameters
     ----------
     num_elements : int
@@ -335,13 +338,17 @@ def element_solver(
         The number of iterations
     cnt_error : int
         The number of completed iterations
-        
+    damping : float
+        The damping factor for the solver (default 0.5)
+
     Returns
     -------
     cnt : int
-        The number of elements that were solved    
-    
+        The number of elements that were solved
+
     """
+
+    cnt = 0
 
     # Solve the elements
     for i in nb.prange(num_elements):
@@ -376,7 +383,10 @@ def element_solver(
     # Get the coefficients from the work array
     for i in nb.prange(num_elements):
         e = element_struc_array[i]
-        e["coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
+        e["coef"][: e["ncoef"]] = (
+            damping * work_array[i]["coef"][: e["ncoef"]]
+            + (1 - damping) * e["coef"][: e["ncoef"]]
+        )
 
     return cnt
 
@@ -393,6 +403,7 @@ def element_solver2(
     max_coef_ratio,
     max_coef,
     coef_increase,
+    damping,
 ):
     """
     Solves the elements and updates the coefficients in the work array.
@@ -418,6 +429,8 @@ def element_solver2(
         The maximum number of coefficients
     coef_increase : int
         The coefficient increase
+    damping : float
+        The damping factor for the solver (default 0.5)
 
     Returns
     -------
@@ -440,6 +453,7 @@ def element_solver2(
                     max_error,
                     nit,
                     cnt_error,
+                    damping,
                 )
 
         error, _id = get_error(element_struc_array)
@@ -556,7 +570,10 @@ def element_solver2(
             #    work_array[i]["coef"][: e["ncoef"]] = (
             #            work_array[i]["coef"][: e["ncoef"]]* 0
             #    )
-            e["coef"][: e["ncoef"]] = work_array[i]["coef"][: e["ncoef"]]
+            e["coef"][: e["ncoef"]] = (
+                damping * work_array[i]["coef"][: e["ncoef"]]
+                + (1 - damping) * e["coef"][: e["ncoef"]]
+            )
 
         # Solve the elements
         if nit <= -2000:
@@ -569,6 +586,7 @@ def element_solver2(
                     max_error,
                     nit,
                     cnt_error,
+                    damping,
                 )
 
     return np.sum(work_array["set_zero"])

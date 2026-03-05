@@ -18,6 +18,7 @@ dtype_constants = np.dtype(
         ("MAX_ITERATIONS", np.int32),
         ("MAX_ERROR", np.float64),
         ("MAX_NCOEF", np.int32),
+        ("DAMPING", np.float64),
         ("COEF_INCREASE", np.int32),
         ("COEF_RATIO", np.float64),
         ("MAX_ELEMENTS", np.int32),
@@ -93,6 +94,7 @@ class Constants:
                 50,  # Maximum number of iterations
                 1e-6,  # Maximum error
                 150,  # Maximum number of coefficients
+                0.5,  # Damping factor for the solver (default 0.5)
                 5,  # Coefficient increase factor
                 0.05,  # Coefficient ratio
                 150,  # Maximum number of elements
@@ -117,6 +119,7 @@ class Constants:
         logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
         logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
         logger.info(f"      MAX_NCOEF: {self.constants['MAX_NCOEF']}")
+        logger.info(f"        DAMPING: {self.constants['DAMPING']}")
         logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
         logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
         logger.info(f"   MAX_ELEMENTS: {self.constants['MAX_ELEMENTS']}")
@@ -130,7 +133,8 @@ class Constants:
         logger.info("Solver Constants:")
         logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
         logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
-        logger.info(f"       MAX_NCOEF: {self.constants['MAX_NCOEF']}")
+        logger.info(f"      MAX_NCOEF: {self.constants['MAX_NCOEF']}")
+        logger.info(f"        DAMPING: {self.constants['DAMPING']}")
         logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
         logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
         logger.info(

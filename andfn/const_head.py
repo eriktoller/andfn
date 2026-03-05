@@ -48,7 +48,6 @@ class ConstantHeadLine(Element):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-
     def discharge_term(self, z):
         """
         Calculate the discharge term for the constant head line.

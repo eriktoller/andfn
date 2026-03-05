@@ -1758,7 +1758,7 @@ class DFN(Constants):
             )
             for i, pnts in enumerate(pnts_3d):
                 if np.nanmin(heads[i]) < min_lim or np.nanmax(heads[i]) > max_lim:
-                    logger.debug(f"Fracture {i} has head outside limits, plotting.")
+                    logger.debug(f"Fracture id={i} has head outside limits, plotting.")
                     poly = pv.PolyData(pnts, faces)
                     poly.point_data["head"] = heads[i]
                     meshes.append(poly)
@@ -2135,7 +2135,7 @@ class DFN(Constants):
         return False, False
 
     @staticmethod
-    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-6):
+    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-2):
         if frac == element.frac0:
             endpoints = element.endpoints0
         else:
