@@ -1,14 +1,14 @@
-name: Test and lint
+name: Lint
 
 on:
   push:
-    branches: [main, dev]
+    branches: [master, dev]
   pull_request:
-    branches: [main, dev]
+    branches: [master, dev]
 
 jobs:
   test:
-    name: Test and lint Python ${{ matrix.python-version }}
+    name: Lint Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
