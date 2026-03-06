@@ -702,10 +702,6 @@ def pre_matrix_solve(
     # Set the discharges equal to zero
     for i in nb.prange(len(element_struc_array)):
         element_struc_array[i]["q"] = 0.0
-    #    if e["_type"] in {0, 2, 3}:  # Intersection, Well, Constant head line
-    #        e["q"] = 0.0
-    # for i in nb.prange(len(discharge_elements)):
-    #    discharge_elements[i]["q"] = 0.0
 
     # Set the constants equal to zero
     for i in nb.prange(len(fractures_struc_array)):
