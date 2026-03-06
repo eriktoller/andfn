@@ -203,6 +203,51 @@ class RectangularRegion(Region):
             "right": [0, 3, 7, 4],
         }
 
+    def rotate(self, angle, axis):
+        """
+        Rotates the rectangular region around a given axis by a given angle.
+
+        Parameters
+        ----------
+        angle : float
+            The angle to rotate by in degrees (in degrees).
+        axis : list or np.ndarray
+            The axis to rotate around.
+        """
+        # Create the rotation matrix
+        axis = np.array(axis)
+        axis = axis / np.linalg.norm(axis)
+        angle_rad = np.radians(angle)
+        cos_angle = np.cos(angle_rad)
+        sin_angle = np.sin(angle_rad)
+        R = np.array(
+            [
+                [
+                    cos_angle + axis[0] ** 2 * (1 - cos_angle),
+                    axis[0] * axis[1] * (1 - cos_angle) - axis[2] * sin_angle,
+                    axis[0] * axis[2] * (1 - cos_angle) + axis[1] * sin_angle,
+                ],
+                [
+                    axis[1] * axis[0] * (1 - cos_angle) + axis[2] * sin_angle,
+                    cos_angle + axis[1] ** 2 * (1 - cos_angle),
+                    axis[1] * axis[2] * (1 - cos_angle) - axis[0] * sin_angle,
+                ],
+                [
+                    axis[2] * axis[0] * (1 - cos_angle) - axis[1] * sin_angle,
+                    axis[2] * axis[1] * (1 - cos_angle) + axis[0] * sin_angle,
+                    cos_angle + axis[2] ** 2 * (1 - cos_angle),
+                ],
+            ]
+        )
+        # Rotate the x, y, and z vectors
+        self.x_vec = R @ self.x_vec
+        self.y_vec = R @ self.y_vec
+        self.z_vec = R @ self.z_vec
+        # Rotate the vertices
+        self.vertices = (R @ (self.vertices - self.center).T).T + self.center
+        # Update the faces
+        self.get_vertices_faces()
+
     def plot(self, pl, opacity=0.5, **kwargs):
         """
         Plots the rectangular region.
