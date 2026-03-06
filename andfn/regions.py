@@ -601,7 +601,7 @@ if __name__ == "__main__":
     )
 
     # Add some points to check if they are inside the rectangular region
-    points = np.random.uniform(-3, 3, size=(100, 3))
+    points = np.random.uniform(-3, 3, size=(1000, 3))
 
     # Plot the rectangular region
     pl = pv.Plotter()
