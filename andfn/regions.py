@@ -311,6 +311,7 @@ class RectangularRegion(Region):
                 face = self.faces_dict[face]
             except KeyError:
                 raise ValueError("Face must be an integer between 0 and 5.")
+
         mesh = pv.PolyData(self.vertices[face], np.array([[4, 0, 1, 2, 3]]))
         pl.add_mesh(
             mesh,
