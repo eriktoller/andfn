@@ -749,6 +749,7 @@ def post_matrix_solve(
     element_struc_array : np.ndarray[element_dtype]
         The array of elements
     """
+    # TODO: Should I use damping here too?
     # Set the discharges for each element
     for i in nb.prange(len(discharge_elements)):
         e = discharge_elements[i]
