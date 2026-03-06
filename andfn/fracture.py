@@ -89,6 +89,17 @@ class Fracture:
         """
         return f"Fracture {self.label}"
 
+    def __repr__(self):
+        """
+        Returns the string representation of the fracture.
+
+        Returns
+        -------
+        str
+            The string representation of the fracture.
+        """
+        return self.__str__()
+
     def set_id(self, _id):
         """
         Sets the id for the fracture.

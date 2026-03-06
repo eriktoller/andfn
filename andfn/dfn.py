@@ -692,6 +692,10 @@ class DFN(Constants):
         fracture : Fracture
             The fracture to delete from the DFN.
         """
+        # Delete all the elements that are connected to the fracture
+        elements = fracture.elements.copy()
+        for e in elements:
+            fracture.delete_element(e)
         self.fractures.remove(fracture)
         # reset the discharge matrix and elements
         self.discharge_matrix = None
@@ -1351,6 +1355,9 @@ class DFN(Constants):
         # self.build_discharge_matrix()
         # t3 = time.time()
         # logger.debug(f"Time to build discharge matrix: {t3 - t2:.2f} seconds")
+        logger.info("DFN properties:")
+        logger.info(f"Number of fractures: {len(self.fractures)}")
+        logger.info(f" Number of elements: {len(self.elements)}")
         self.print_solver_constants()
         self.elements_struc_array = hpc_solve(
             self.fractures_struc_array_hpc,
@@ -1815,6 +1822,8 @@ class DFN(Constants):
             The list of elements to plot. If None, all elements are plotted.
         line_width : float
             The line width of the elements.
+        const_elements : bool
+            Whether to only plot the constant head elements. Default is False.
         """
         # Check if the elements have been stored in the DFN
         assert (

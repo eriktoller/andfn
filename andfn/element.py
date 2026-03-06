@@ -270,6 +270,17 @@ class Element:
         """
         return f"{self.__class__.__name__}: {self.label}"
 
+    def __repr__(self):
+        """
+        Returns the string representation of the element.
+
+        Returns
+        -------
+        str
+            The string representation of the element.
+        """
+        return self.__str__()
+
     def set_id(self, _id):
         """
         Set the id of the element.
