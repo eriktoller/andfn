@@ -277,6 +277,54 @@ class RectangularRegion(Region):
             **kwargs,
         )
 
+    def plot_face(self, pl, face, opacity=0.5, **kwargs):
+        """
+        Plots a face of the rectangular region.
+
+        Parameters
+        ----------
+        pl : pyvista.Plotter
+            The pyvista plotter to plot on.
+        face : int | str
+            The face of the rectangular region to plot.
+            They are numbered as follows:
+
+            0/top: top face (x-y plane)
+
+            1/bottom: bottom face (x-y plane)
+
+            2/front: front face (x-z plane)
+
+            3/back: back face (x-z plane)
+
+            4/left: left face (y-z plane)
+
+            5/right: right face (y-z plane)
+
+        opacity : float, optional
+            The opacity of the face, by default 0.5.
+        kwargs : dict
+            Additional keyword arguments for the plot.
+        """
+        if isinstance(face, int):
+            try:
+                face = self.faces_dict[face]
+            except KeyError:
+                raise ValueError("Face must be an integer between 0 and 5.")
+        mesh = pv.PolyData(self.vertices[face], np.array([[4, 0, 1, 2, 3]]))
+        pl.add_mesh(
+            mesh,
+            show_edges=True,
+            show_vertices=True,
+            vertex_color=REGION_COLOR[self._region_type],
+            color=REGION_COLOR[self._region_type],
+            edge_opacity=1.0,
+            opacity=opacity,
+            render_points_as_spheres=True,
+            point_size=5,
+            **kwargs,
+        )
+
     def map_point(self, point):
         """
         Maps a point from the global coordinate system to the local coordinate system of the rectangular region.
