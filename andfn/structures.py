@@ -192,7 +192,7 @@ class RegularPolygonPrism(Structure):
             point_size=5,
         )
 
-    def possible_intersections(self, frac, pl):
+    def possible_intersections(self, frac):
         """
         Checks if the tunnel can possibly intersect with a given fracture.
 
@@ -240,7 +240,7 @@ class RegularPolygonPrism(Structure):
             fractures = [fractures]
         for frac in fractures:
             # Check if the tunnel can possibly intersect with the fracture
-            if not self.possible_intersections(frac, pl):
+            if not self.possible_intersections(frac):
                 continue
             # calculate the intersection points between line between the verticies and the fracture plane
             pnts = []
