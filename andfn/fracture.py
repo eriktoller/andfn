@@ -21,7 +21,7 @@ class Fracture:
         radius,
         center,
         normal,
-        aperture=1e-6,
+        aperture=None,
         ncoef=5,
         nint=10,
         elements=None,
@@ -133,6 +133,7 @@ class Fracture:
         fracture_struc_array["y_vector"][0] = self.y_vector
         fracture_struc_array["elements"][0] = np.array([e._id for e in self.elements])
         fracture_struc_array["constant"][0] = self.constant
+        fracture_struc_array["aperture"][0] = self.aperture
 
         fracture_index_array = np.array(
             [(self.label, self._id)], dtype=fracture_index_dtype
@@ -402,6 +403,26 @@ class Fracture:
                 else:
                     w += e.calc_w(z)
         return w
+
+    def calc_velocity(self, z, exclude=None):
+        """
+        Calculates the velocity vector for the fracture excluding element "exclude".
+
+        Parameters
+        ----------
+        z : complex
+            A point in the complex z plane.
+        exclude : any
+            Label of element to exclude from the omega calculation.
+
+        Returns
+        -------
+        velocity : complex
+            The velocity vector for the fracture.
+        """
+        w = self.calc_w(z, exclude)
+        velocity = w / self.aperture
+        return velocity
 
     def calc_head(self, z):
         """

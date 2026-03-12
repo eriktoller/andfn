@@ -139,6 +139,7 @@ fracture_dtype = np.dtype(
         ("y_vector", np.float64, 3),
         ("elements", np.ndarray),
         ("constant", np.float64),
+        ("aperture", np.float64),
     ]
 )
 
