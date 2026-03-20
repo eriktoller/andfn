@@ -67,6 +67,7 @@ class BoundingCircle(Element):
         else:
             if np.abs(chi) > 1.0 + 1e-5:
                 chi = np.nan + 1j * np.nan
+                # chi = chi / np.abs(chi)*0.99
         return chi
 
     def calc_omega(self, z):
