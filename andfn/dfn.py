@@ -1817,9 +1817,9 @@ class DFN(Constants):
             The line width of the elements.
         """
         # Check if the elements have been stored in the DFN
-        assert (
-            self.elements is not None and len(self.elements) > 0
-        ), "The elements have not been stored in the DFN. Use the get_elements method."
+        assert self.elements is not None and len(self.elements) > 0, (
+            "The elements have not been stored in the DFN. Use the get_elements method."
+        )
         # Plot the elements
         if elements is None:
             elements = self.elements
