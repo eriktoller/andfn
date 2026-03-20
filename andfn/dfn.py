@@ -1871,9 +1871,9 @@ class DFN(Constants):
             Whether to only plot the constant head elements. Default is False.
         """
         # Check if the elements have been stored in the DFN
-        assert (
-            self.elements is not None and len(self.elements) > 0
-        ), "The elements have not been stored in the DFN. Use the get_elements method."
+        assert self.elements is not None and len(self.elements) > 0, (
+            "The elements have not been stored in the DFN. Use the get_elements method."
+        )
         # Plot the elements
         if elements is None:
             elements = self.elements
