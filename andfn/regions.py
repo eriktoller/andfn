@@ -6,6 +6,7 @@ This module contains the region classes.
 
 import numpy as np
 import pyvista as pv
+
 import andfn.geometry_functions as gf
 
 from andfn.const_head import ConstantHeadLine
@@ -26,6 +27,13 @@ class Region:
         ----------
         label : str or int
             The label of the underground structure.
+        _region_type: int
+            The region type. The avaliable region types are:
+
+            Rectangular box: 0
+
+            Panel: 1
+
         kwargs : dict
             Additional keyword arguments.
         """
@@ -629,6 +637,23 @@ class RectangularRegion(Region):
         if 0 <= d <= 1:
             return line_start + d * line_direction
         return None
+
+
+class Panel(Region):
+    """
+    Class for panels.
+    """
+
+    def __init__(self, label, center, normal, x_vec, y_vec, **kwargs):
+        """
+        A ...
+        """
+        super().__init__(label, _region_type=1, **kwargs)
+
+        self.normal = normal
+        self.center = center
+        self.x_vec = x_vec
+        self.y_vec = y_vec
 
 
 if __name__ == "__main__":

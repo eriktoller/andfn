@@ -390,7 +390,9 @@ class DFN(Constants):
                         y_vector=hf[f"fractures/properties/y_vector/{i}"][()],
                         elements=False,
                         constant=hf[f"fractures/properties/constant/{i}"][()],
-                        aperture=hf[f"fractures/properties/aperture/{i}"][()],
+                        aperture=hf[f"fractures/properties/aperture/{i}"][()]
+                        if f"fractures/properties/aperture/{i}" in hf
+                        else 1e-6,
                     )
                 )
 
@@ -2174,14 +2176,12 @@ class DFN(Constants):
         for e in discharge_elements:
             if isinstance(e, Intersection):
                 # if ((e.q < 0 and e.frac0 == frac) or (e.q > 0 and e.frac1 == frac)) ^ backward:
-                #    continue
+                #   continue
                 z2 = e.check_chi_crossing(z0, z1, frac)
             else:
                 # if (e.q < 0) ^ backward:
-                #    continue
+                #   continue
                 z2 = e.check_chi_crossing(z0, z1)
-            if np.isnan(np.real(z2)):
-                return z1, False
             if z2 is not False:
                 return z2, e
         return False, False
@@ -2193,20 +2193,34 @@ class DFN(Constants):
         else:
             endpoints = element.endpoints1
         z = gf.map_3d_to_2d(z3d, frac)
+        # z2 = gf.map_3d_to_2d(z3d, frac_old)
         chi0 = gf.map_z_line_to_chi(z, endpoints)
         chi1 = np.conj(chi0)
+        # chi20 = gf.map_z_line_to_chi(z2, endpoints)
+        # chi21 = np.conj(chi20)
         z0 = gf.map_chi_to_z_line(chi0 * (1 + dchi), endpoints)
         z1 = gf.map_chi_to_z_line(chi1 * (1 + dchi), endpoints)
+        # z2 = gf.map_chi_to_z_line(chi20 * (1 + dchi), endpoints)
+        # z3 = gf.map_chi_to_z_line(chi21 * (1 + dchi), endpoints)
         w0 = frac.calc_w(z0)
         w1 = frac.calc_w(z1)
+        # w2 = frac_old.calc_w(z2)
+        # w3 = frac_old.calc_w(z3)
 
         # Magnitude
         abs_w0 = np.abs(w0)
         abs_w1 = np.abs(w1)
+        # abs_w2 = np.abs(w2)
+        # abs_w3 = np.abs(w3)
 
         # check angles between w0, w1 and z-z0, z-z1, using the dot product
         divide = abs_w0 / (abs_w0 + abs_w1)
         pointz0 = gf.map_2d_to_3d(z0, frac)
+
+        # if divide > 0.5 + np.random.rand() * 0.1:
+        #    return z0, z0, elevation * 0 + 0.5
+        # else:
+        #    return z1, z1, elevation * 0 + 0.5
 
         # map on direction of normal
         nz0 = np.dot((pointz0 - z3d), frac_old.normal)
@@ -2258,6 +2272,8 @@ class DFN(Constants):
         if np.isnan(np.real(w0)):
             return np.nan + np.nan * 1j
         z1 = z0 + np.conj(w0) / np.abs(w0) * ds
+        if np.abs(z1) > frac.radius:
+            z1 *= frac.radius / (np.abs(z1) * (1 + 1e-5))
         dz = 1e99
         it = 0
         while dz > tolerance and it < max_it:
@@ -2265,6 +2281,8 @@ class DFN(Constants):
             if np.isnan(np.real(w1)):
                 break
             z2 = z0 + np.conj(w0 + w1) / np.abs(w0 + w1) * ds
+            if np.abs(z2) > frac.radius:
+                z2 *= frac.radius / (np.abs(z2) * (1 + 1e-5))
             dz = np.abs(z2 - z1)
             z1 = z2
             it += 1

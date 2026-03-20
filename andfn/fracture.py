@@ -421,7 +421,7 @@ class Fracture:
             The velocity vector for the fracture.
         """
         w = self.calc_w(z, exclude)
-        velocity = w / self.aperture
+        velocity = np.abs(w) / self.aperture
         return velocity
 
     def calc_head(self, z):
