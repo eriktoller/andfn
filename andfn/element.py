@@ -298,12 +298,12 @@ class Element:
         -------
         None. The element is updated in place.
         """
-        assert all(key in element_dtype.names for key in kwargs.keys()), (
-            "Invalid property name."
-        )
-        assert all(key in element_index_dtype.names for key in kwargs.keys()), (
-            "Invalid property name."
-        )
+        assert all(
+            key in element_dtype.names for key in kwargs.keys()
+        ), "Invalid property name."
+        assert all(
+            key in element_index_dtype.names for key in kwargs.keys()
+        ), "Invalid property name."
 
         for key, value in kwargs.items():
             setattr(self, key, value)
