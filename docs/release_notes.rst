@@ -17,6 +17,7 @@ Enhancements
 ~~~~~~~~~~~~
 - Added the description for the configuration file in the documentation.
 - Improved and stabilized the solver by including damping the iterative solver
+- Imporved the particle tracking algorithm.
 
 Bug fixes
 ~~~~~~~~~
