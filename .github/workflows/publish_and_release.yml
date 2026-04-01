@@ -83,6 +83,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install build
+        pip install -r requirements.txt
       
     - name: Build package
       run: python -m build
@@ -120,11 +121,6 @@ jobs:
           ```bash
           pip install --upgrade andfn
           ```
-          
-    - name: Install dependencies
-      run: | 
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
     
     - name: Build HTML
       run: | 
