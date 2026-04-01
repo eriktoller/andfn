@@ -390,6 +390,9 @@ class DFN(Constants):
                         y_vector=hf[f"fractures/properties/y_vector/{i}"][()],
                         elements=False,
                         constant=hf[f"fractures/properties/constant/{i}"][()],
+                        aperture=hf[f"fractures/properties/aperture/{i}"][()]
+                        if f"fractures/properties/aperture/{i}" in hf
+                        else 1e-6,
                     )
                 )
 
@@ -586,11 +589,55 @@ class DFN(Constants):
         """
         return len(self.fractures)
 
-    def number_of_elements(self):
+    def number_of_elements(self, element_type=None):
         """
-        Returns the number of elements in the DFN.
+        Gets the number of elements in the DFN.
+
+        Parameters
+        ----------
+        element_type : type, optional
+            The type of elements to count. If None, counts all elements. The default is None.
+
+        Returns
+        -------
+        int
+            The number of elements in the DFN.
         """
-        return len(self.elements)
+        if self.elements is None:
+            self.get_elements()
+
+        if element_type is None:
+            return len(self.elements)
+        else:
+            if isinstance(element_type, str):
+                element_type = {
+                    "intersection": Intersection,
+                    "bounding circle": BoundingCircle,
+                    "well": Well,
+                    "constant head line": ConstantHeadLine,
+                    "impermeable circle": ImpermeableCircle,
+                    "impermeable line": ImpermeableLine,
+                }.get(element_type.lower(), None)
+                if element_type is None:
+                    raise ValueError(
+                        f"Unsupported element type: {element_type}. Supported types are 'intersection', 'bounding circle', 'well', 'constant head line', 'impermeable circle', and 'impermeable line'."
+                    )
+            if element_type not in [
+                Intersection,
+                BoundingCircle,
+                Well,
+                ConstantHeadLine,
+                ImpermeableCircle,
+                ImpermeableLine,
+            ]:
+                raise ValueError(
+                    f"Unsupported element type: {element_type}. Supported types are 'intersection', 'bounding', 'well', 'const_head_line', 'imp_circle', and 'imp_line'."
+                )
+            if not isinstance(element_type, type):
+                raise ValueError(
+                    f"Element type must be a type. Got {type(element_type)} instead."
+                )
+            return len([e for e in self.elements if isinstance(e, element_type)])
 
     def get_elements(self):
         """
@@ -692,6 +739,10 @@ class DFN(Constants):
         fracture : Fracture
             The fracture to delete from the DFN.
         """
+        # Delete all the elements that are connected to the fracture
+        elements = fracture.elements.copy()
+        for e in elements:
+            fracture.delete_element(e)
         self.fractures.remove(fracture)
         # reset the discharge matrix and elements
         self.discharge_matrix = None
@@ -952,7 +1003,7 @@ class DFN(Constants):
                 if endpoints0 is not None:
                     endpoints0 = gf.shorten_line(endpoints0, se_factor)
                     endpoints1 = gf.shorten_line(endpoints1, se_factor)
-                    i0 = Intersection(
+                    Intersection(
                         f"{fr.label}_{fr2.label}",
                         endpoints0,
                         endpoints1,
@@ -961,8 +1012,6 @@ class DFN(Constants):
                         ncoef,
                         nint,
                     )
-                    fr.add_element(i0)
-                    fr2.add_element(i0)
 
         # Compute intersections between all fractures
         if new_frac is None:
@@ -976,7 +1025,7 @@ class DFN(Constants):
                     if endpoints0 is not None:
                         endpoints0 = gf.shorten_line(endpoints0, se_factor)
                         endpoints1 = gf.shorten_line(endpoints1, se_factor)
-                        i0 = Intersection(
+                        Intersection(
                             f"{fr.label}_{fr2.label}",
                             endpoints0,
                             endpoints1,
@@ -985,12 +1034,11 @@ class DFN(Constants):
                             ncoef,
                             nint,
                         )
-                        fr.add_element(i0)
-                        fr2.add_element(i0)
 
         # Update the elements in the DFN
         self.get_elements()
 
+    @property
     def center(self):
         """
         Gets the center of the DFN.
@@ -1000,6 +1048,7 @@ class DFN(Constants):
             center += f.center
         return center / len(self.fractures)
 
+    @property
     def size(self):
         """
         Gets the size of the DFN.
@@ -1351,6 +1400,9 @@ class DFN(Constants):
         # self.build_discharge_matrix()
         # t3 = time.time()
         # logger.debug(f"Time to build discharge matrix: {t3 - t2:.2f} seconds")
+        logger.info("DFN properties:")
+        logger.info(f"Number of fractures: {len(self.fractures)}")
+        logger.info(f" Number of elements: {len(self.elements)}")
         self.print_solver_constants()
         self.elements_struc_array = hpc_solve(
             self.fractures_struc_array_hpc,
@@ -1815,6 +1867,8 @@ class DFN(Constants):
             The list of elements to plot. If None, all elements are plotted.
         line_width : float
             The line width of the elements.
+        const_elements : bool
+            Whether to only plot the constant head elements. Default is False.
         """
         # Check if the elements have been stored in the DFN
         assert self.elements is not None and len(self.elements) > 0, (
@@ -2002,6 +2056,7 @@ class DFN(Constants):
         for i, z in enumerate(z0):  # type: int, complex
             for j, e in enumerate(elevation):
                 logger.debug(f"Tracing streamline: {i + 1} / {len(z0)}")
+                print(f"\rTracing streamline: {i} / {len(z0)}", end="")
                 streamline, streamline_frac, velocity, element = (
                     self.streamline_tracking(z, frac, e, ds, max_length, backward)
                 )
@@ -2068,7 +2123,7 @@ class DFN(Constants):
             length = sum([len(s) for s in streamline])
             # Start the tracking process
             psi = [z_start]
-            w = [np.abs(frac.calc_w(z0))]
+            w = [frac.calc_velocity(z0)]
             discharge_elements = frac.get_discharge_elements()
 
             # get the next points
@@ -2080,7 +2135,7 @@ class DFN(Constants):
             )
             while z3 is False:
                 psi.append(z1)
-                w.append(np.abs(frac.calc_w(z1)))
+                w.append(frac.calc_velocity(z1))
                 z0 = z1
                 z1 = self.runge_kutta(z0, frac, ds_frac, backward)
                 if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
@@ -2093,7 +2148,7 @@ class DFN(Constants):
                     z3 = z1
                     break
             psi.append(z3)
-            w.append(np.abs(frac.calc_w(z3)))
+            w.append(frac.calc_velocity(z3))
 
             streamline.append(psi)
             streamline_frac.append(frac)
@@ -2122,39 +2177,51 @@ class DFN(Constants):
         for e in discharge_elements:
             if isinstance(e, Intersection):
                 # if ((e.q < 0 and e.frac0 == frac) or (e.q > 0 and e.frac1 == frac)) ^ backward:
-                #    continue
+                #   continue
                 z2 = e.check_chi_crossing(z0, z1, frac)
             else:
                 # if (e.q < 0) ^ backward:
-                #    continue
+                #   continue
                 z2 = e.check_chi_crossing(z0, z1)
-            if np.isnan(np.real(z2)):
-                return z1, False
             if z2 is not False:
                 return z2, e
         return False, False
 
     @staticmethod
-    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-2):
+    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-4):
         if frac == element.frac0:
             endpoints = element.endpoints0
         else:
             endpoints = element.endpoints1
         z = gf.map_3d_to_2d(z3d, frac)
+        # z2 = gf.map_3d_to_2d(z3d, frac_old)
         chi0 = gf.map_z_line_to_chi(z, endpoints)
         chi1 = np.conj(chi0)
+        # chi20 = gf.map_z_line_to_chi(z2, endpoints)
+        # chi21 = np.conj(chi20)
         z0 = gf.map_chi_to_z_line(chi0 * (1 + dchi), endpoints)
         z1 = gf.map_chi_to_z_line(chi1 * (1 + dchi), endpoints)
+        # z2 = gf.map_chi_to_z_line(chi20 * (1 + dchi), endpoints)
+        # z3 = gf.map_chi_to_z_line(chi21 * (1 + dchi), endpoints)
         w0 = frac.calc_w(z0)
         w1 = frac.calc_w(z1)
+        # w2 = frac_old.calc_w(z2)
+        # w3 = frac_old.calc_w(z3)
 
         # Magnitude
         abs_w0 = np.abs(w0)
         abs_w1 = np.abs(w1)
+        # abs_w2 = np.abs(w2)
+        # abs_w3 = np.abs(w3)
 
         # check angles between w0, w1 and z-z0, z-z1, using the dot product
         divide = abs_w0 / (abs_w0 + abs_w1)
         pointz0 = gf.map_2d_to_3d(z0, frac)
+
+        # if divide > 0.5 + np.random.rand() * 0.1:
+        #  return z0, z0, elevation * 0 + 0.5
+        # else:
+        #   return z1, z1, elevation * 0 + 0.5
 
         # map on direction of normal
         nz0 = np.dot((pointz0 - z3d), frac_old.normal)
@@ -2169,10 +2236,10 @@ class DFN(Constants):
         # Check if elevation is below the divide
         if elevation < divide:
             elevation /= divide  # new elevation
-            return down, z0, elevation
+            return down, z0, elevation  # * 0 + 0.5
 
         elevation = (elevation - divide) / (1 - divide)
-        return up, z0, elevation
+        return up, z0, elevation  # * 0 + 0.5
 
     @staticmethod
     def runge_kutta(z0, frac, ds, backward, tolerance=1e-6, max_it=10):
@@ -2206,13 +2273,17 @@ class DFN(Constants):
         if np.isnan(np.real(w0)):
             return np.nan + np.nan * 1j
         z1 = z0 + np.conj(w0) / np.abs(w0) * ds
-        dz = np.abs(z1 - z0)
+        if np.abs(z1) > frac.radius:
+            z1 *= frac.radius / (np.abs(z1) * (1 + 1e-5))
+        dz = 1e99
         it = 0
         while dz > tolerance and it < max_it:
             w1 = frac.calc_w(z1)
             if np.isnan(np.real(w1)):
                 break
             z2 = z0 + np.conj(w0 + w1) / np.abs(w0 + w1) * ds
+            if np.abs(z2) > frac.radius:
+                z2 *= frac.radius / (np.abs(z2) * (1 + 1e-5))
             dz = np.abs(z2 - z1)
             z1 = z2
             it += 1
@@ -2239,12 +2310,35 @@ class DFN(Constants):
             The length of the streamline.
         """
         if isinstance(streamline[0], list):
-            streamline = np.concat(streamline)
-            velocity = np.concatenate(velocity)
+            time = 0
+            length = 0
+            for i, s in enumerate(streamline):
+                if isinstance(s, list):
+                    streamline[i] = np.array(s)
+                if isinstance(velocity[i], list):
+                    velocity[i] = np.array(velocity[i])
+                t, le = _get_length_time_fracture(streamline[i], velocity[i])
+                time += t
+                length += le
+            return time, length
         if isinstance(streamline, list):
             streamline = np.array(streamline)
         if isinstance(velocity, list):
             velocity = np.array(velocity)
-        time = np.sum(np.abs(streamline[1:] - streamline[:-1]) / velocity[:-1])
-        length = np.sum(np.abs(streamline[1:] - streamline[:-1]))
-        return time, length
+        # remove nans
+        mask = ~np.isnan(streamline) & ~np.isnan(velocity)
+        streamline = streamline[mask]
+        velocity = velocity[mask]
+        t, le = _get_length_time_fracture(streamline, velocity)
+
+        return t, le
+
+
+def _get_length_time_fracture(streamline, velocity):
+    mask = ~np.isnan(streamline) & ~np.isnan(velocity)
+    streamline = streamline[mask]
+    velocity = velocity[mask]
+    time = np.sum(np.abs(streamline[1:] - streamline[:-1]) / velocity[:-1])
+    length = np.sum(np.abs(streamline[1:] - streamline[:-1]))
+
+    return time, length
