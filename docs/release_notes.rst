@@ -22,6 +22,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 - Fixed an import error in the DFN module.
+- Fixed a bug in the particle tracking algorithm that caused incorrect trajectories under certain conditions.
 
 Version 0.1.8
 -------------
