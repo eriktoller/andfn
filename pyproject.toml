@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "andfn"
-dynamic = ["version"]
+version = "0.1.9"
 description = "An Analytic Element Model for Discrete Fracture Networks"
 authors = [
     { name = "Erik A.L. Toller" }
@@ -47,9 +47,6 @@ Homepage = "https://eriktoller.github.io/andfn/"
 Documentation = "https://eriktoller.github.io/andfn/"
 Repository = "https://github.com/eriktoller/andfn"
 Issues = "https://github.com/eriktoller/andfn/issues"
-
-[tool.setuptools.dynamic]
-version = { attr = "andfn.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["andfn", "andfn.hpc"]
