@@ -1,0 +1,131 @@
+name: Publish Package
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  test-publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    permissions:
+      id-token: write        # For trusted publishing to TestPyPI
+      pull-requests: write   # For commenting on PRs
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Set up Python
+      run: uv python install 3.11
+      
+    - name: Create dev version for TestPyPI
+      run: |
+        # Create unique version for PR testing (e.g., 0.1.0.dev42001701234567)
+        PR_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+        DEV_VERSION="${PR_VERSION}.dev${{ github.event.number }}$(date +%s)"
+        sed -i "s/version = \".*\"/version = \"$DEV_VERSION\"/" pyproject.toml
+        echo "Created dev version: $DEV_VERSION"
+        
+    - name: Build package
+      run: uv build
+      
+    - name: Publish to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        
+    - name: Comment on PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const version = process.env.DEV_VERSION || 'dev-version';
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🚀 **TestPyPI Release Published**\n\nYou can test this version with:\n\`\`\`bash\npip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ gwrefpy\n\`\`\`\n\n_This is a staging release for testing purposes only._`
+          })
+
+  publish-and-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: write  # For creating releases
+      id-token: write  # For trusted publishing to PyPI
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Set up Python
+      run: uv python install 3.11
+      
+    - name: Build package
+      run: uv build
+      
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+        
+    - name: Get version from pyproject.toml
+      id: get_version
+      run: |
+        VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.get_version.outputs.version }}
+        name: Release v${{ steps.get_version.outputs.version }}
+        generate_release_notes: true
+        files: |
+          dist/*.tar.gz
+          dist/*.whl
+        body: |
+          ## 📦 PyPI Release
+          
+          This release has been automatically published to PyPI.
+          
+          **Install with pip:**
+          ```bash
+          pip install gwrefpy==${{ steps.get_version.outputs.version }}
+          ```
+          
+          **Install with uv:**
+          ```bash
+          uv add gwrefpy==${{ steps.get_version.outputs.version }}
+          ```
+          
+          **Or upgrade with pip:**
+          ```bash
+          pip install --upgrade gwrefpy
+          ```
+          
+          **Or upgrade with uv:**
+          ```bash
+          uv add gwrefpy@latest
+          ```
+          
+    - name: Install dependencies
+      run: | 
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Build HTML
+      run: | 
+        cd docs/
+        make html
+    
+    - name: Run ghp-import
+      run: | 
+        ghp-import -n -p -f docs/_build/html
