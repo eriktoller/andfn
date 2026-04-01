@@ -3,8 +3,8 @@ requires = ["setuptools>64"]
 build-backend = "setuptools.build_meta"
 
 [project]
+version = "0.1.9"
 name = "andfn"
-version = "0.1.9" # static version, updated manually for releases
 description = "An analytic element model for discrete fracture networks"
 authors = [
     { name = "Erik A.L. Toller" }
