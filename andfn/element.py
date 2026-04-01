@@ -139,6 +139,7 @@ fracture_dtype = np.dtype(
         ("y_vector", np.float64, 3),
         ("elements", np.ndarray),
         ("constant", np.float64),
+        ("aperture", np.float64),
     ]
 )
 
@@ -269,6 +270,17 @@ class Element:
             The string representation of the element.
         """
         return f"{self.__class__.__name__}: {self.label}"
+
+    def __repr__(self):
+        """
+        Returns the string representation of the element.
+
+        Returns
+        -------
+        str
+            The string representation of the element.
+        """
+        return self.__str__()
 
     def set_id(self, _id):
         """
