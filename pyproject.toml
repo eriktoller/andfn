@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "andfn"
-version = "0.1.9"
+version = "0.1.9" # static version, updated manually
 description = "An Analytic Element Model for Discrete Fracture Networks"
 authors = [
     { name = "Erik A.L. Toller" }
