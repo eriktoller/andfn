@@ -61,19 +61,12 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-      with:
-          fetch-depth: 0
 
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
-    - name: Debug full pyproject
-      run: |
-        echo "### FULL pyproject.toml ###"
-        nl -ba pyproject.toml
 
 
     - name: Install dependencies
@@ -81,13 +74,21 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install build
-      
+
+
     - name: Create dev version for TestPyPI
       run: |
-        # Create unique version for PR testing (e.g., 0.1.0.dev42001701234567)
+        # 1. Get the current version from the code
         PR_VERSION=$(python -c "from andfn import __version__; print(__version__)")
+        
+        # 2. Generate the unique dev version string
         DEV_VERSION="${PR_VERSION}.dev${{ github.event.number }}$(date +%s)"
-        sed -i "s/version = ".*"/version = "$DEV_VERSION"/" pyproject.toml
+        
+        # 3. Use single quotes for sed to avoid shell expansion issues with internal double quotes
+        sed -i 's/version = ".*"/version = "'$DEV_VERSION'"/' pyproject.toml
+        
+        # 4. (Optional) Export for the next step (the PR comment)
+        echo "DEV_VERSION=$DEV_VERSION" >> $GITHUB_ENV
         echo "Created dev version: $DEV_VERSION"
         
     - name: Build package
