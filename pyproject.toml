@@ -1,6 +1,6 @@
 
 [build-system]
-requires = ["setuptools>64", "setuptools-scm"]
+requires = ["setuptools>64"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -43,8 +43,8 @@ classifiers = [
 all = ["pyyaml", "pandas", "matplotlib"]
 
 [project.urls]
-Homepage = "https://eriktoller.github.io/andfn/"
-Documentation = "https://eriktoller.github.io/andfn/"
+Homepage = "https://eriktoller.github.io/andfn"
+Documentation = "https://eriktoller.github.io/andfn"
 Repository = "https://github.com/eriktoller/andfn"
 Issues = "https://github.com/eriktoller/andfn/issues"
 
