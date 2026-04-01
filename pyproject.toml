@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "andfn"
 version = "0.1.9" # static version, updated manually for releases
@@ -33,10 +37,6 @@ classifiers = [
     "Programming Language :: Python",
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
-
-[build-system]
-requires = ["setuptools>64"]
-build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 all = ["pyyaml", "pandas", "matplotlib"]
