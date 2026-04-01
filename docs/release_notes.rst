@@ -8,7 +8,7 @@ Version 0.1.9
 
 Date: 2026-04-01
 
-This release includes several new features, enhancements, and bug fixes to improve the functionality and stability of the code.
+This release includes several new features, enhancements, and bug fixes to improve the functionality and stability of the code. It also includes updates to the documentation to provide better guidance for users.
 
 Features
 ~~~~~~~~
