@@ -1,37 +1,33 @@
 name: Debug
-  
-on: workflow_dispatch 
+
+on:
+  workflow_dispatch:
 
 jobs:
   check-version:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
+
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    
-    - name: Search for duplicate pyproject.toml
-      run: find . -name pyproject.toml -print
+      - name: Search for duplicate pyproject.toml
+        run: find . -name pyproject.toml -print
 
-  
-    - name: Show sdist contents
-      run: |
-        python -m build --sdist
-        echo "Listing sdist:"
-        tar -tf dist/*.tar.gz | grep pyproject
+      - name: Show sdist contents
+        run: |
+          python -m build --sdist
+          echo "Listing sdist:"
+          tar -tf dist/*.tar.gz | grep pyproject
 
-    
-    - name: Debug what pyproject the builder reads
-      run: |
-        python - << 'EOF'
-        import pathlib, sys, tomllib
-    
-        # Walk entire workspace for pyproject.toml
-        for p in pathlib.Path(".").rglob("pyproject.toml"):
-            print("FOUND:", p)
-            print("--- CONTENTS ---")
-            print(p.read_text())
-            print("----------------")
-        EOF
+      - name: Debug what pyproject the builder reads
+        run: |
+          python - << 'EOF'
+          import pathlib
+          import tomllib
 
+          for p in pathlib.Path(".").rglob("pyproject.toml"):
+              print("FOUND:", p)
+              print("--- CONTENTS ---")
+              print(p.read_text())
+              print("----------------")
+          EOF
