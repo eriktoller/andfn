@@ -61,11 +61,20 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+          fetch-depth: 0
+
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+    
+    - name: Show first lines of pyproject.toml
+      run: |
+        echo "===== pyproject as used by GitHub ====="
+        nl -ba pyproject.toml | sed -n '1,20p'
+
 
     - name: Install dependencies
       run: | 
