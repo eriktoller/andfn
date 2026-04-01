@@ -106,14 +106,19 @@ jobs:
       with:
         script: |
           const version = process.env.FINAL_VERSION;
-          github.rest.issues.createComment({
+          const body = `🚀 **TestPyPI Release Published**
+ 
+          You can test this version with:
+          \`\`\`bash
+          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ andfn==${version}
+          \`\`\``;
+ 
+          await github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `🚀 **TestPyPI Release Published**\n\nYou can test this version with:\n\`
-            \
-            bash\npip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ andfn==${version}\n\`
-          })
+            body: body
+          });
 
   publish-and-release:
     runs-on: ubuntu-latest
