@@ -8,6 +8,8 @@ Version 0.1.9
 
 Date: 2026-04-01
 
+This release includes several new features, enhancements, and bug fixes to improve the functionality and stability of the code.
+
 Features
 ~~~~~~~~
 - Added regional boxed for extracting sub-DFN and setting boundary conditions
