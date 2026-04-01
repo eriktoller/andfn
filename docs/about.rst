@@ -1,7 +1,7 @@
 About
 =====
 
-The software is based on the Analytic Element Method (AEM) and is designed to simulate flow and transport in discrete fracture networks (DFNs). The software is written in Python and is open-source.
+The software is based on the Analytic Element Method (AEM) and is designed to simulate groundwater flow and transport in discrete fracture networks (DFN). The software is written in Python and is open-source.
 
 Contributors
 ------------

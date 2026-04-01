@@ -61,11 +61,20 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+          fetch-depth: 0
+
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+    
+    - name: Debug full pyproject
+      run: |
+        echo "### FULL pyproject.toml ###"
+        nl -ba pyproject.toml
+
 
     - name: Install dependencies
       run: | 
