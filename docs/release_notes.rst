@@ -13,7 +13,7 @@ This release includes several new features, enhancements, and bug fixes to impro
 Features
 ~~~~~~~~
 - Added regional boxed for extracting sub-DFN and setting boundary conditions
-- Added panels for setting boudnary coditions using rectuangular panels
+- Added panels for setting boundary conditions using rectangular panels
 
 Enhancements
 ~~~~~~~~~~~~
