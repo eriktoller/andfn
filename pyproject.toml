@@ -1,6 +1,6 @@
 [project]
 name = "andfn"
-version = "0.1.9" # static version, updated manually
+version = "0.1.9" # static version, updated manually for releases
 description = "An Analytic Element Model for Discrete Fracture Networks"
 authors = [
     { name = "Erik A.L. Toller" }
