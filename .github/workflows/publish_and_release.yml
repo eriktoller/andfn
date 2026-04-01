@@ -70,10 +70,10 @@ jobs:
       with:
         python-version: '3.11'
     
-    - name: Show first lines of pyproject.toml
+    - name: Debug full pyproject
       run: |
-        echo "===== pyproject as used by GitHub ====="
-        nl -ba pyproject.toml | sed -n '1,20p'
+        echo "### FULL pyproject.toml ###"
+        nl -ba pyproject.toml
 
 
     - name: Install dependencies
