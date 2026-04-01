@@ -2056,6 +2056,7 @@ class DFN(Constants):
         for i, z in enumerate(z0):  # type: int, complex
             for j, e in enumerate(elevation):
                 logger.debug(f"Tracing streamline: {i + 1} / {len(z0)}")
+                print(f"\rTracing streamline: {i} / {len(z0)}", end="")
                 streamline, streamline_frac, velocity, element = (
                     self.streamline_tracking(z, frac, e, ds, max_length, backward)
                 )
@@ -2218,9 +2219,9 @@ class DFN(Constants):
         pointz0 = gf.map_2d_to_3d(z0, frac)
 
         # if divide > 0.5 + np.random.rand() * 0.1:
-        #    return z0, z0, elevation * 0 + 0.5
+        #  return z0, z0, elevation * 0 + 0.5
         # else:
-        #    return z1, z1, elevation * 0 + 0.5
+        #   return z1, z1, elevation * 0 + 0.5
 
         # map on direction of normal
         nz0 = np.dot((pointz0 - z3d), frac_old.normal)
@@ -2235,10 +2236,10 @@ class DFN(Constants):
         # Check if elevation is below the divide
         if elevation < divide:
             elevation /= divide  # new elevation
-            return down, z0, elevation * 0 + 0.5
+            return down, z0, elevation  # * 0 + 0.5
 
         elevation = (elevation - divide) / (1 - divide)
-        return up, z0, elevation * 0 + 0.5
+        return up, z0, elevation  # * 0 + 0.5
 
     @staticmethod
     def runge_kutta(z0, frac, ds, backward, tolerance=1e-6, max_it=10):
