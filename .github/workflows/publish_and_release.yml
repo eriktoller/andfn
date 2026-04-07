@@ -78,19 +78,19 @@ jobs:
             # --------------------------------
         
             python - <<EOF
-            from packaging.version import Version
-            
-            local = Version("$INIT_VERSION")
-            published = Version("$PUBLISHED_VERSION")
-            
-            if local <= published:
-                raise SystemExit(
-                    f"❌ Local version {local} must be greater than published version {published}"
-                )
-            
-            print(f"✅ Local version {local} is newer than published version {published}")
-            EOF
-            ``
+        from packaging.version import Version
+        
+        local = Version("$INIT_VERSION")
+        published = Version("$PUBLISHED_VERSION")
+        
+        if local <= published:
+            raise SystemExit(
+                f"❌ Local version {local} must be greater than published version {published}"
+            )
+        
+        print(f"✅ Local version {local} is newer than published version {published}")
+        EOF
+        ``
 
     
   test-publish:
