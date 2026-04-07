@@ -427,7 +427,7 @@ class RectangularRegion(Region):
 
     def frac_intersections(self, fractures, face, head):
         """
-        Checks if the tunnel intersects with a given fracture.
+        Checks if a panel of the region box intersects with any fractures.
 
         Parameters
         ----------
