@@ -26,29 +26,71 @@ jobs:
     
     - name: Check version consistency
       run: |
-        # Extract version from __init__.py
+        set -e
+    
+        PACKAGE_NAME="andfn"
+    
+        # -----------------------------
+        # Extract versions from sources
+        # -----------------------------
+    
         INIT_VERSION=$(python -c "from andfn import __version__; print(__version__)")
-        
-        # Extract version from pyproject.toml
-        TOML_VERSION=$(python -c "import tomllib; data = tomllib.load(open('pyproject.toml', 'rb')); print(data['project']['version'] if 'version' in data['project'] else data['tool']['setuptools']['dynamic']['version'].split(\"'\")[1])" 2>/dev/null || python -c "import toml; data = toml.load('pyproject.toml'); print(data.get('project', {}).get('version', ''))")
-
-        # Extract sphinx release
+    
+        TOML_VERSION=$(python -c "import tomllib; data = tomllib.load(open('pyproject.toml', 'rb')); print(data['project']['version'] if 'version' in data['project'] else data['tool']['setuptools']['dynamic']['version'].split(\"'\")[1])" \
+          2>/dev/null || \
+          python -c "import toml; data = toml.load('pyproject.toml'); print(data.get('project', {}).get('version', ''))")
+    
         SH_VERSION=$(python -c "from docs.conf import release; print(release)")
+    
+        # -----------------------------
+        # Fetch latest published version
+        # -----------------------------
+    
+        PUBLISHED_VERSION=$(python - <<EOF
+        import json, urllib.request
+        pkg = "$PACKAGE_NAME"
+        url = f"https://pypi.org/pypi/{pkg}/json"
+        with urllib.request.urlopen(url) as r:
+            print(json.load(r)["info"]["version"])
+        EOF
+            )
         
-        echo "Version in __init__.py: $INIT_VERSION"
-        echo "Version in pyproject.toml: $TOML_VERSION"
-        echo "Version in conf.py: $SH_VERSION"
+            echo "Version in __init__.py:        $INIT_VERSION"
+            echo "Version in pyproject.toml:    $TOML_VERSION"
+            echo "Version in conf.py:           $SH_VERSION"
+            echo "Published version on PyPI:    $PUBLISHED_VERSION"
         
+            # --------------------------------
+            # Internal consistency check
+            # --------------------------------
         
-        if [ "$INIT_VERSION" != "$TOML_VERSION" ] || [ "$INIT_VERSION" != "$SH_VERSION" ] || [ "$TOML_VERSION" != "$SH_VERSION" ]; then
-            echo "❌ Version mismatch!"
-            echo "andfn/__init__.py has version: $INIT_VERSION"
-            echo "pyproject.toml has version:     $TOML_VERSION"
-            echo "setup.sh has version:           $SH_VERSION"
-            exit 1
-        else
-            echo "✅ All versions match!"
-        fi
+            if [ "$INIT_VERSION" != "$TOML_VERSION" ] || \
+               [ "$INIT_VERSION" != "$SH_VERSION" ] || \
+               [ "$TOML_VERSION" != "$SH_VERSION" ]; then
+                echo "❌ Version mismatch between source files!"
+                exit 1
+            fi
+        
+            echo "✅ Internal versions match"
+        
+            # --------------------------------
+            # Compare to published PyPI version
+            # --------------------------------
+        
+            python - <<EOF
+            from packaging.version import Version
+            
+            local = Version("$INIT_VERSION")
+            published = Version("$PUBLISHED_VERSION")
+            
+            if local <= published:
+                raise SystemExit(
+                    f"❌ Local version {local} must be greater than published version {published}"
+                )
+            
+            print(f"✅ Local version {local} is newer than published version {published}")
+            EOF
+            ``
 
     
   test-publish:
