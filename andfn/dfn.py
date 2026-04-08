@@ -229,6 +229,15 @@ class DFN(Constants):
         self.structures = []
         self.elements = None
 
+        self.ntype_element = {
+            0: 0,  # Intersection
+            1: 0,  # Bounding circle
+            2: 0,  # Well
+            3: 0,  # Constant head line
+            4: 0,  # Impermeable circle
+            5: 0,  # Impermeable line
+        }
+
         # Initialize the discharge matrix
         self.discharge_matrix = None
         self.discharge_elements = None
@@ -668,6 +677,14 @@ class DFN(Constants):
             bounding + imp_circle + imp_line + const_head_lines + wells + intersections
         )
         self.elements = elements
+        self.ntype_element = {
+            0: len(intersections),
+            1: len(bounding),
+            2: len(wells),
+            3: len(const_head_lines),
+            4: len(imp_circle),
+            5: len(imp_line),
+        }
         logger.info(f"Added {len(self.elements)} elements to the DFN.")
 
         for e in self.elements:
@@ -849,50 +866,44 @@ class DFN(Constants):
             raise FileNotFoundError(f"The file {path} does not exist.")
 
         data_file = pd.read_csv(path)
-        frac = []
-        for i in range(len(data_file)):
-            radius = data_file[radius_str][i]
-            if strike_str is not None and dip_str is not None:
-                normal = gf.convert_strike_dip_to_normal(
-                    data_file[strike_str][i], data_file[dip_str][i]
-                )
-            elif trend_str is not None and plunge_str is not None:
-                normal = gf.convert_trend_plunge_to_normal(
-                    data_file[trend_str][i], data_file[plunge_str][i]
-                )
-            else:
-                raise ValueError("Either strike/dip or trend/plunge must be provided.")
-            normal = normal / np.linalg.norm(normal)
-            center = np.array(
-                [data_file[x_str][i], data_file[y_str][i], data_file[z_str][i]]
+        if strike_str is not None and dip_str is not None:
+            orientation_method = gf.convert_strike_dip_to_normal
+            st_str = strike_str
+            dp_str = dip_str
+        elif trend_str is not None and plunge_str is not None:
+            orientation_method = gf.convert_trend_plunge_to_normal
+            st_str = trend_str
+            dp_str = plunge_str
+        else:
+            raise ValueError("Either strike/dip or trend/plunge must be provided.")
+        if e_str is not None and e_str not in data_file.columns:
+            raise ValueError(f"Aperture column '{e_str}' not found in the data file.")
+
+        # Extract the data from the file
+        radius_arr = data_file[radius_str].to_numpy()
+        st_arr = data_file[st_str].to_numpy()
+        dp_arr = data_file[dp_str].to_numpy()
+        center_arr = data_file[[x_str, y_str, z_str]].to_numpy()
+        transmissivity_arr = data_file[t_str].to_numpy()
+        aperture_arr = data_file[e_str].to_numpy()
+
+        normals = np.array(
+            [orientation_method(st, dp) for st, dp in zip(st_arr, dp_arr)]
+        )
+
+        frac = [
+            Fracture(
+                f"{i}",
+                transmissivity_arr[i],
+                radius_arr[i],
+                center_arr[i],
+                normals[i],
+                aperture_arr[i],
+                ncoef=self.constants["NCOEF"],
+                nint=self.constants["NINT"],
             )
-            transmissivity = data_file[t_str][i]
-            if e_str is None:
-                frac.append(
-                    Fracture(
-                        f"{i}",
-                        transmissivity,
-                        radius,
-                        center,
-                        normal,
-                        ncoef=self.constants["NCOEF"],
-                        nint=self.constants["NINT"],
-                    )
-                )
-            else:
-                aperture = data_file[e_str][i]
-                frac.append(
-                    Fracture(
-                        f"{i}",
-                        transmissivity,
-                        radius,
-                        center,
-                        normal,
-                        aperture,
-                        ncoef=self.constants["NCOEF"],
-                        nint=self.constants["NINT"],
-                    )
-                )
+            for i in range(len(data_file))
+        ]
 
         if starting_frac is not None:
             fracs = gf.get_connected_fractures(

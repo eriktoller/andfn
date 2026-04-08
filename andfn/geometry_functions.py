@@ -7,6 +7,7 @@ The geometrical functions are used by the element classes and to create the DFN 
 """
 
 import numpy as np
+from scipy.spatial import KDTree
 
 import andfn
 from . import fracture
@@ -216,7 +217,7 @@ def map_3d_to_2d(point, fractures):
     return x + 1j * y
 
 
-def fracture_intersection(frac0, frac1):
+def fracture_intersection_org(frac0, frac1):
     """
     Function that calculates the intersection between two fractures.
 
@@ -236,34 +237,29 @@ def fracture_intersection(frac0, frac1):
     """
     # vector parallel to the intersection line
     n = np.cross(frac0.normal, frac1.normal)
-    if n.sum() == 0:  # Check if the normals are parallel
+    if np.allclose(n, 0):  # Check if the normals are parallel
         return None, None
     n = n / np.linalg.norm(n)
 
     # Calculate a point on the line of intersection
     n_1, n_2 = frac0.normal, frac1.normal
     p_1, p_2 = frac0.center, frac1.center
-    a = np.matrix(
-        np.array(
-            [
-                [2, 0, 0, n_1[0], n_2[0]],
-                [0, 2, 0, n_1[1], n_2[1]],
-                [0, 0, 2, n_1[2], n_2[2]],
-                [n_1[0], n_1[1], n_1[2], 0, 0],
-                [n_2[0], n_2[1], n_2[2], 0, 0],
-            ]
-        )
+    a = np.array(
+        [
+            [2, 0, 0, n_1[0], n_2[0]],
+            [0, 2, 0, n_1[1], n_2[1]],
+            [0, 0, 2, n_1[2], n_2[2]],
+            [n_1[0], n_1[1], n_1[2], 0, 0],
+            [n_2[0], n_2[1], n_2[2], 0, 0],
+        ]
     )
     b4 = p_1[0] * n_1[0] + p_1[1] * n_1[1] + p_1[2] * n_1[2]
     b5 = p_2[0] * n_2[0] + p_2[1] * n_2[1] + p_2[2] * n_2[2]
-    b = np.matrix(
-        np.array([[2.0 * p_1[0]], [2.0 * p_1[1]], [2.0 * p_1[2]], [b4], [b5]])
-    )
-
+    b = np.array(
+        [[2.0 * p_1[0]], [2.0 * p_1[1]], [2.0 * p_1[2]], [b4], [b5]]
+    )  # Get two points on the intersection line and map them to each fracture
     x = np.linalg.solve(a, b)
     xi_a = np.squeeze(np.asarray(x[0:3]))
-
-    # Get two points on the intersection line and map them to each fracture
     xi_b = xi_a + n * 2.0
     z0_a, z0_b = map_3d_to_2d(xi_a, frac0), map_3d_to_2d(xi_b, frac0)
     z1_a, z1_b = map_3d_to_2d(xi_a, frac1), map_3d_to_2d(xi_b, frac1)
@@ -284,8 +280,8 @@ def fracture_intersection(frac0, frac1):
     pos = [
         i
         for i, xi in enumerate(xis)
-        if np.linalg.norm(xi - frac0.center) < frac0.radius + 1e-10
-        and np.linalg.norm(xi - frac1.center) < frac1.radius + 1e-10
+        if np.linalg.norm(xi - frac0.center) < frac0.radius + 1e-7
+        and np.linalg.norm(xi - frac1.center) < frac1.radius + 1e-7
     ]
     if not pos:
         return None, None
@@ -298,6 +294,63 @@ def fracture_intersection(frac0, frac1):
     endpoints1 = np.array([map_3d_to_2d(xi0, frac1), map_3d_to_2d(xi1, frac1)])
 
     return endpoints0, endpoints1
+
+
+def fracture_intersection(frac0, frac1):
+    # Line direction = intersection of planes
+    n0, n1 = frac0.normal, frac1.normal
+    d = np.cross(n0, n1)
+    d_norm2 = np.dot(d, d)
+
+    if d_norm2 < 1e-14:
+        return None, None  # planes parallel or coincident
+
+    # Plane offsets: n · x = c
+    c0 = np.dot(n0, frac0.center)
+    c1 = np.dot(n1, frac1.center)
+
+    # Point on intersection line (closed-form)
+    x0 = (c0 * np.cross(n1, d) + c1 * np.cross(d, n0)) / d_norm2
+
+    # Two points defining the line
+    x1 = x0 + d
+
+    # Project line to fracture-local 2D coordinates
+    z00, z01 = map_3d_to_2d(x0, frac0), map_3d_to_2d(x1, frac0)
+    z10, z11 = map_3d_to_2d(x0, frac1), map_3d_to_2d(x1, frac1)
+
+    # Intersect with circular fracture boundaries
+    a0, b0 = line_circle_intersection(z00, z01, frac0.radius)
+    a1, b1 = line_circle_intersection(z10, z11, frac1.radius)
+
+    if a0 is None or a1 is None:
+        return None, None
+
+    # Lift valid endpoints into 3D
+    candidates = [
+        map_2d_to_3d(a0, frac0),
+        map_2d_to_3d(b0, frac0),
+        map_2d_to_3d(a1, frac1),
+        map_2d_to_3d(b1, frac1),
+    ]
+
+    # Keep points inside both fractures
+    valid = [
+        x
+        for x in candidates
+        if np.linalg.norm(x - frac0.center) <= frac0.radius + 1e-8
+        and np.linalg.norm(x - frac1.center) <= frac1.radius + 1e-8
+    ]
+
+    if len(valid) != 2:
+        return None, None
+
+    p0, p1 = valid
+
+    endpoints0 = np.array([map_3d_to_2d(p0, frac0), map_3d_to_2d(p1, frac0)])
+    endpoints1 = np.array([map_3d_to_2d(p0, frac1), map_3d_to_2d(p1, frac1)])
+
+    return endpoints0, endpoints1  # endpoints0, endpoints1
 
 
 def line_circle_intersection(z0, z1, radius):
@@ -501,7 +554,9 @@ def get_connected_fractures(
     return connected_fractures
 
 
-def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance=-1):
+def get_fracture_intersections_org(
+    fractures, se_factor, ncoef=5, nint=10, tolerance=-1
+):
     """
     Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
     a given fracture, the function iterates through the list of fractures and finds all connected fractures.
@@ -559,6 +614,80 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
                     # fr.add_element(intersections)
                     # fr2.add_element(intersections)
 
+    return fractures
+
+
+def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance=-1):
+    """
+    Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
+    a given fracture, the function iterates through the list of fractures and finds all connected fractures.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+    se_factor : float
+        The shortening element factor. This is used to shorten the intersection line between two fractures.
+    ncoef : int
+        The number of coefficients for the intersection elements.
+    nint : int
+        The number of integration points for the intersection elements.
+    tolerance : float, optional
+        The minimum length of the intersection line as a fraction of the fracture radius. Intersections shorter than
+        this value will be ignored. If -1, no tolerance is applied. Default is -1.
+
+
+    Returns
+    -------
+    connected_fractures : list
+        A list of connected fractures.
+    """
+    # 1. Build a spatial index based on fracture centers
+    centers = np.array([fr.center for fr in fractures])
+    max_radius = max(fr.radius for fr in fractures)
+    tree = KDTree(centers)
+
+    # 2. Query the tree for pairs within a possible intersection distance
+    # This will give us candidate pairs of fractures that might intersect, significantly reducing the number of expensive intersection checks.
+    pairs = set()
+    for i, fr in enumerate(fractures):
+        r = fr.radius + max_radius
+        neighbors = tree.query_ball_point(fr.center, r)
+        for j in neighbors:
+            if j > i:
+                pairs.add((i, j))
+
+    cnt = 1
+    for i, j in pairs:
+        if cnt % 10000 == 0:
+            print(f"\r{cnt} / {len(pairs)} fracture pairs processed", end="")
+        cnt += 1
+        fr, fr2 = fractures[i], fractures[j]
+
+        # 3. Quick Squared Distance Check
+        dist_sq = np.sum((fr.center - fr2.center) ** 2)
+        if dist_sq > (fr.radius + fr2.radius) ** 2:
+            continue
+
+        # 4. Perform expensive geometric intersection
+        endpoints0, endpoints1 = fracture_intersection(fr, fr2)
+        if endpoints0 is not None:
+            if fr2 not in []:
+                length = np.linalg.norm(endpoints0[0] - endpoints0[1])
+                if length < tolerance * fr.radius or length < tolerance * fr2.radius:
+                    continue
+                endpoints01 = shorten_line(endpoints0, se_factor)
+                endpoints11 = shorten_line(endpoints1, se_factor)
+                intersection.Intersection(
+                    f"{fr.label}_{fr2.label}",
+                    endpoints01,
+                    endpoints11,
+                    fr,
+                    fr2,
+                    ncoef,
+                    nint,
+                )
+    print(f"\r{len(pairs)} fracture pairs processed. Intersection detection complete.")
     return fractures
 
 
