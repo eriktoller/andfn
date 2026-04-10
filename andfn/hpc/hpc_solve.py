@@ -53,10 +53,7 @@ logger = logging.getLogger("andfn")
 
 
 def solve(
-    fracture_struc_array,
-    element_struc_array,
-    discharge_int,
-    constants,
+    fracture_struc_array, element_struc_array, discharge_int, constants, ntype_elements
 ):
     """
     Solves the DFN.
@@ -71,6 +68,8 @@ def solve(
         The number of integration points
     constants : np.ndarray[constants_dtype]
         The constants for the solver and dfn.
+    ntype_elements : np.ndarray[int]
+        A dictionary with the number of elements of each type.
 
     Returns
     -------

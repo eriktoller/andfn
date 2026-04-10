@@ -40,6 +40,7 @@ from .element import (
 
 # Custom colormaps
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.tri import Triangulation
 
 import logging
 
@@ -229,14 +230,7 @@ class DFN(Constants):
         self.structures = []
         self.elements = None
 
-        self.ntype_element = {
-            0: 0,  # Intersection
-            1: 0,  # Bounding circle
-            2: 0,  # Well
-            3: 0,  # Constant head line
-            4: 0,  # Impermeable circle
-            5: 0,  # Impermeable line
-        }
+        self.ntype_element = np.zeros(6, dtype=int)  # number of elements of each type
 
         # Initialize the discharge matrix
         self.discharge_matrix = None
@@ -252,6 +246,9 @@ class DFN(Constants):
         self.fractures_index_array = None
         self.elements_struc_array_hpc = None
         self.fractures_struc_array_hpc = None
+
+        # Initialize the cell tree
+        self._tree = None
 
         # Set the kwargs
         self.set_kwargs(**kwargs)
@@ -507,7 +504,7 @@ class DFN(Constants):
             self.add_fracture(fracs)
             self.get_elements()
 
-    def consolidate_dfn(self, hpc=False):
+    def consolidate_dfn2(self, hpc=False):
         # Check if the elements have been stored in the DFN
         if self.elements is None:
             self.get_elements()
@@ -532,9 +529,9 @@ class DFN(Constants):
                 elements_struc_array[i], elements_index_array[i] = e.consolidate()
 
         # Consolidate fractures
-        fractures_struc_array = np.empty(self.number_of_fractures(), dtype=f_dtype)
+        fractures_struc_array = np.empty(self.number_of_fractures, dtype=f_dtype)
         fractures_index_array = np.empty(
-            self.number_of_fractures(), dtype=fracture_index_dtype
+            self.number_of_fractures, dtype=fracture_index_dtype
         )
 
         if hpc:
@@ -551,6 +548,57 @@ class DFN(Constants):
         else:
             self.elements_struc_array = elements_struc_array
             self.fractures_struc_array = fractures_struc_array
+        self.elements_index_array = elements_index_array
+        self.fractures_index_array = fractures_index_array
+
+    def consolidate_dfn(self, hpc=False):
+        if self.elements is None:
+            self.get_elements()
+
+        elements = self.elements
+        fractures = self.fractures
+
+        ne = len(elements)
+        nf = self.number_of_fractures
+
+        if hpc:
+            e_dtype = element_dtype_hpc
+            f_dtype = fracture_dtype_hpc
+            e_method = "consolidate_into_hpc"
+            f_method = "consolidate_into_hpc"
+        else:
+            e_dtype = element_dtype
+            f_dtype = fracture_dtype
+            e_method = "consolidate_into"
+            f_method = "consolidate_into"
+
+        elements_struc_array = np.empty(ne, dtype=e_dtype)
+        elements_index_array = np.empty(ne, dtype=element_index_dtype)
+
+        for i in range(ne):
+            getattr(elements[i], e_method)(
+                elements_struc_array,
+                elements_index_array,
+                i,
+            )
+
+        fractures_struc_array = np.empty(nf, dtype=f_dtype)
+        fractures_index_array = np.empty(nf, dtype=fracture_index_dtype)
+
+        for i in range(nf):
+            getattr(fractures[i], f_method)(
+                fractures_struc_array,
+                fractures_index_array,
+                i,
+            )
+
+        if hpc:
+            self.elements_struc_array_hpc = elements_struc_array
+            self.fractures_struc_array_hpc = fractures_struc_array
+        else:
+            self.elements_struc_array = elements_struc_array
+            self.fractures_struc_array = fractures_struc_array
+
         self.elements_index_array = elements_index_array
         self.fractures_index_array = fractures_index_array
 
@@ -591,7 +639,21 @@ class DFN(Constants):
     ####################################################################################################################
     #                      DFN functions                                                                               #
     ####################################################################################################################
+    @property
+    def tree(self):
+        """
+        Gets the cell tree for the DFN.
 
+        Returns
+        -------
+        tree : scipy.spatial.KDTree | None
+            The cell tree for the DFN.
+        """
+        if self._tree is None and self.number_of_fractures > 0:
+            self._tree = sp.spatial.KDTree(np.array([f.center for f in self.fractures]))
+        return self._tree
+
+    @property
     def number_of_fractures(self):
         """
         Returns the number of fractures in the DFN.
@@ -648,7 +710,7 @@ class DFN(Constants):
                 )
             return len([e for e in self.elements if isinstance(e, element_type)])
 
-    def get_elements(self):
+    def get_elements_org(self):
         """
         Gets the elements from the fractures and add store them in the DFN.
         """
@@ -677,18 +739,91 @@ class DFN(Constants):
             bounding + imp_circle + imp_line + const_head_lines + wells + intersections
         )
         self.elements = elements
-        self.ntype_element = {
-            0: len(intersections),
-            1: len(bounding),
-            2: len(wells),
-            3: len(const_head_lines),
-            4: len(imp_circle),
-            5: len(imp_line),
-        }
+        self.ntype_element = np.array(
+            [
+                len(intersections),
+                len(bounding),
+                len(wells),
+                len(const_head_lines),
+                len(imp_circle),
+                len(imp_line),
+            ],
+            dtype=int,
+        )
         logger.info(f"Added {len(self.elements)} elements to the DFN.")
 
         for e in self.elements:
             e.set_id(self.elements.index(e))
+
+    def get_elements(self):
+        """
+        Gets the elements from the fractures and stores them in the DFN.
+        """
+
+        # reset
+        self.discharge_matrix = None
+        self.elements = None
+        self.discharge_elements = None
+        self.lup = None
+
+        # ---- collect unique elements (O(n)) ----
+        elements = []
+        element_set = set()
+
+        for f in self.fractures:
+            fes = f.elements
+            if not fes:
+                continue
+            for e in fes:
+                if e not in element_set:
+                    element_set.add(e)
+                    elements.append(e)
+
+        # ---- classify in ONE pass ----
+        intersections = []
+        bounding = []
+        wells = []
+        const_head_lines = []
+        imp_circle = []
+        imp_line = []
+
+        for e in elements:
+            t = e._type
+            if t == 0:
+                intersections.append(e)
+            elif t == 1:
+                bounding.append(e)
+            elif t == 2:
+                wells.append(e)
+            elif t == 3:
+                const_head_lines.append(e)
+            elif t == 4:
+                imp_circle.append(e)
+            elif t == 5:
+                imp_line.append(e)
+
+        # ---- final ordering (unchanged semantics) ----
+        self.elements = (
+            bounding + imp_circle + imp_line + const_head_lines + wells + intersections
+        )
+
+        self.ntype_element = np.array(
+            [
+                len(intersections),
+                len(bounding),
+                len(wells),
+                len(const_head_lines),
+                len(imp_circle),
+                len(imp_line),
+            ],
+            dtype=int,
+        )
+
+        logger.info(f"Added {len(self.elements)} elements to the DFN.")
+
+        # ---- assign ids in O(n) ----
+        for i, e in enumerate(self.elements):
+            e.set_id(i)
 
     def get_discharge_elements(self):
         """
@@ -905,6 +1040,9 @@ class DFN(Constants):
             for i in range(len(data_file))
         ]
 
+        centers = np.array([f.center for f in frac])
+        tree = sp.spatial.KDTree(centers)
+
         if starting_frac is not None:
             fracs = gf.get_connected_fractures(
                 frac,
@@ -921,6 +1059,7 @@ class DFN(Constants):
                 ncoef=self.constants["NCOEF"],
                 nint=self.constants["NINT"],
                 tolerance=remove_tolerance,
+                tree=tree,
             )
 
         if remove_isolated:
@@ -1103,6 +1242,7 @@ class DFN(Constants):
         ncoef=5,
         nint=10,
         se_factor=None,
+        tolerance=-1,
     ):
         """
         Adds a constant head boundary to the DFN.
@@ -1125,6 +1265,8 @@ class DFN(Constants):
             The number of integration points to use for the constant head boundary elements.
         se_factor : float
             The shortening element factor to use for the constant head boundary elements.
+        tolerance : float, optional
+            The tolerance to use when checking if the constant head boundary intersects with the fractures. The default is -1 (no tolerance).
         """
         if se_factor is None:
             se_factor = self.constants["SE_FACTOR"]
@@ -1138,6 +1280,7 @@ class DFN(Constants):
             normal,
             label,
             se_factor,
+            tolerance,
         )
 
     def set_impermeable_boundary(
@@ -1263,7 +1406,7 @@ class DFN(Constants):
         """
         Checks the connectivity of the DFN and removes isolated fractures.
         """
-
+        logger.info("Checking connectivity of the DFN...")
         connectivity, remove_fracs = gf.check_connectivity(self.fractures)
         if not connectivity:
             for f in remove_fracs:
@@ -1283,7 +1426,7 @@ class DFN(Constants):
 
         """
         self.get_discharge_elements()
-        size = len(self.discharge_elements) + self.number_of_fractures()
+        size = len(self.discharge_elements) + self.number_of_fractures
 
         # Create a sparse matrix
         # create the row, col and data arrays
@@ -1400,7 +1543,8 @@ class DFN(Constants):
         logger.info("---------------------------------------")
         logger.info("Collecting elements and fractures...")
         t0 = time.time()
-        self.get_elements()
+        if self.elements is None:
+            self.get_elements()
         t1 = time.time()
         logger.debug(f"Time to collect elements and fractures: {t1 - t0:.2f} seconds")
         logger.info("Consolidating DFN...")
@@ -1420,6 +1564,7 @@ class DFN(Constants):
             self.elements_struc_array_hpc,
             self.discharge_int,
             self.constants,
+            self.ntype_element,
         )
         if unconsolidate:
             logger.info("Unconsolidating DFN...")
@@ -1717,12 +1862,11 @@ class DFN(Constants):
 
         logger.debug("")
 
-    def plot_fractures_head(
+    def plot_fractures_head_org(
         self,
         pl,
         lvs=20,
-        n_points=2000,
-        n_boundary_points=50,
+        n_layers=10,
         line_width=2,
         opacity=1.0,
         color_map="viridis",
@@ -1741,10 +1885,8 @@ class DFN(Constants):
             The plotter object.
         lvs : int | bool
             The number of levels to contour for the flow net.
-        n_points : int
-            The number of points to use for the flow net.
-        n_boundary_points : int
-            The number of boundary points to use for the bounding circles.
+        n_layers : int
+            The number of layers to use for the flow net. This determines how many points are used
         line_width : float
             The line width of the flow net.
         opacity : float
@@ -1791,11 +1933,13 @@ class DFN(Constants):
             self.fractures_struc_array_hpc_fracs = self.fractures_struc_array_hpc
 
         # Calculate the hydraulic head for each fracture and get the mapped 3d points
+        h = 1 / (n_layers + 1)
+        partitions = int(2 * np.pi / h / n_layers)
+        z_array, base_faces = generate_disk(partitions, n_layers)
         heads, pnts_3d = hpc_get_heads(
             self.fractures_struc_array_hpc_fracs,
-            n_points,
-            n_boundary_points,
             self.elements_struc_array_hpc,
+            z_array,
         )
 
         # Get the limits for the color map
@@ -1861,6 +2005,122 @@ class DFN(Constants):
         end = time.time()
         logger.info(f"Plotting hydraulic head took {end - start:.2f} seconds.")
         logger.debug("")
+
+    def plot_fractures_head(
+        self,
+        pl,
+        lvs=20,
+        n_layers=10,
+        line_width=2,
+        opacity=1.0,
+        color_map="viridis",
+        limits=None,
+        contour=True,
+        colorbar=True,
+        debug=False,
+        fractures=None,
+    ):
+
+        start = time.time()
+
+        # --- Debug handling ---
+        if debug:
+            assert limits is not None, "For debug mode, limits must be provided."
+            min_lim, max_lim = limits
+            limits = None
+
+        # --- Ensure consolidation ---
+        if self.fractures_struc_array_hpc is None:
+            self.consolidate_dfn(hpc=True)
+
+        # --- Select fractures efficiently ---
+        fracs_arr = self.fractures_struc_array_hpc
+        if fractures is not None:
+            fracture_index = {f: i for i, f in enumerate(self.fractures)}
+            idx = np.fromiter(
+                (fracture_index[f] for f in fractures),
+                dtype=np.int64,
+                count=len(fractures),
+            )
+            fracs_arr = fracs_arr[idx]
+
+        # --- Compute heads & points ---
+        h = 1 / (n_layers + 1)
+        partitions = int(2 * np.pi / h / n_layers)
+        z_array, base_faces = generate_disk(partitions, n_layers)
+        heads, pnts_3d = hpc_get_heads(
+            fracs_arr, self.elements_struc_array_hpc, z_array
+        )
+
+        # --- Debug filtering BEFORE mesh creation ---
+        if debug:
+            mask = np.array(
+                [(np.nanmin(h) < min_lim) or (np.nanmax(h) > max_lim) for h in heads],
+                dtype=bool,
+            )
+            heads = heads[mask]
+            pnts_3d = pnts_3d[mask]
+
+        if heads.size == 0:
+            return
+
+        # --- Color limits ---
+        if limits is None:
+            limits = [np.nanmin(heads), np.nanmax(heads)]
+
+        # --- Contour levels ---
+        if lvs is not False:
+            lvs = np.linspace(limits[0], limits[1], lvs)
+
+        # --- Build ONE mesh (major speedup) ---
+
+        nf, npts, _ = pnts_3d.shape
+
+        points = pnts_3d.reshape(nf * npts, 3)
+        head_vals = heads.reshape(nf * npts)
+
+        # base_faces = get_faces(pnts_3d[0])  # already VTK-style
+
+        faces = np.tile(base_faces, nf)
+
+        # indices are at positions 1,2,3, 5,6,7, 9,10,11, ...
+        idx = np.arange(len(faces)) % 4 != 0
+
+        repeat_offsets = np.repeat(np.arange(nf) * npts, len(base_faces))
+        faces[idx] += repeat_offsets[idx]
+
+        mesh = pv.PolyData(points, faces)
+        mesh.point_data["head"] = head_vals
+
+        # --- Plot mesh ---
+        pl.add_mesh(
+            mesh,
+            scalars="head",
+            cmap=color_map,
+            opacity=opacity,
+            show_edges=False,
+            line_width=line_width,
+            scalar_bar_args=dict(title="Hydraulic Head", shadow=True),
+            clim=limits,
+            name="head",
+        )
+
+        # --- Contours ---
+        if contour:
+            contours = mesh.contour(isosurfaces=lvs, scalars="head")
+            if contours.n_points > 0:
+                pl.add_mesh(
+                    contours,
+                    color="black",
+                    line_width=line_width,
+                    opacity=opacity,
+                    clim=limits,
+                )
+
+        if not colorbar:
+            pl.remove_scalar_bar()
+
+        logger.info(f"Plotting hydraulic head took {time.time() - start:.2f} seconds.")
 
     def plot_elements(
         self, pl, color=None, elements=None, line_width=3.0, const_elements=False
@@ -1958,7 +2218,7 @@ class DFN(Constants):
         num_zeros = self.discharge_matrix.shape[0] * self.discharge_matrix.shape[1]
         # title
         ax.set_title(
-            f"Sparse matrix of the DFN\nNumber of fractures: {self.number_of_fractures()}, Number of elements: {self.number_of_elements()}"
+            f"Sparse matrix of the DFN\nNumber of fractures: {self.number_of_fractures}, Number of elements: {self.number_of_elements()}"
             f"\nNumber of entries: {num_entries}, Number of zeros: "
             f"{num_zeros - num_entries}\nFilled percentage: {num_entries / num_zeros * 100:.2f}%"
         )
@@ -2353,3 +2613,39 @@ def _get_length_time_fracture(streamline, velocity):
     length = np.sum(np.abs(streamline[1:] - streamline[:-1]))
 
     return time, length
+
+
+def generate_disk(partitions: int, depth: int):
+    """
+    Generate a triangular mesh for the unit circle.
+
+    Parameters
+    ----------
+    partitions: int
+        Number of triangles around the origin.
+    depth: int
+        Number of "layers" of triangles around the origin.
+
+    Returns
+    -------
+    z: np.ndarray of complex numbers with shape ``(n_points,)``
+        The coordinates of the points in the mesh, where the real part is the x-coordinate and the imaginary part is the y-coordinate.
+    faces : np.ndarray of integers with shape ``(n_triangles, 4)``
+        The faces of the mesh, where each row contains the number of vertices in the face (which is 3 for triangles) followed by the indices of the vertices in the mesh.
+    """
+    N = depth + 1
+    n_per_level = partitions * np.arange(N)
+    n_per_level[0] = 1
+
+    delta_angle = (2 * np.pi) / np.repeat(n_per_level, n_per_level)
+    index = np.repeat(np.insert(n_per_level.cumsum()[:-1], 0, 0), n_per_level)
+    angles = delta_angle.cumsum()
+    angles = angles - angles[index] + 0.5 * np.pi
+    radii = np.repeat(np.linspace(0.0, 1.0, N), n_per_level)
+
+    x = np.cos(angles) * radii
+    y = np.sin(angles) * radii
+    triang = Triangulation(x, y)
+    triangles = triang.triangles
+    faces = np.column_stack([np.full(triangles.shape[0], 3), triangles]).ravel()
+    return x + 1j * y, faces

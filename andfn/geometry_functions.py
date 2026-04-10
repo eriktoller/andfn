@@ -617,7 +617,9 @@ def get_fracture_intersections_org(
     return fractures
 
 
-def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance=-1):
+def get_fracture_intersections(
+    fractures, se_factor, ncoef=5, nint=10, tolerance=-1, tree=None
+):
     """
     Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
     a given fracture, the function iterates through the list of fractures and finds all connected fractures.
@@ -635,6 +637,8 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
     tolerance : float, optional
         The minimum length of the intersection line as a fraction of the fracture radius. Intersections shorter than
         this value will be ignored. If -1, no tolerance is applied. Default is -1.
+    tree : KDTree, optional
+        A KDTree object for spatial indexing of the fracture centers. If None, a new KDtree will be created. Default is None.
 
 
     Returns
@@ -643,9 +647,10 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
         A list of connected fractures.
     """
     # 1. Build a spatial index based on fracture centers
-    centers = np.array([fr.center for fr in fractures])
+    if tree is None:
+        centers = np.array([fr.center for fr in fractures])
+        tree = KDTree(centers)
     max_radius = max(fr.radius for fr in fractures)
-    tree = KDTree(centers)
 
     # 2. Query the tree for pairs within a possible intersection distance
     # This will give us candidate pairs of fractures that might intersect, significantly reducing the number of expensive intersection checks.
@@ -657,36 +662,40 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
             if j > i:
                 pairs.add((i, j))
 
-    cnt = 1
-    for i, j in pairs:
-        if cnt % 10000 == 0:
-            print(f"\r{cnt} / {len(pairs)} fracture pairs processed", end="")
+    n_pairs = len(pairs)
+    for cnt, (i, j) in enumerate(pairs, start=1):
+        if cnt % 50000 == 0:
+            print(f"\r{cnt} / {n_pairs} fracture pairs processed", end="")
         cnt += 1
         fr, fr2 = fractures[i], fractures[j]
 
         # 3. Quick Squared Distance Check
-        dist_sq = np.sum((fr.center - fr2.center) ** 2)
+        dx = fr.center[0] - fr2.center[0]
+        dy = fr.center[1] - fr2.center[1]
+        dz = fr.center[2] - fr2.center[2]
+        dist_sq = dx * dx + dy * dy + dz * dz
         if dist_sq > (fr.radius + fr2.radius) ** 2:
             continue
 
         # 4. Perform expensive geometric intersection
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
-            if fr2 not in []:
-                length = np.linalg.norm(endpoints0[0] - endpoints0[1])
-                if length < tolerance * fr.radius or length < tolerance * fr2.radius:
-                    continue
-                endpoints01 = shorten_line(endpoints0, se_factor)
-                endpoints11 = shorten_line(endpoints1, se_factor)
-                intersection.Intersection(
-                    f"{fr.label}_{fr2.label}",
-                    endpoints01,
-                    endpoints11,
-                    fr,
-                    fr2,
-                    ncoef,
-                    nint,
-                )
+            dx = endpoints0[0].real - endpoints0[1].real
+            dy = endpoints0[0].imag - endpoints0[1].imag
+            length = (dx * dx + dy * dy) ** 0.5
+            if length < tolerance * fr.radius or length < tolerance * fr2.radius:
+                continue
+            endpoints01 = shorten_line(endpoints0, se_factor)
+            endpoints11 = shorten_line(endpoints1, se_factor)
+            intersection.Intersection(
+                f"{fr.label}_{fr2.label}",
+                endpoints01,
+                endpoints11,
+                fr,
+                fr2,
+                ncoef,
+                nint,
+            )
     print(f"\r{len(pairs)} fracture pairs processed. Intersection detection complete.")
     return fractures
 
@@ -854,7 +863,7 @@ def remove_isolated_fractures(fractures):
 
 
 def set_head_boundary(
-    fractures, ncoef, nint, head, center, radius, normal, label, se_factor
+    fractures, ncoef, nint, head, center, radius, normal, label, se_factor, tolerance
 ):
     """
     Function that sets a constant head boundary condition on the intersection line between a fracture and a defined
@@ -880,6 +889,9 @@ def set_head_boundary(
         The label of the constant head fracture plane.
     se_factor : float
         The shortening element factor. This is used to shorten the constant head line.
+    tolerance : float
+        The minimum length of the intersection line as a fraction of the fracture radius. Intersections shorter than
+        this value will be ignored. If -1, no tolerance is applied. Default is -1.
 
     Returns
     -------
@@ -888,14 +900,15 @@ def set_head_boundary(
     fracture_surface = andfn.Fracture(label, 1, radius, center, normal, ncoef, nint)
     fr = fracture_surface
     for fr2 in fractures:
-        if fr == fr2:
-            continue
-        if np.linalg.norm(fr.center - fr2.center) > fr.radius + fr2.radius:
+        # Quick Squared Distance Check
+        dist_sq = np.sum((fr.center - fr2.center) ** 2)
+        if dist_sq > (fr.radius + fr2.radius) ** 2:
             continue
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
             endpoints = shorten_line(endpoints1, se_factor)
-            if np.linalg.norm(endpoints0[0] - endpoints0[1]) < 1e-10:
+            length = np.linalg.norm(endpoints1[0] - endpoints1[1])
+            if length < tolerance * fr2.radius:
                 continue
             ConstantHeadLine(f"{label}_{fr2.label}", endpoints, head, fr2, ncoef, nint)
 
@@ -967,7 +980,7 @@ def shorten_line(endpoints, se_factor):
     return np.array([z0, z1])
 
 
-def check_connectivity(fractures):
+def check_connectivity_org(fractures):
     """
     Function that checks the connectivity of a list of fractures. The function returns
     any fractures that are not connected to a constant head boundary.
@@ -1024,6 +1037,70 @@ def check_connectivity(fractures):
         fracture_list = [f for f in fractures if f not in connected_fractures]
 
     remove_list = [f for f in fractures if f not in connected_fractures]
+
+    return len(remove_list) == 0, remove_list
+
+
+def check_connectivity(fractures):
+    """
+    Function that checks the connectivity of a list of fractures. The function returns
+    any fractures that are not connected to a constant head boundary.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+
+    Returns
+    -------
+    bool
+        True if all fractures are connected, False otherwise.
+    """
+    from collections import deque
+
+    n = len(fractures)
+
+    # Map fractures to integer IDs (major speedup)
+    id_of = {f: i for i, f in enumerate(fractures)}
+
+    # Neighbor adjacency list (only intersections)
+    neighbors = [[] for _ in range(n)]
+
+    # Connected flag (bitset for speed & memory)
+    connected = bytearray(n)
+
+    # BFS queue
+    queue = deque()
+
+    # ---------- Single preprocessing pass ----------
+    for f in fractures:
+        fid = id_of[f]
+        has_boundary = False
+
+        for el in f.elements:
+            if isinstance(el, intersection.Intersection):
+                neighbors[fid].append(id_of[el.frac0])
+                neighbors[fid].append(id_of[el.frac1])
+
+            elif isinstance(el, (ConstantHeadLine, Well)):
+                has_boundary = True
+
+        # Seed BFS immediately
+        if has_boundary:
+            connected[fid] = 1
+            queue.append(fid)
+
+    # ---------- BFS traversal ----------
+    while queue:
+        fid = queue.popleft()
+
+        for nbr in neighbors[fid]:
+            if not connected[nbr]:
+                connected[nbr] = 1
+                queue.append(nbr)
+
+    # ---------- Fractures to remove ----------
+    remove_list = [fractures[i] for i in range(n) if not connected[i]]
 
     return len(remove_list) == 0, remove_list
 
