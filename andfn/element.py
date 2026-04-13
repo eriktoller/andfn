@@ -346,6 +346,32 @@ class Element:
 
         return struc_array, index_array
 
+    def consolidate_into(self, struc_array, index_array, i):
+        """
+        Consolidate into a given numpy structures array.
+
+        Parameters
+        ----------
+        struc_array : np.ndarray
+            The structure array to consolidate into.
+        index_array : np.ndarray
+            The index array to consolidate into.
+        i : int
+            The index to consolidate into.
+
+        Returns
+        -------
+        None. The element is updated in place.
+        """
+        for key in self.__dict__.keys():
+            if key in element_dtype.names:
+                if key in ["frac0", "frac1"]:
+                    struc_array[key][i] = self.__dict__[key]._id
+                else:
+                    struc_array[key][i] = self.__dict__[key]
+
+        index_array[i] = (self.label, self._id, self._type)
+
     def consolidate_hpc(self):
         """
         Consolidate into a numpy structures array for HPC solver.
@@ -373,6 +399,34 @@ class Element:
         )
 
         return struc_array, index_array
+
+    def consolidate_into_hpc(self, struc_array, index_array, i):
+        """
+        Consolidate into a given numpy structures array for HPC solver.
+
+        Parameters
+        ----------
+        struc_array : np.ndarray
+            The structure array to consolidate into.
+        index_array : np.ndarray
+            The index array to consolidate into.
+        i : int
+            The index to consolidate into.
+
+        Returns
+        -------
+        None. The element is updated in place.
+        """
+        for key in self.__dict__.keys():
+            if key in element_dtype.names:
+                if key in ["frac0", "frac1"]:
+                    struc_array[key][i] = self.__dict__[key]._id
+                elif key in ["thetas", "coef", "old_coef", "dpsi_corr"]:
+                    struc_array[key][i][: self.__dict__[key].size] = self.__dict__[key]
+                else:
+                    struc_array[key][i] = self.__dict__[key]
+
+        index_array[i] = (self.label, self._id, self._type)
 
     def unconsolidate(self, struc_array, index_array, fracs):
         """

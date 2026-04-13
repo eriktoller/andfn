@@ -256,7 +256,7 @@ def get_flow_nets(
 
 
 @nb.njit(cache=CACHE, parallel=True)
-def get_heads(fracture_struc_array, n_points, n_boundary_points, element_struc_array):
+def get_heads(fracture_struc_array, element_struc_array, z_array):
     """
     Get the heads for all fractures.
 
@@ -264,19 +264,17 @@ def get_heads(fracture_struc_array, n_points, n_boundary_points, element_struc_a
     ----------
     fracture_struc_array : np.ndarray[fracture_dtype]
         The fracture structure array.
-    n_points : int
-        Number of points in the flow net.
-    n_boundary_points : int
-        Number of points along the boundary of the unit circle.
     element_struc_array : np.ndarray[element_dtype]
         Array of elements.
+    z_array : np.ndarray[np.complex128]
+        Array of complex coordinates for the points in the disk.
 
     Returns
     -------
     heads : list[np.ndarray[complex]]
         List of heads for each fracture.
     """
-    n = n_points + n_boundary_points
+    n = len(z_array)
 
     # Create the heads arrays
     heads = np.zeros((len(fracture_struc_array), n), dtype=np.float64)
@@ -284,7 +282,6 @@ def get_heads(fracture_struc_array, n_points, n_boundary_points, element_struc_a
     # Create the 3D points arrays and its working z arrays
     pnts_3d = np.zeros((len(fracture_struc_array), n, 3), dtype=np.float64)
     z_arrays = np.zeros((len(fracture_struc_array), n), dtype=np.complex128)
-    z_array = sunflower_spiral(n_points, n_boundary_points)
 
     # Calculate the heads for each fracture
     for i in nb.prange(len(fracture_struc_array)):

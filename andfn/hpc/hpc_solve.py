@@ -53,10 +53,7 @@ logger = logging.getLogger("andfn")
 
 
 def solve(
-    fracture_struc_array,
-    element_struc_array,
-    discharge_int,
-    constants,
+    fracture_struc_array, element_struc_array, discharge_int, constants, ntype_elements
 ):
     """
     Solves the DFN.
@@ -71,6 +68,8 @@ def solve(
         The number of integration points
     constants : np.ndarray[constants_dtype]
         The constants for the solver and dfn.
+    ntype_elements : np.ndarray[int]
+        A dictionary with the number of elements of each type.
 
     Returns
     -------
@@ -841,6 +840,13 @@ def build_discharge_matrix(
     Builds the discharge matrix for the DFN and adds it to the DFN.
 
     """
+    # Estimate the maximum number of non-zero entries in the discharge matrix
+    max_id = int(np.max(element_struc_array["_id"]))
+    id_to_pos = np.full(max_id + 1, -1, dtype=np.int32)
+    for i, e in enumerate(discharge_elements):
+        id_to_pos[e["_id"]] = i
+
+    """
     data, rows, cols, size = get_discharge_matrix_arrays(
         fractures_struc_array,
         element_struc_array,
@@ -848,6 +854,32 @@ def build_discharge_matrix(
         discharge_int,
         z_int,
     )
+    """
+
+    nnz_per_row = count_discharge_nnz(
+        fractures_struc_array, element_struc_array, discharge_elements
+    )
+    row_offsets, total_nnz = exclusive_prefix_sum(nnz_per_row)
+
+    rows = np.empty(total_nnz, np.int64)
+    cols = np.empty(total_nnz, np.int64)
+    data = np.empty(total_nnz, np.float64)
+    size = len(nnz_per_row)
+
+    fill_discharge_matrix(
+        fractures_struc_array,
+        element_struc_array,
+        discharge_elements,
+        id_to_pos,
+        z_int,
+        discharge_int,
+        row_offsets,
+        rows,
+        cols,
+        data,
+    )
+
+    logger.info(f"Dicharge matrix arrays size: {size}")
 
     # create the csr sparse matrix
     matrix = sp.sparse.csc_matrix((data, (rows, cols)), shape=(size, size))
@@ -1022,7 +1054,151 @@ def get_discharge_matrix_arrays(
     rows = rows_np[inds]
     cols = cols_np[inds]
     data = data_np[inds]
+
     return data, rows, cols, size
+
+
+@nb.njit(parallel=True, cache=CACHE)
+def count_discharge_nnz(fractures, elements, discharge_elements):
+    n_de = discharge_elements.size
+    n_fr = fractures.size
+    nnz_per_row = np.zeros(n_de + n_fr, np.int64)
+
+    # Discharge element equations
+    for j in nb.prange(n_de):
+        e = discharge_elements[j]
+        cnt = 0
+
+        if e["_type"] == 0:
+            for f_id in (e["frac0"], e["frac1"]):
+                f = fractures[f_id]
+                for k in range(f["nelements"]):
+                    ee = elements[f["elements"][k]]
+                    t = ee["_type"]
+                    if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                        continue
+                    cnt += 1
+            cnt += 2  # fracture continuity terms
+        else:
+            f = fractures[e["frac0"]]
+            for k in range(f["nelements"]):
+                ee = elements[f["elements"][k]]
+                t = ee["_type"]
+                if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                    continue
+                cnt += 1
+            cnt += 1
+
+        nnz_per_row[j] = cnt
+
+    # Fracture continuity equations
+    for j in nb.prange(n_fr):
+        f = fractures[j]
+        cnt = 0
+        for k in range(f["nelements"]):
+            e = elements[f["elements"][k]]
+            if e["_type"] in (0, 2, 3):
+                cnt += 1
+        nnz_per_row[n_de + j] = cnt
+
+    return nnz_per_row
+
+
+@nb.njit(cache=CACHE)
+def exclusive_prefix_sum(arr):
+    out = np.empty_like(arr)
+    s = 0
+    for i in range(arr.size):
+        out[i] = s
+        s += arr[i]
+    return out, s  # offsets, total nnz
+
+
+@nb.njit(parallel=True, cache=CACHE)
+def fill_discharge_matrix(
+    fractures,
+    elements,
+    discharge_elements,
+    id_to_pos,
+    z_int,
+    discharge_int,
+    row_offsets,
+    rows,
+    cols,
+    data,
+):
+    n_de = discharge_elements.size
+    n_fr = fractures.size
+
+    # ---- discharge element equations ----
+    for j in nb.prange(n_de):
+        e = discharge_elements[j]
+        row = j
+        ptr = row_offsets[j]
+
+        if e["_type"] == 0:
+            z0 = z_int["z0"][j][:discharge_int]
+            z1 = z_int["z1"][j][:discharge_int]
+
+            for f_id, sign in ((e["frac0"], 1.0), (e["frac1"], -1.0)):
+                f = fractures[f_id]
+                for k in range(f["nelements"]):
+                    ee = elements[f["elements"][k]]
+                    t = ee["_type"]
+                    if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                        continue
+
+                    rows[ptr] = row
+                    cols[ptr] = id_to_pos[ee["_id"]]
+                    data[ptr] = hpc_fracture.head_from_phi(
+                        f, sign * get_discharge_term(ee, z0 if sign > 0 else z1, f_id)
+                    )
+                    ptr += 1
+
+            rows[ptr] = row
+            cols[ptr] = n_de + e["frac0"]
+            data[ptr] = hpc_fracture.head_from_phi(fractures[e["frac0"]], 1.0)
+            ptr += 1
+
+            rows[ptr] = row
+            cols[ptr] = n_de + e["frac1"]
+            data[ptr] = hpc_fracture.head_from_phi(fractures[e["frac1"]], -1.0)
+
+        else:
+            f = fractures[e["frac0"]]
+            z0 = z_int["z0"][j][:discharge_int]
+
+            for k in range(f["nelements"]):
+                ee = elements[f["elements"][k]]
+                t = ee["_type"]
+                if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                    continue
+
+                rows[ptr] = row
+                cols[ptr] = id_to_pos[ee["_id"]]
+                data[ptr] = get_discharge_term(ee, z0, e["frac0"])
+                ptr += 1
+
+            rows[ptr] = row
+            cols[ptr] = n_de + e["frac0"]
+            data[ptr] = 1.0
+
+    # ---- fracture continuity equations ----
+    for j in nb.prange(n_fr):
+        f = fractures[j]
+        row = n_de + j
+        ptr = row_offsets[row]
+
+        for k in range(f["nelements"]):
+            e = elements[f["elements"][k]]
+            t = e["_type"]
+            if t not in (0, 2, 3):
+                continue
+
+            rows[ptr] = row
+            cols[ptr] = id_to_pos[e["_id"]]
+            data[ptr] = 1.0 if t != 0 or e["frac0"] == f["_id"] else -1.0
+            ptr += 1
 
 
 # @nb.njit( parallel=PARALLEL, cache=CACHE)

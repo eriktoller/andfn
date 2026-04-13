@@ -141,6 +141,34 @@ class Fracture:
 
         return fracture_struc_array, fracture_index_array
 
+    def consolidate_into(self, fracture_struc_array, fracture_index_array, i):
+        """
+        Consolidates the fracture into a structured array.
+
+        Parameters
+        ----------
+        fracture_struc_array : np.ndarray
+            The structured array for the fracture.
+        fracture_index_array : np.ndarray
+            The structured array for the fracture index.
+        i : int
+            The index to consolidate into.
+        """
+        fracture_struc_array["_id"][i] = self._id
+        fracture_struc_array["t"][i] = self.t
+        fracture_struc_array["radius"][i] = self.radius
+        fracture_struc_array["center"][i] = self.center
+        fracture_struc_array["normal"][i] = self.normal
+        fracture_struc_array["x_vector"][i] = self.x_vector
+        fracture_struc_array["y_vector"][i] = self.y_vector
+        elements = np.array([e._id for e in self.elements])
+        fracture_struc_array["elements"][i][: elements.size] = elements
+        fracture_struc_array["nelements"][i] = elements.size
+        fracture_struc_array["constant"][i] = self.constant
+        fracture_struc_array["aperture"][i] = self.aperture
+
+        fracture_index_array[i] = (self.label, self._id)
+
     def consolidate_hpc(self):
         """
         Consolidates the fracture into a structured array for HPC.
@@ -171,6 +199,33 @@ class Fracture:
         )
 
         return fracture_struc_array, fracture_index_array
+
+    def consolidate_into_hpc(self, fracture_struc_array, fracture_index_array, i):
+        """
+        Consolidates the fracture into a structured array for HPC.
+
+        Parameters
+        ----------
+        fracture_struc_array : np.ndarray
+            The structured array for the fracture.
+        fracture_index_array : np.ndarray
+            The structured array for the fracture index.
+        i : int
+            The index to consolidate into.
+        """
+        fracture_struc_array["_id"][i] = self._id
+        fracture_struc_array["t"][i] = self.t
+        fracture_struc_array["radius"][i] = self.radius
+        fracture_struc_array["center"][i] = self.center
+        fracture_struc_array["normal"][i] = self.normal
+        fracture_struc_array["x_vector"][i] = self.x_vector
+        fracture_struc_array["y_vector"][i] = self.y_vector
+        elements = np.array([e._id for e in self.elements])
+        fracture_struc_array["elements"][i][: elements.size] = elements
+        fracture_struc_array["nelements"][i] = elements.size
+        fracture_struc_array["constant"][i] = self.constant
+
+        fracture_index_array[i] = (self.label, self._id)
 
     def unconsolidate(self, fracture_struc_array, fracture_index_array):
         """
@@ -255,6 +310,17 @@ class Fracture:
                 self.elements.remove(element)
         else:
             print("Element not in fracture.")
+
+    def delete_all_elements(self):
+        """
+        Deletes all elements from the fracture.
+        """
+        elements = self.elements.copy()
+        for e in elements:
+            if isinstance(e, Intersection):
+                e.frac0.elements.remove(e)
+                e.frac1.elements.remove(e)
+        self.elements.clear()
 
     def get_discharge_elements(self):
         """

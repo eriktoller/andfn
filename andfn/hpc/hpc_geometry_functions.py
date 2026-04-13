@@ -130,3 +130,27 @@ def map_2d_to_3d(self_, z, pnts):
         )
 
     return pnts
+
+
+def map_3d_to_2d(self_, point):
+    """
+    Function that maps a point in the 3D plane to a point in the complex z-plane
+
+    .. math::
+            z = (x - x_0) + i(y - y_0)
+
+    Parameters
+    ----------
+    self_ : np.ndarray[fracture_dtype]
+        The fracture element.
+    point : np.ndarray[np.float64]
+        A point in the 3D plane
+
+    Returns
+    -------
+    z : np.complex128
+        The corresponding point in the complex z-plane
+    """
+    return np.dot(point - self_["center"], self_["x_vector"]) + 1j * np.dot(
+        point - self_["center"], self_["y_vector"]
+    )
