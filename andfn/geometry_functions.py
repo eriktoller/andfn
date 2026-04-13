@@ -6,7 +6,10 @@ This module contains some geometrical functions for e.g. conformal mappings and 
 The geometrical functions are used by the element classes and to create the DFN in the andfn module.
 """
 
+import time
+
 import numpy as np
+import numba as nb
 from scipy.spatial import KDTree
 
 import andfn
@@ -648,15 +651,25 @@ def get_fracture_intersections(
     """
     # 1. Build a spatial index based on fracture centers
     if tree is None:
+        # Sort fractures by radius to optimize the search
+        fractures = sorted(fractures, key=lambda f: f.radius, reverse=True)
         centers = np.array([fr.center for fr in fractures])
         tree = KDTree(centers)
-    max_radius = max(fr.radius for fr in fractures)
+
+    # Check if fractures are sorted by radius
+    if not all(
+        fractures[i].radius >= fractures[i + 1].radius
+        for i in range(len(fractures) - 1)
+    ):
+        raise ValueError(
+            "Fractures must be sorted by radius in descending order for the spatial index to work correctly."
+        )
 
     # 2. Query the tree for pairs within a possible intersection distance
     # This will give us candidate pairs of fractures that might intersect, significantly reducing the number of expensive intersection checks.
     pairs = set()
     for i, fr in enumerate(fractures):
-        r = fr.radius + max_radius
+        r = fr.radius * 2  # Maximum distance for potential intersection
         neighbors = tree.query_ball_point(fr.center, r)
         for j in neighbors:
             if j > i:
@@ -1103,6 +1116,178 @@ def check_connectivity(fractures):
     remove_list = [fractures[i] for i in range(n) if not connected[i]]
 
     return len(remove_list) == 0, remove_list
+
+
+@nb.njit(parallel=True, cache=True)
+def count_fracture_adjacency_from_elements(elements, n_fractures):
+    counts = np.zeros(n_fractures, dtype=np.int32)
+
+    for i in nb.prange(elements.size):
+        if elements[i]["_type"] == 0:
+            f0 = elements["frac0"][i]
+            f1 = elements["frac1"][i]
+            counts[f0] += 1
+            counts[f1] += 1
+
+    return counts
+
+
+@nb.njit(cache=True)
+def build_indptr(counts):
+    n = counts.size
+    indptr = np.empty(n + 1, dtype=np.int32)
+
+    s = 0
+    indptr[0] = 0
+    for i in range(n):
+        s += counts[i]
+        indptr[i + 1] = s
+
+    return indptr, s  # total adjacency entries
+
+
+@nb.njit(cache=True)
+def fill_fracture_adjacency_from_elements(elements, adj_indptr, adj_indices):
+    write_ptr = adj_indptr.copy()
+    frac0 = elements["frac0"]
+    frac1 = elements["frac1"]
+    types = elements["_type"]
+
+    for i in range(elements.size):
+        if types[i] != 0:
+            continue
+
+        f0 = frac0[i]
+        f1 = frac1[i]
+
+        p0 = write_ptr[f0]
+        p1 = write_ptr[f1]
+
+        adj_indices[p0] = f1
+        adj_indices[p1] = f0
+
+        write_ptr[f0] += 1
+        write_ptr[f1] += 1
+
+
+@nb.njit(cache=True)
+def build_fracture_adjacency(fractures_struc_array, elements_struc_array):
+    counts = count_fracture_adjacency_from_elements(
+        elements_struc_array, fractures_struc_array.size
+    )
+
+    adj_indptr, total = build_indptr(counts)
+
+    adj_indices = np.empty(total, dtype=np.int32)
+
+    fill_fracture_adjacency_from_elements(
+        elements_struc_array,
+        adj_indptr,
+        adj_indices,
+    )
+
+    return adj_indptr, adj_indices
+
+
+@nb.njit(parallel=True, cache=True)
+def compute_boundary_fractures_from_elements(elements, n_fractures):
+    """
+    Determine which fractures are connected to boundary conditions.
+
+    Parameters
+    ----------
+    elements : structured array (element_dtype_hpc)
+        All DFN elements.
+    n_fractures : int
+        Total number of fractures.
+
+    Returns
+    -------
+    boundary : uint8 array of shape (n_fractures,)
+        boundary[f] == 1 if fracture f has a boundary condition.
+    """
+    boundary = np.zeros(n_fractures, dtype=np.uint8)
+
+    for i in nb.prange(elements.size):
+        t = elements[i]["_type"]
+
+        # Boundary condition elements
+        if t == 2 or t == 3:
+            f = elements[i]["frac0"]
+            boundary[f] = 1  # safe: idempotent write
+
+    return boundary
+
+
+@nb.njit(cache=True)
+def bfs_connectivity_from_adjacency(adj_indptr, adj_indices, boundary):
+    n_fr = boundary.size
+
+    connected = np.empty(n_fr, dtype=np.uint8)
+    queue = np.empty(n_fr, dtype=np.int32)
+
+    q0 = 0
+    q1 = 0
+
+    # seed queue and copy boundary
+    for i in range(n_fr):
+        c = boundary[i]
+        connected[i] = c
+        if c == 1:
+            queue[q1] = i
+            q1 += 1
+
+    adj_ptr = adj_indptr
+    adj_idx = adj_indices
+    conn = connected
+    queue_loc = queue
+
+    while q0 < q1:
+        f = queue_loc[q0]
+        q0 += 1
+
+        start = adj_ptr[f]
+        end = adj_ptr[f + 1]
+
+        for k in range(start, end):
+            nbr = adj_idx[k]
+            if conn[nbr] == 0:
+                conn[nbr] = 1
+                queue_loc[q1] = nbr
+                q1 += 1
+
+    return connected
+
+
+def check_connectivity_hpc(fractures_struc_array, elements_struc_array):
+    """
+    Drop-in replacement for check_connectivity using HPC arrays.
+    """
+    s = time.time()
+    adj_indptr, adj_indices = build_fracture_adjacency(
+        fractures_struc_array,
+        elements_struc_array,
+    )
+    s1 = time.time()
+    boundary = compute_boundary_fractures_from_elements(
+        elements_struc_array,
+        fractures_struc_array.size,
+    )
+    s2 = time.time()
+    connected = bfs_connectivity_from_adjacency(
+        adj_indptr,
+        adj_indices,
+        boundary,
+    )
+    print(
+        f"Adjacency: {s1 - s:.2f} sec, Boundary: {s2 - s1:.2f} sec, BFS: {time.time() - s2:.2f} sec"
+    )
+
+    # fractures to remove (Python side)
+    remove_ids = np.flatnonzero(connected == 0).tolist()
+
+    all_connected = len(remove_ids) == 0
+    return all_connected, remove_ids
 
 
 def convert_trend_plunge_to_normal(trend, plunge):

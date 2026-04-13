@@ -311,6 +311,17 @@ class Fracture:
         else:
             print("Element not in fracture.")
 
+    def delete_all_elements(self):
+        """
+        Deletes all elements from the fracture.
+        """
+        elements = self.elements.copy()
+        for e in elements:
+            if isinstance(e, Intersection):
+                e.frac0.elements.remove(e)
+                e.frac1.elements.remove(e)
+        self.elements.clear()
+
     def get_discharge_elements(self):
         """
         Returns the elements in the fracture that have a discharge.
