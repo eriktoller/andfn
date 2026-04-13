@@ -382,9 +382,6 @@ class RectangularRegion(Region):
             and (abs(local_point[2]) <= 0.5 * self.zl)
         )
 
-    import numpy as np
-    from scipy.spatial import cKDTree
-
     def check_fractures(self, fractures, tree=None):
         """
         Checks if any of the fractures are inside the rectangular region
