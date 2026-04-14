@@ -1096,8 +1096,8 @@ class DFN(Constants):
         self.discharge_elements = None
         self.lup = None
 
-        for f in self.fractures:
-            f.set_id(self.fractures.index(f))
+        for i, f in enumerate(self.fractures):
+            f.set_id(i)
 
     def delete_fracture(self, fracture):
         """

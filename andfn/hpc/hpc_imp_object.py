@@ -64,6 +64,30 @@ def solve_circle(self_, fracture_struc_array, element_struc_array, work_array):
     )
 
 
+@nb.njit(inline="always")
+def calc_omega_circle(self_, z):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    z : complex
+        An array of points in the complex z-plane
+
+    Return
+    ------
+    omega : complex
+        The resulting value for the omega function
+    """
+    chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
+    if np.abs(chi) < 1.0 - 1e-10:
+        return np.nan + 1j * np.nan
+    omega = mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    return omega
+
+
 @nb.njit()
 def calc_omega_circle_array(self_, omega, z):
     """
