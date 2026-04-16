@@ -115,6 +115,20 @@ class RectangularRegion(Region):
         self.fracs = []
         self.elements = []
 
+    def get_total_flow(self):
+        """
+        Gets the total flow through the rectangular region.
+
+        Returns
+        -------
+        float
+            The total flow through the rectangular region.
+        """
+        total_flow = [
+            np.abs(e.q) for e in self.elements if isinstance(e, ConstantHeadLine)
+        ]
+        return np.sum(total_flow)
+
     def get_vertices_faces(self):
         """
         Gets the vertices and faces of the rectangular region.
@@ -422,6 +436,7 @@ class RectangularRegion(Region):
         candidate_set = set(candidate_idx)
 
         for i, frac in enumerate(fractures):
+            print(f"Checking fracture {i}/{len(fractures)}", end="\r")
             if i in candidate_set and self.check_point(frac.center):
                 inside_fractures.append(frac)
             else:
