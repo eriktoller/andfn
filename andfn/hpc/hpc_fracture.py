@@ -92,6 +92,50 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
     return omega
 
 
+@nb.njit()
+def calc_omega_array(self_, omega, z, element_struc_array, exclude=-1):
+    """
+    Calculates the omega for the fracture excluding element "exclude".
+
+    Parameters
+    ----------
+    self_ : np.ndarray[fracture_dtype]
+        The fracture element.
+    omega : np.ndarray[np.complex128]
+        Array to store the resulting omega values for each point in z.
+    z : np.ndarray[np.complex128]
+        A point in the complex z plane.
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements.
+    exclude : int
+        Label of element to exclude from the omega calculation.
+
+    Returns
+    -------
+    None
+    """
+    # Initialize omega with the constant value
+    omega[:] = self_["constant"] + 0.0j
+
+    # Loop through the elements of the fracture
+    for e in range(self_["nelements"]):
+        el = self_["elements"][e]
+        if el != exclude:
+            element = element_struc_array[el]
+            if element["_type"] == 0:  # Intersection
+                hpc_intersection.calc_omega_array(element, omega, z, self_["_id"])
+            elif element["_type"] == 1:  # Bounding circle
+                hpc_bounding_circle.calc_omega_array(element, omega, z)
+            elif element["_type"] == 2:  # Well
+                hpc_well.calc_omega_array(element, omega, z)
+            elif element["_type"] == 3:  # Constant head line
+                hpc_const_head_line.calc_omega_array(element, omega, z)
+            elif element["_type"] == 4:  # Impermeable circle
+                hpc_imp_object.calc_omega_circle_array(element, omega, z)
+            elif element["_type"] == 5:  # Impermeable line
+                hpc_imp_object.calc_omega_line_array(element, omega, z)
+
+
 def calc_w(self_, z, element_struc_array, exclude=-1):
     """
     Calculates the omega for the fracture excluding element "exclude".

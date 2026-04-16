@@ -30,7 +30,7 @@ def map_z_line_to_chi(z, endpoints):
             Z = \frac{ 2z - \text{endpoints}[0] - \text{endpoints}[1] }{ \text{endpoints}[1] - \text{endpoints}[0]}
 
     .. math::
-            \chi = \frac{1}{2} \left( z + \sqrt{z - 1} \sqrt{z + 1} \right)
+            \\chi = \\frac{1}{2} \\left( z + \\sqrt{z - 1} \\sqrt{z + 1} \\right)
 
     Parameters
     ----------
@@ -195,10 +195,10 @@ def map_3d_to_2d(point, fractures):
     Function that maps a point in the 3D plane to a point in the complex z-plane.
 
     .. math::
-            x = \left( x_i - x_{i,0} \right) u_i
+            x = \\left( x_i - x_{i,0} \\right) u_i
 
     .. math::
-            y = \left( x_i - x_{i,0} \right) v_i
+            y = \\left( x_i - x_{i,0} \\right) v_i
 
     .. math::
             z = x + iy
