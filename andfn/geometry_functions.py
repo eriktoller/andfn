@@ -1119,15 +1119,15 @@ def check_connectivity(fractures):
 
 
 @nb.njit(parallel=True, cache=True)
-def count_fracture_adjacency_from_elements(elements, n_fractures):
+def count_fracture_adjacency_from_fractures(fractures, elements):
+    n_fractures = fractures.size
     counts = np.zeros(n_fractures, dtype=np.int32)
 
-    for i in nb.prange(elements.size):
-        if elements[i]["_type"] == 0:
-            f0 = elements["frac0"][i]
-            f1 = elements["frac1"][i]
-            counts[f0] += 1
-            counts[f1] += 1
+    for i in nb.prange(n_fractures):
+        nel = fractures[i]["nelements"]
+        el_ids = fractures[i]["elements"][:nel]
+        el = elements[el_ids]
+        counts[i] = sum(el["_type"] == 0)
 
     return counts
 
@@ -1172,8 +1172,8 @@ def fill_fracture_adjacency_from_elements(elements, adj_indptr, adj_indices):
 
 @nb.njit(cache=True)
 def build_fracture_adjacency(fractures_struc_array, elements_struc_array):
-    counts = count_fracture_adjacency_from_elements(
-        elements_struc_array, fractures_struc_array.size
+    counts = count_fracture_adjacency_from_fractures(
+        fractures_struc_array, elements_struc_array
     )
 
     adj_indptr, total = build_indptr(counts)
@@ -1223,7 +1223,7 @@ def compute_boundary_fractures_from_elements(elements, n_fractures):
 def bfs_connectivity_from_adjacency(adj_indptr, adj_indices, boundary):
     n_fr = boundary.size
 
-    connected = np.empty(n_fr, dtype=np.uint8)
+    connected = np.zeros(n_fr, dtype=np.uint8)
     queue = np.empty(n_fr, dtype=np.int32)
 
     q0 = 0
@@ -1263,6 +1263,10 @@ def check_connectivity_hpc(fractures_struc_array, elements_struc_array):
     """
     Drop-in replacement for check_connectivity using HPC arrays.
     """
+
+    count_fracture_adjacency_from_fractures(
+        fractures_struc_array, elements_struc_array
+    )  # warmup JIT
     s = time.time()
     adj_indptr, adj_indices = build_fracture_adjacency(
         fractures_struc_array,
