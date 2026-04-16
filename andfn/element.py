@@ -456,82 +456,78 @@ class Element:
         -------
         None. The element is updated in place.
         """
-        for key in self.__dict__.keys():
-            if key in element_dtype.names:
-                if key == "frac0" or key == "frac1":
-                    self.__dict__[key] = next(
-                        frac for frac in fracs if frac._id == struc_array[key]
-                    )
-                    continue
-                if key == "coef" or key == "old_coef":
-                    self.__dict__[key] = struc_array[key][: struc_array["ncoef"]]
-                    continue
-                if key == "thetas" or key == "dpsi_corr":
-                    self.__dict__[key] = struc_array[key][: struc_array["nint"]]
-                    continue
-                self.__dict__[key] = struc_array[key]
 
-        for key in index_array.dtype.names:
-            self.__dict__[key] = index_array[key]
+        ncoef = struc_array["ncoef"]
+        nint = struc_array["nint"]
+        coef = struc_array["coef"][:ncoef]
+        q = struc_array["q"]
+        error = struc_array["error"]
 
-    def plot(self, pl, line_width, color, point_size=5):
-        """
-        Plot the element using the given plotter.
+        setattr(self, "ncoef", ncoef)
+        setattr(self, "nint", nint)
+        setattr(self, "coef", coef)
+        setattr(self, "q", q)
+        setattr(self, "error", error)
 
-        Parameters
-        ----------
-        pl : pyvista.Plotter
-            The plotter to use for plotting.
-        line_width : float
-            The width of the lines in the plot.
-        color : str
-            The color of the element in the plot, if None the default color will be used.
-        point_size : float
-            The size of the points in the plot.
 
-        Returns
-        -------
-        None
-            The element is plotted in the plotter.
-        """
-        if self._type in [
-            0,
-            3,
-            5,
-        ]:  # Intersection, Constant Head Line, Impermeable Line
-            line = gf.map_2d_to_3d(self.endpoints0, self.frac0)
-            pl.add_mesh(
-                pv.Line(line[0], line[1]),
-                color=color if color is not None else ELEMENT_COLORS[self._type],
-                line_width=line_width,
-                show_edges=True,
-                render_points_as_spheres=True,
-                point_size=5,
-                show_vertices=True,
-            )
-        elif self._type == 1:  # Bounding Circle
-            point = gf.map_2d_to_3d(0 + 0j, self.frac0)
-            pl.add_mesh(
-                pv.Polygon(
-                    center=point,
-                    radius=self.radius,
-                    normal=self.frac0.normal,
-                    n_sides=50,
-                    fill=False,
-                ),
-                color=color if color is not None else ELEMENT_COLORS[self._type],
-                line_width=line_width,
-            )
-        elif self._type in [1, 2, 4]:  # Bounding Circle, Well, Impermeable Circle
-            point = gf.map_2d_to_3d(self.center, self.frac0)
-            pl.add_mesh(
-                pv.Polygon(
-                    center=point,
-                    radius=self.radius,
-                    normal=self.frac0.normal,
-                    n_sides=50,
-                    fill=False,
-                ),
-                color=color if color is not None else ELEMENT_COLORS[self._type],
-                line_width=line_width,
-            )
+def plot(self, pl, line_width, color, point_size=5):
+    """
+    Plot the element using the given plotter.
+
+    Parameters
+    ----------
+    pl : pyvista.Plotter
+        The plotter to use for plotting.
+    line_width : float
+        The width of the lines in the plot.
+    color : str
+        The color of the element in the plot, if None the default color will be used.
+    point_size : float
+        The size of the points in the plot.
+
+    Returns
+    -------
+    None
+        The element is plotted in the plotter.
+    """
+    if self._type in [
+        0,
+        3,
+        5,
+    ]:  # Intersection, Constant Head Line, Impermeable Line
+        line = gf.map_2d_to_3d(self.endpoints0, self.frac0)
+        pl.add_mesh(
+            pv.Line(line[0], line[1]),
+            color=color if color is not None else ELEMENT_COLORS[self._type],
+            line_width=line_width,
+            show_edges=True,
+            render_points_as_spheres=True,
+            point_size=5,
+            show_vertices=True,
+        )
+    elif self._type == 1:  # Bounding Circle
+        point = gf.map_2d_to_3d(0 + 0j, self.frac0)
+        pl.add_mesh(
+            pv.Polygon(
+                center=point,
+                radius=self.radius,
+                normal=self.frac0.normal,
+                n_sides=50,
+                fill=False,
+            ),
+            color=color if color is not None else ELEMENT_COLORS[self._type],
+            line_width=line_width,
+        )
+    elif self._type in [1, 2, 4]:  # Bounding Circle, Well, Impermeable Circle
+        point = gf.map_2d_to_3d(self.center, self.frac0)
+        pl.add_mesh(
+            pv.Polygon(
+                center=point,
+                radius=self.radius,
+                normal=self.frac0.normal,
+                n_sides=50,
+                fill=False,
+            ),
+            color=color if color is not None else ELEMENT_COLORS[self._type],
+            line_width=line_width,
+        )

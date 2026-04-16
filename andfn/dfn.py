@@ -831,16 +831,36 @@ class DFN(Constants):
 
         # Unconsolidate fractures
         if hpc:
-            for i, f in enumerate(self.fractures):
-                f.unconsolidate_hpc(
-                    self.fractures_struc_array_hpc[i], self.fractures_index_array[i]
+            # --- Phase 1: unconsolidate fractures - --
+            cnt = 1
+            for f, f_struc, f_idx in zip(
+                self.fractures,
+                self.fractures_struc_array_hpc,
+                self.fractures_index_array,
+            ):
+                print(
+                    f"\rUnconsolidating fracture {cnt}/{self.number_of_fractures} ",
+                    end="",
                 )
-            for i, e in enumerate(self.elements):
-                e.unconsolidate_hpc(
-                    self.elements_struc_array_hpc[i],
-                    self.elements_index_array[i],
-                    self.fractures,
-                )
+                cnt += 1
+                f.unconsolidate_hpc(f_struc, f_idx)
+            print()  # new line after unconsolidating fractures
+            # --- Phase 2: unconsolidate elements (depends on fractures) ---
+            fractures = self.fractures  # local ref (minor speedup)
+            cnt = 1
+            for e, e_struc, e_idx in zip(
+                self.elements,
+                self.elements_struc_array_hpc,
+                self.elements_index_array,
+            ):
+                if cnt % 5000 == 0 or cnt == self.number_of_elements():
+                    print(
+                        f"\rUnconsolidating element {cnt}/{self.number_of_elements()} ",
+                        end="",
+                    )
+                cnt += 1
+                e.unconsolidate_hpc(e_struc, e_idx, fractures)
+
         else:
             for i, f in enumerate(self.fractures):
                 f.unconsolidate(
