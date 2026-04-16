@@ -71,6 +71,28 @@ def calc_omega(self_, z):
     return omega
 
 
+@nb.njit()
+def calc_omega_array(self_, omega, z):
+    """
+    Calculates the omega for the bounding circle.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting omega values.
+    z : np.ndarray[np.complex128]
+        A point in the complex z plane.
+
+    Returns
+    -------
+    None
+    """
+    chi = gf.map_z_circle_to_chi(z, self_["radius"])
+    mf.taylor_series_array(omega, chi, self_["coef"][: self_["ncoef"]])
+
+
 # @nb.njit(, inline='always')
 def calc_w(self_, z):
     """

@@ -16,14 +16,14 @@ def map_z_line_to_chi(z, endpoints):
 
     Parameters
     ----------
-    z : complex
+    z : complex | np.ndarray[np.complex128]
         A complex point in the complex z-plane
     endpoints : np.ndarray
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    chi : complex
+    chi : complex | np.ndarray[np.complex128]
         The corresponding point in the complex chi-plane
     """
     # Map via the Z-plane
@@ -39,14 +39,14 @@ def map_chi_to_z_line(chi, endpoints):
 
     Parameters
     ----------
-    chi : complex
+    chi : complex | np.ndarray[np.complex128]
         A point in the complex chi-plane
     endpoints : np.ndarray[np.complex128]
         Endpoints of the line in the complex z-plane
 
     Returns
     -------
-    z : complex
+    z : complex | np.ndarray[np.complex128]
         The corresponding point in the complex z-plane
     """
     # Map via the Z-plane
@@ -62,7 +62,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
     Parameters
     ----------
-    z : complex
+    z : complex | np.ndarray[np.complex128]
         A point in the complex z-plane
     r : float
         Radius of the circle
@@ -71,7 +71,7 @@ def map_z_circle_to_chi(z, r, center=0.0):
 
     Return
     ------
-    chi : complex
+    chi : complex | np.ndarray[np.complex128]
         The corresponding point in the complex chi-plane
     """
     return (z - center) / r
@@ -84,7 +84,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
 
     Parameters
     ----------
-    chi : np.complex128
+    chi : np.complex128 | np.ndarray[np.complex128]
         A point in the complex chi-plane
     r : float
         Radius of the circle
@@ -93,7 +93,7 @@ def map_chi_to_z_circle(chi, r, center=0.0):
 
     Return
     ------
-    z : np.complex128
+    z : np.complex128 | np.ndarray[np.complex128]
         The corresponding point in the complex z-plane
     """
     return chi * r + center
@@ -130,3 +130,27 @@ def map_2d_to_3d(self_, z, pnts):
         )
 
     return pnts
+
+
+def map_3d_to_2d(self_, point):
+    """
+    Function that maps a point in the 3D plane to a point in the complex z-plane
+
+    .. math::
+            z = (x - x_0) + i(y - y_0)
+
+    Parameters
+    ----------
+    self_ : np.ndarray[fracture_dtype]
+        The fracture element.
+    point : np.ndarray[np.float64]
+        A point in the 3D plane
+
+    Returns
+    -------
+    z : np.complex128
+        The corresponding point in the complex z-plane
+    """
+    return np.dot(point - self_["center"], self_["x_vector"]) + 1j * np.dot(
+        point - self_["center"], self_["y_vector"]
+    )

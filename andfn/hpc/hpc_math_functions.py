@@ -40,6 +40,38 @@ def asym_expansion(chi, coef):
     return res
 
 
+@nb.njit()
+def asym_expansion_array(omega, chi, coef):
+    """
+    Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
+    coefficients.
+
+    Parameters
+    ----------
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting omega values
+    chi : np.ndarray[np.complex128]
+        A point in the complex chi-plane
+    coef : np.ndarray[np.complex128]
+        An array of coefficients
+
+    Return
+    ------
+    None
+        Fills the omega array with the resulting values for the asymptotic expansion
+    """
+    n_omega = omega.size
+    length = len(coef)
+
+    for i in range(n_omega):
+        tmp = 0.0 + 0.0j
+        for n in range(length - 1):
+            tmp += coef[length - n - 1]
+            tmp /= chi[i]
+        tmp += coef[0]
+        omega[i] += tmp
+
+
 @nb.njit(inline="always")
 def asym_expansion_d1(chi, coef):
     """
@@ -96,6 +128,38 @@ def taylor_series(chi, coef):
     return res
 
 
+@nb.njit()
+def taylor_series_array(omega, chi, coef):
+    """
+    Function that calculates the Taylor series starting from 0 for a given point chi and an array of
+    coefficients.
+
+    Parameters
+    ----------
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting omega values
+    chi : np.ndarray[np.complex128]
+        A point in the complex chi-plane
+    coef : np.ndarray[np.complex128]
+        An array of coefficients
+
+    Return
+    ------
+    None
+        Fills the omega array with the resulting values for the asymptotic expansion
+    """
+    n_omega = omega.size
+    length = len(coef)
+
+    for i in range(n_omega):
+        tmp = 0.0 + 0.0j
+        for n in range(length - 1):
+            tmp += coef[length - n - 1]
+            tmp *= chi[i]
+        tmp += coef[0]
+        omega[i] += tmp
+
+
 @nb.njit(inline="always")
 def taylor_series_d1(chi, coef):
     """
@@ -147,6 +211,33 @@ def well_chi(chi, q):
         The complex discharge potential
     """
     return q / (2 * np.pi) * np.log(chi)
+
+
+@nb.njit()
+def well_chi_array(omega, chi, q):
+    """
+    Function that return the complex potential for a well as a function of chi.
+
+    .. math::
+        \omega = \frac{q}{2 \pi} \log(\chi)
+
+    Parameters
+    ----------
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting omega values
+    chi : np.ndarray[np.complex128]
+        A point in the complex chi plane
+    q : float
+        The discharge eof the well.
+
+    Returns
+    -------
+    None
+        Fills the omega array with the resulting values for the complex discharge potential
+    """
+    n = omega.size
+    for i in range(n):
+        omega[i] += q / (2 * np.pi) * np.log(chi[i])
 
 
 @nb.njit()

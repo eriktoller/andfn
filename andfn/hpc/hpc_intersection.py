@@ -145,6 +145,37 @@ def calc_omega(self_, z, frac_is_id):
     return omega
 
 
+@nb.njit()
+def calc_omega_array(self_, omega, z, frac_is_id):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting omega values
+    z : np.ndarray[np.complex128]
+        An array of points in the complex z-plane
+    frac_is_id : np.int64
+        The fracture that the point is in
+
+    Return
+    ------
+    None
+    """
+    # See if function is in the first or second fracture that the intersection is associated with
+    if frac_is_id == self_["frac0"]:
+        chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
+        mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+        mf.well_chi(omega, chi, self_["q"])
+    else:
+        chi = gf.map_z_line_to_chi(z, self_["endpoints1"])
+        mf.asym_expansion_array(omega, chi, -self_["coef"][: self_["ncoef"]])
+        mf.well_chi(omega, chi, -self_["q"])
+
+
 def calc_w(self_, z, frac_is_id):
     """
     Calculate the complex discharge vector for the intersection.

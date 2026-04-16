@@ -88,6 +88,34 @@ def calc_omega_circle(self_, z):
     return omega
 
 
+@nb.njit()
+def calc_omega_circle_array(self_, omega, z):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting value for the omega function
+    z : np.ndarray[np.complex128]
+        An array of points in the complex z-plane
+
+    Return
+    ------
+    None
+        Edits the omega array in place with the resulting value for the omega function
+    """
+    chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
+    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    for i in range(len(omega)):
+        if np.abs(chi[i]) < 1.0 - 1e-10:
+            omega[i] = (
+                np.nan + np.nan * 1j
+            )  # Set omega to NaN for points inside the circle
+
+
 ########################################################################################################################
 ## Impermeable Line
 ########################################################################################################################
@@ -175,3 +203,26 @@ def calc_omega_line(self_, z):
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
     omega = mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
     return omega
+
+
+@nb.njit()
+def calc_omega_line_array(self_, omega, z):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting value for the omega function
+    z : np.ndarray[np.complex128]
+        An array of points in the complex z-plane
+
+    Return
+    ------
+    None
+        Edits the omega array in place with the resulting value for the omega function
+    """
+    chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
+    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])

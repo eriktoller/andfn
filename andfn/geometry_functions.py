@@ -6,7 +6,11 @@ This module contains some geometrical functions for e.g. conformal mappings and 
 The geometrical functions are used by the element classes and to create the DFN in the andfn module.
 """
 
+import time
+
 import numpy as np
+import numba as nb
+from scipy.spatial import KDTree
 
 import andfn
 from . import fracture
@@ -26,7 +30,7 @@ def map_z_line_to_chi(z, endpoints):
             Z = \frac{ 2z - \text{endpoints}[0] - \text{endpoints}[1] }{ \text{endpoints}[1] - \text{endpoints}[0]}
 
     .. math::
-            \chi = \frac{1}{2} \left( z + \sqrt{z - 1} \sqrt{z + 1} \right)
+            \\chi = \\frac{1}{2} \\left( z + \\sqrt{z - 1} \\sqrt{z + 1} \\right)
 
     Parameters
     ----------
@@ -191,10 +195,10 @@ def map_3d_to_2d(point, fractures):
     Function that maps a point in the 3D plane to a point in the complex z-plane.
 
     .. math::
-            x = \left( x_i - x_{i,0} \right) u_i
+            x = \\left( x_i - x_{i,0} \\right) u_i
 
     .. math::
-            y = \left( x_i - x_{i,0} \right) v_i
+            y = \\left( x_i - x_{i,0} \\right) v_i
 
     .. math::
             z = x + iy
@@ -216,7 +220,7 @@ def map_3d_to_2d(point, fractures):
     return x + 1j * y
 
 
-def fracture_intersection(frac0, frac1):
+def fracture_intersection_org(frac0, frac1):
     """
     Function that calculates the intersection between two fractures.
 
@@ -236,34 +240,29 @@ def fracture_intersection(frac0, frac1):
     """
     # vector parallel to the intersection line
     n = np.cross(frac0.normal, frac1.normal)
-    if n.sum() == 0:  # Check if the normals are parallel
+    if np.allclose(n, 0):  # Check if the normals are parallel
         return None, None
     n = n / np.linalg.norm(n)
 
     # Calculate a point on the line of intersection
     n_1, n_2 = frac0.normal, frac1.normal
     p_1, p_2 = frac0.center, frac1.center
-    a = np.matrix(
-        np.array(
-            [
-                [2, 0, 0, n_1[0], n_2[0]],
-                [0, 2, 0, n_1[1], n_2[1]],
-                [0, 0, 2, n_1[2], n_2[2]],
-                [n_1[0], n_1[1], n_1[2], 0, 0],
-                [n_2[0], n_2[1], n_2[2], 0, 0],
-            ]
-        )
+    a = np.array(
+        [
+            [2, 0, 0, n_1[0], n_2[0]],
+            [0, 2, 0, n_1[1], n_2[1]],
+            [0, 0, 2, n_1[2], n_2[2]],
+            [n_1[0], n_1[1], n_1[2], 0, 0],
+            [n_2[0], n_2[1], n_2[2], 0, 0],
+        ]
     )
     b4 = p_1[0] * n_1[0] + p_1[1] * n_1[1] + p_1[2] * n_1[2]
     b5 = p_2[0] * n_2[0] + p_2[1] * n_2[1] + p_2[2] * n_2[2]
-    b = np.matrix(
-        np.array([[2.0 * p_1[0]], [2.0 * p_1[1]], [2.0 * p_1[2]], [b4], [b5]])
-    )
-
+    b = np.array(
+        [[2.0 * p_1[0]], [2.0 * p_1[1]], [2.0 * p_1[2]], [b4], [b5]]
+    )  # Get two points on the intersection line and map them to each fracture
     x = np.linalg.solve(a, b)
     xi_a = np.squeeze(np.asarray(x[0:3]))
-
-    # Get two points on the intersection line and map them to each fracture
     xi_b = xi_a + n * 2.0
     z0_a, z0_b = map_3d_to_2d(xi_a, frac0), map_3d_to_2d(xi_b, frac0)
     z1_a, z1_b = map_3d_to_2d(xi_a, frac1), map_3d_to_2d(xi_b, frac1)
@@ -284,8 +283,8 @@ def fracture_intersection(frac0, frac1):
     pos = [
         i
         for i, xi in enumerate(xis)
-        if np.linalg.norm(xi - frac0.center) < frac0.radius + 1e-10
-        and np.linalg.norm(xi - frac1.center) < frac1.radius + 1e-10
+        if np.linalg.norm(xi - frac0.center) < frac0.radius + 1e-7
+        and np.linalg.norm(xi - frac1.center) < frac1.radius + 1e-7
     ]
     if not pos:
         return None, None
@@ -298,6 +297,63 @@ def fracture_intersection(frac0, frac1):
     endpoints1 = np.array([map_3d_to_2d(xi0, frac1), map_3d_to_2d(xi1, frac1)])
 
     return endpoints0, endpoints1
+
+
+def fracture_intersection(frac0, frac1):
+    # Line direction = intersection of planes
+    n0, n1 = frac0.normal, frac1.normal
+    d = np.cross(n0, n1)
+    d_norm2 = np.dot(d, d)
+
+    if d_norm2 < 1e-14:
+        return None, None  # planes parallel or coincident
+
+    # Plane offsets: n · x = c
+    c0 = np.dot(n0, frac0.center)
+    c1 = np.dot(n1, frac1.center)
+
+    # Point on intersection line (closed-form)
+    x0 = (c0 * np.cross(n1, d) + c1 * np.cross(d, n0)) / d_norm2
+
+    # Two points defining the line
+    x1 = x0 + d
+
+    # Project line to fracture-local 2D coordinates
+    z00, z01 = map_3d_to_2d(x0, frac0), map_3d_to_2d(x1, frac0)
+    z10, z11 = map_3d_to_2d(x0, frac1), map_3d_to_2d(x1, frac1)
+
+    # Intersect with circular fracture boundaries
+    a0, b0 = line_circle_intersection(z00, z01, frac0.radius)
+    a1, b1 = line_circle_intersection(z10, z11, frac1.radius)
+
+    if a0 is None or a1 is None:
+        return None, None
+
+    # Lift valid endpoints into 3D
+    candidates = [
+        map_2d_to_3d(a0, frac0),
+        map_2d_to_3d(b0, frac0),
+        map_2d_to_3d(a1, frac1),
+        map_2d_to_3d(b1, frac1),
+    ]
+
+    # Keep points inside both fractures
+    valid = [
+        x
+        for x in candidates
+        if np.linalg.norm(x - frac0.center) <= frac0.radius + 1e-8
+        and np.linalg.norm(x - frac1.center) <= frac1.radius + 1e-8
+    ]
+
+    if len(valid) != 2:
+        return None, None
+
+    p0, p1 = valid
+
+    endpoints0 = np.array([map_3d_to_2d(p0, frac0), map_3d_to_2d(p1, frac0)])
+    endpoints1 = np.array([map_3d_to_2d(p0, frac1), map_3d_to_2d(p1, frac1)])
+
+    return endpoints0, endpoints1  # endpoints0, endpoints1
 
 
 def line_circle_intersection(z0, z1, radius):
@@ -501,7 +557,9 @@ def get_connected_fractures(
     return connected_fractures
 
 
-def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance=-1):
+def get_fracture_intersections_org(
+    fractures, se_factor, ncoef=5, nint=10, tolerance=-1
+):
     """
     Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
     a given fracture, the function iterates through the list of fractures and finds all connected fractures.
@@ -559,6 +617,99 @@ def get_fracture_intersections(fractures, se_factor, ncoef=5, nint=10, tolerance
                     # fr.add_element(intersections)
                     # fr2.add_element(intersections)
 
+    return fractures
+
+
+def get_fracture_intersections(
+    fractures, se_factor, ncoef=5, nint=10, tolerance=-1, tree=None
+):
+    """
+    Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
+    a given fracture, the function iterates through the list of fractures and finds all connected fractures.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+    se_factor : float
+        The shortening element factor. This is used to shorten the intersection line between two fractures.
+    ncoef : int
+        The number of coefficients for the intersection elements.
+    nint : int
+        The number of integration points for the intersection elements.
+    tolerance : float, optional
+        The minimum length of the intersection line as a fraction of the fracture radius. Intersections shorter than
+        this value will be ignored. If -1, no tolerance is applied. Default is -1.
+    tree : KDTree, optional
+        A KDTree object for spatial indexing of the fracture centers. If None, a new KDtree will be created. Default is None.
+
+
+    Returns
+    -------
+    connected_fractures : list
+        A list of connected fractures.
+    """
+    # 1. Build a spatial index based on fracture centers
+    if tree is None:
+        # Sort fractures by radius to optimize the search
+        fractures = sorted(fractures, key=lambda f: f.radius, reverse=True)
+        centers = np.array([fr.center for fr in fractures])
+        tree = KDTree(centers)
+
+    # Check if fractures are sorted by radius
+    if not all(
+        fractures[i].radius >= fractures[i + 1].radius
+        for i in range(len(fractures) - 1)
+    ):
+        raise ValueError(
+            "Fractures must be sorted by radius in descending order for the spatial index to work correctly."
+        )
+
+    # 2. Query the tree for pairs within a possible intersection distance
+    # This will give us candidate pairs of fractures that might intersect, significantly reducing the number of expensive intersection checks.
+    pairs = set()
+    for i, fr in enumerate(fractures):
+        r = fr.radius * 2  # Maximum distance for potential intersection
+        neighbors = tree.query_ball_point(fr.center, r)
+        for j in neighbors:
+            if j > i:
+                pairs.add((i, j))
+
+    n_pairs = len(pairs)
+    for cnt, (i, j) in enumerate(pairs, start=1):
+        if cnt % 50000 == 0:
+            print(f"\r{cnt} / {n_pairs} fracture pairs processed", end="")
+        cnt += 1
+        fr, fr2 = fractures[i], fractures[j]
+
+        # 3. Quick Squared Distance Check
+        dx = fr.center[0] - fr2.center[0]
+        dy = fr.center[1] - fr2.center[1]
+        dz = fr.center[2] - fr2.center[2]
+        dist_sq = dx * dx + dy * dy + dz * dz
+        if dist_sq > (fr.radius + fr2.radius) ** 2:
+            continue
+
+        # 4. Perform expensive geometric intersection
+        endpoints0, endpoints1 = fracture_intersection(fr, fr2)
+        if endpoints0 is not None:
+            dx = endpoints0[0].real - endpoints0[1].real
+            dy = endpoints0[0].imag - endpoints0[1].imag
+            length = (dx * dx + dy * dy) ** 0.5
+            if length < tolerance * fr.radius or length < tolerance * fr2.radius:
+                continue
+            endpoints01 = shorten_line(endpoints0, se_factor)
+            endpoints11 = shorten_line(endpoints1, se_factor)
+            intersection.Intersection(
+                f"{fr.label}_{fr2.label}",
+                endpoints01,
+                endpoints11,
+                fr,
+                fr2,
+                ncoef,
+                nint,
+            )
+    print(f"\r{len(pairs)} fracture pairs processed. Intersection detection complete.")
     return fractures
 
 
@@ -725,7 +876,7 @@ def remove_isolated_fractures(fractures):
 
 
 def set_head_boundary(
-    fractures, ncoef, nint, head, center, radius, normal, label, se_factor
+    fractures, ncoef, nint, head, center, radius, normal, label, se_factor, tolerance
 ):
     """
     Function that sets a constant head boundary condition on the intersection line between a fracture and a defined
@@ -751,6 +902,9 @@ def set_head_boundary(
         The label of the constant head fracture plane.
     se_factor : float
         The shortening element factor. This is used to shorten the constant head line.
+    tolerance : float
+        The minimum length of the intersection line as a fraction of the fracture radius. Intersections shorter than
+        this value will be ignored. If -1, no tolerance is applied. Default is -1.
 
     Returns
     -------
@@ -759,14 +913,15 @@ def set_head_boundary(
     fracture_surface = andfn.Fracture(label, 1, radius, center, normal, ncoef, nint)
     fr = fracture_surface
     for fr2 in fractures:
-        if fr == fr2:
-            continue
-        if np.linalg.norm(fr.center - fr2.center) > fr.radius + fr2.radius:
+        # Quick Squared Distance Check
+        dist_sq = np.sum((fr.center - fr2.center) ** 2)
+        if dist_sq > (fr.radius + fr2.radius) ** 2:
             continue
         endpoints0, endpoints1 = fracture_intersection(fr, fr2)
         if endpoints0 is not None:
             endpoints = shorten_line(endpoints1, se_factor)
-            if np.linalg.norm(endpoints0[0] - endpoints0[1]) < 1e-10:
+            length = np.linalg.norm(endpoints1[0] - endpoints1[1])
+            if length < tolerance * fr2.radius:
                 continue
             ConstantHeadLine(f"{label}_{fr2.label}", endpoints, head, fr2, ncoef, nint)
 
@@ -838,7 +993,7 @@ def shorten_line(endpoints, se_factor):
     return np.array([z0, z1])
 
 
-def check_connectivity(fractures):
+def check_connectivity_org(fractures):
     """
     Function that checks the connectivity of a list of fractures. The function returns
     any fractures that are not connected to a constant head boundary.
@@ -897,6 +1052,242 @@ def check_connectivity(fractures):
     remove_list = [f for f in fractures if f not in connected_fractures]
 
     return len(remove_list) == 0, remove_list
+
+
+def check_connectivity(fractures):
+    """
+    Function that checks the connectivity of a list of fractures. The function returns
+    any fractures that are not connected to a constant head boundary.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures.
+
+    Returns
+    -------
+    bool
+        True if all fractures are connected, False otherwise.
+    """
+    from collections import deque
+
+    n = len(fractures)
+
+    # Map fractures to integer IDs (major speedup)
+    id_of = {f: i for i, f in enumerate(fractures)}
+
+    # Neighbor adjacency list (only intersections)
+    neighbors = [[] for _ in range(n)]
+
+    # Connected flag (bitset for speed & memory)
+    connected = bytearray(n)
+
+    # BFS queue
+    queue = deque()
+
+    # ---------- Single preprocessing pass ----------
+    for f in fractures:
+        fid = id_of[f]
+        has_boundary = False
+
+        for el in f.elements:
+            if isinstance(el, intersection.Intersection):
+                neighbors[fid].append(id_of[el.frac0])
+                neighbors[fid].append(id_of[el.frac1])
+
+            elif isinstance(el, (ConstantHeadLine, Well)):
+                has_boundary = True
+
+        # Seed BFS immediately
+        if has_boundary:
+            connected[fid] = 1
+            queue.append(fid)
+
+    # ---------- BFS traversal ----------
+    while queue:
+        fid = queue.popleft()
+
+        for nbr in neighbors[fid]:
+            if not connected[nbr]:
+                connected[nbr] = 1
+                queue.append(nbr)
+
+    # ---------- Fractures to remove ----------
+    remove_list = [fractures[i] for i in range(n) if not connected[i]]
+
+    return len(remove_list) == 0, remove_list
+
+
+@nb.njit(parallel=True, cache=True)
+def count_fracture_adjacency_from_elements(elements, n_fractures):
+    counts = np.zeros(n_fractures, dtype=np.int32)
+
+    for i in nb.prange(elements.size):
+        if elements[i]["_type"] == 0:
+            f0 = elements["frac0"][i]
+            f1 = elements["frac1"][i]
+            counts[f0] += 1
+            counts[f1] += 1
+
+    return counts
+
+
+@nb.njit(cache=True)
+def build_indptr(counts):
+    n = counts.size
+    indptr = np.empty(n + 1, dtype=np.int32)
+
+    s = 0
+    indptr[0] = 0
+    for i in range(n):
+        s += counts[i]
+        indptr[i + 1] = s
+
+    return indptr, s  # total adjacency entries
+
+
+@nb.njit(cache=True)
+def fill_fracture_adjacency_from_elements(elements, adj_indptr, adj_indices):
+    write_ptr = adj_indptr.copy()
+    frac0 = elements["frac0"]
+    frac1 = elements["frac1"]
+    types = elements["_type"]
+
+    for i in range(elements.size):
+        if types[i] != 0:
+            continue
+
+        f0 = frac0[i]
+        f1 = frac1[i]
+
+        p0 = write_ptr[f0]
+        p1 = write_ptr[f1]
+
+        adj_indices[p0] = f1
+        adj_indices[p1] = f0
+
+        write_ptr[f0] += 1
+        write_ptr[f1] += 1
+
+
+@nb.njit(cache=True)
+def build_fracture_adjacency(fractures_struc_array, elements_struc_array):
+    counts = count_fracture_adjacency_from_elements(
+        elements_struc_array, fractures_struc_array.size
+    )
+
+    adj_indptr, total = build_indptr(counts)
+
+    adj_indices = np.empty(total, dtype=np.int32)
+
+    fill_fracture_adjacency_from_elements(
+        elements_struc_array,
+        adj_indptr,
+        adj_indices,
+    )
+
+    return adj_indptr, adj_indices
+
+
+@nb.njit(parallel=True, cache=True)
+def compute_boundary_fractures_from_elements(elements, n_fractures):
+    """
+    Determine which fractures are connected to boundary conditions.
+
+    Parameters
+    ----------
+    elements : structured array (element_dtype_hpc)
+        All DFN elements.
+    n_fractures : int
+        Total number of fractures.
+
+    Returns
+    -------
+    boundary : uint8 array of shape (n_fractures,)
+        boundary[f] == 1 if fracture f has a boundary condition.
+    """
+    boundary = np.zeros(n_fractures, dtype=np.uint8)
+
+    for i in nb.prange(elements.size):
+        t = elements[i]["_type"]
+
+        # Boundary condition elements
+        if t == 2 or t == 3:
+            f = elements[i]["frac0"]
+            boundary[f] = 1  # safe: idempotent write
+
+    return boundary
+
+
+@nb.njit(cache=True)
+def bfs_connectivity_from_adjacency(adj_indptr, adj_indices, boundary):
+    n_fr = boundary.size
+
+    connected = np.empty(n_fr, dtype=np.uint8)
+    queue = np.empty(n_fr, dtype=np.int32)
+
+    q0 = 0
+    q1 = 0
+
+    # seed queue and copy boundary
+    for i in range(n_fr):
+        c = boundary[i]
+        connected[i] = c
+        if c == 1:
+            queue[q1] = i
+            q1 += 1
+
+    adj_ptr = adj_indptr
+    adj_idx = adj_indices
+    conn = connected
+    queue_loc = queue
+
+    while q0 < q1:
+        f = queue_loc[q0]
+        q0 += 1
+
+        start = adj_ptr[f]
+        end = adj_ptr[f + 1]
+
+        for k in range(start, end):
+            nbr = adj_idx[k]
+            if conn[nbr] == 0:
+                conn[nbr] = 1
+                queue_loc[q1] = nbr
+                q1 += 1
+
+    return connected
+
+
+def check_connectivity_hpc(fractures_struc_array, elements_struc_array):
+    """
+    Drop-in replacement for check_connectivity using HPC arrays.
+    """
+    s = time.time()
+    adj_indptr, adj_indices = build_fracture_adjacency(
+        fractures_struc_array,
+        elements_struc_array,
+    )
+    s1 = time.time()
+    boundary = compute_boundary_fractures_from_elements(
+        elements_struc_array,
+        fractures_struc_array.size,
+    )
+    s2 = time.time()
+    connected = bfs_connectivity_from_adjacency(
+        adj_indptr,
+        adj_indices,
+        boundary,
+    )
+    print(
+        f"Adjacency: {s1 - s:.2f} sec, Boundary: {s2 - s1:.2f} sec, BFS: {time.time() - s2:.2f} sec"
+    )
+
+    # fractures to remove (Python side)
+    remove_ids = np.flatnonzero(connected == 0).tolist()
+
+    all_connected = len(remove_ids) == 0
+    return all_connected, remove_ids
 
 
 def convert_trend_plunge_to_normal(trend, plunge):

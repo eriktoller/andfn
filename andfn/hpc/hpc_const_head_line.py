@@ -108,6 +108,30 @@ def calc_omega(self_, z):
     return omega
 
 
+@nb.njit()
+def calc_omega_array(self_, omega, z):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting value for the omega function
+    z : np.ndarray[np.complex128]
+        An array of points in the complex z-plane
+
+    Return
+    ------
+    None
+            Edits the omega array in place with the resulting value for the omega function
+    """
+    chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
+    mf.well_chi_array(omega, chi, self_["q"])
+    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+
+
 def calc_w(self_, z):
     """
     Calculate the complex discharge vector for the constant head line.

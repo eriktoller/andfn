@@ -92,6 +92,50 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
     return omega
 
 
+@nb.njit()
+def calc_omega_array(self_, omega, z, element_struc_array, exclude=-1):
+    """
+    Calculates the omega for the fracture excluding element "exclude".
+
+    Parameters
+    ----------
+    self_ : np.ndarray[fracture_dtype]
+        The fracture element.
+    omega : np.ndarray[np.complex128]
+        Array to store the resulting omega values for each point in z.
+    z : np.ndarray[np.complex128]
+        A point in the complex z plane.
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements.
+    exclude : int
+        Label of element to exclude from the omega calculation.
+
+    Returns
+    -------
+    None
+    """
+    # Initialize omega with the constant value
+    omega[:] = self_["constant"] + 0.0j
+
+    # Loop through the elements of the fracture
+    for e in range(self_["nelements"]):
+        el = self_["elements"][e]
+        if el != exclude:
+            element = element_struc_array[el]
+            if element["_type"] == 0:  # Intersection
+                hpc_intersection.calc_omega_array(element, omega, z, self_["_id"])
+            elif element["_type"] == 1:  # Bounding circle
+                hpc_bounding_circle.calc_omega_array(element, omega, z)
+            elif element["_type"] == 2:  # Well
+                hpc_well.calc_omega_array(element, omega, z)
+            elif element["_type"] == 3:  # Constant head line
+                hpc_const_head_line.calc_omega_array(element, omega, z)
+            elif element["_type"] == 4:  # Impermeable circle
+                hpc_imp_object.calc_omega_circle_array(element, omega, z)
+            elif element["_type"] == 5:  # Impermeable line
+                hpc_imp_object.calc_omega_line_array(element, omega, z)
+
+
 def calc_w(self_, z, element_struc_array, exclude=-1):
     """
     Calculates the omega for the fracture excluding element "exclude".
@@ -256,7 +300,7 @@ def get_flow_nets(
 
 
 @nb.njit(cache=CACHE, parallel=True)
-def get_heads(fracture_struc_array, n_points, n_boundary_points, element_struc_array):
+def get_heads(fracture_struc_array, element_struc_array, z_array):
     """
     Get the heads for all fractures.
 
@@ -264,19 +308,17 @@ def get_heads(fracture_struc_array, n_points, n_boundary_points, element_struc_a
     ----------
     fracture_struc_array : np.ndarray[fracture_dtype]
         The fracture structure array.
-    n_points : int
-        Number of points in the flow net.
-    n_boundary_points : int
-        Number of points along the boundary of the unit circle.
     element_struc_array : np.ndarray[element_dtype]
         Array of elements.
+    z_array : np.ndarray[np.complex128]
+        Array of complex coordinates for the points in the disk.
 
     Returns
     -------
     heads : list[np.ndarray[complex]]
         List of heads for each fracture.
     """
-    n = n_points + n_boundary_points
+    n = len(z_array)
 
     # Create the heads arrays
     heads = np.zeros((len(fracture_struc_array), n), dtype=np.float64)
@@ -284,7 +326,6 @@ def get_heads(fracture_struc_array, n_points, n_boundary_points, element_struc_a
     # Create the 3D points arrays and its working z arrays
     pnts_3d = np.zeros((len(fracture_struc_array), n, 3), dtype=np.float64)
     z_arrays = np.zeros((len(fracture_struc_array), n), dtype=np.complex128)
-    z_array = sunflower_spiral(n_points, n_boundary_points)
 
     # Calculate the heads for each fracture
     for i in nb.prange(len(fracture_struc_array)):

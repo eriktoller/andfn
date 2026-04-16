@@ -6,6 +6,7 @@ This module contains the region classes.
 
 import numpy as np
 import pyvista as pv
+from scipy.spatial import KDTree
 
 import andfn.geometry_functions as gf
 
@@ -381,14 +382,17 @@ class RectangularRegion(Region):
             and (abs(local_point[2]) <= 0.5 * self.zl)
         )
 
-    def check_fractures(self, fractures):
+    def check_fractures(self, fractures, tree=None):
         """
-        Checks if any of the fractures are inside the rectangular region.
+        Checks if any of the fractures are inside the rectangular region
+        using a KD-tree for efficient spatial lookup.
 
         Parameters
         ----------
         fractures : list of andfn.fracture.Fracture
             The fractures to check.
+        tree : scipy.spatial.KDTree, optional
+            A pre-built KD-tree of fracture centers for efficient querying, by default None.
 
         Returns
         -------
@@ -397,13 +401,32 @@ class RectangularRegion(Region):
         outside_fractures : list of andfn.fracture.Fracture
             The fractures that are outside the rectangular region.
         """
+
+        if not fractures:
+            return [], []
+
+        # Build the tree if not provided
+        if tree is None:
+            centers = np.array([frac.center for frac in fractures])
+            tree = KDTree(centers)
+
+        # ---- rectangle center & radius of enclosing sphere ----
+        radius = 0.5 * np.sqrt(self.xl**2 + self.yl**2 + self.zl**2)
+
+        # ---- KD-tree candidate query ----
+        candidate_idx = tree.query_ball_point(self.center, r=radius)
+
         inside_fractures = []
         outside_fractures = []
-        for frac in fractures:
-            if self.check_point(frac.center):
+
+        candidate_set = set(candidate_idx)
+
+        for i, frac in enumerate(fractures):
+            if i in candidate_set and self.check_point(frac.center):
                 inside_fractures.append(frac)
             else:
                 outside_fractures.append(frac)
+
         return inside_fractures, outside_fractures
 
     def possible_intersections(self, frac):
@@ -427,7 +450,7 @@ class RectangularRegion(Region):
 
     def frac_intersections(self, fractures, face, head):
         """
-        Checks if the tunnel intersects with a given fracture.
+        Checks if a panel of the region box intersects with any fractures.
 
         Parameters
         ----------

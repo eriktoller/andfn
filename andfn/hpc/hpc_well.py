@@ -60,6 +60,32 @@ def calc_omega(self_, z):
     return omega
 
 
+@nb.njit()
+def calc_omega_array(self_, omega, z):
+    """
+    Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The well element.
+    omega : np.ndarray[np.complex128]
+        An array to store the resulting omega values.
+    z : np.ndarray[np.complex128]
+         An array of points in the complex z plane.
+
+    Returns
+    -------
+    None
+        The resulting omega values are stored in the input array.
+    """
+    chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
+    mf.well_chi_array(omega, chi, self_["q"])
+    for i in range(len(chi)):
+        if np.abs(chi[i]) < 1 - 1e-12:
+            omega[i] = np.nan + np.nan * 1j
+
+
 def calc_w(self_, z):
     """
     Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
