@@ -3,7 +3,7 @@ requires = ["setuptools>64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-version = "0.1.10"
+version = "0.1.11"
 name = "andfn"
 description = "An analytic element model for discrete fracture networks"
 authors = [
@@ -24,8 +24,8 @@ dependencies = [
     "numpy",
     "pyvista~=0.44.2",
     "scipy",
-    "numba~=0.61.2",
-    "h5py~=3.13.0",
+    "numba",
+    "h5py",
     "matplotlib"
 ]
 
