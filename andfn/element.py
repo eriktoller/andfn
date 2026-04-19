@@ -12,11 +12,11 @@ from .constants import load_yaml_config
 
 config = load_yaml_config()
 MAX_NCOEF = 200
-MAX_ELEMENTS = 300
+MAX_ELEMENTS = 500
 MAX_DISCHARGE_INT = 1000
 if config:
     MAX_NCOEF = config.get("MAX_NCOEF", 200)
-    MAX_ELEMENTS = config.get("MAX_ELEMENTS", 300)
+    MAX_ELEMENTS = config.get("MAX_ELEMENTS", 500)
     MAX_DISCHARGE_INT = config.get("MAX_DISCHARGE_INT", 1000)
 
 element_dtype = np.dtype(
