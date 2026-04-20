@@ -89,7 +89,7 @@ def calc_omega_circle(self_, z):
 
 
 @nb.njit()
-def calc_omega_circle_array(self_, omega, z):
+def calc_omega_circle_array(omega, z, radius, center, coef, ncoef):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -101,19 +101,62 @@ def calc_omega_circle_array(self_, omega, z):
         An array to store the resulting value for the omega function
     z : np.ndarray[np.complex128]
         An array of points in the complex z-plane
+    radius : float
+        The radius of the circle
+    center : complex128
+        The center of the circle
+    coef : np.ndarray[np.complex128]
+        The coefficients of the asymptotic expansion for the omega function
+    ncoef : int
+        The number of coefficients in the asymptotic expansion
 
     Return
     ------
     None
         Edits the omega array in place with the resulting value for the omega function
     """
-    chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
-    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    chi = gf.map_z_circle_to_chi(z, radius, center)
+    mf.asym_expansion_array(omega, chi, coef, ncoef)
     for i in range(len(omega)):
         if np.abs(chi[i]) < 1.0 - 1e-10:
             omega[i] = (
                 np.nan + np.nan * 1j
             )  # Set omega to NaN for points inside the circle
+
+
+@nb.njit()
+def calc_omega_circle_sum(z, radius, center, coef, ncoef):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    z : np.ndarray[np.complex128]
+        An array of points in the complex z-plane
+    radius : float
+        The radius of the circle
+    center : complex128
+        The center of the circle
+    coef : np.ndarray[np.complex128]
+        The coefficients of the asymptotic expansion for the omega function
+    ncoef : int
+        The number of coefficients in the asymptotic expansion
+
+    Return
+    ------
+    None
+        Edits the omega array in place with the resulting value for the omega function
+    """
+    chi = gf.map_z_circle_to_chi(z, radius, center)
+    omega = 0.0 + 0.0j
+    omega += mf.asym_expansion_sum(chi, coef, ncoef)
+
+    for i in range(len(chi)):
+        if np.abs(chi[i]) < 1.0 - 1e-10:
+            omega = (
+                np.nan + np.nan * 1j
+            )  # Set omega to NaN for points inside the circle
+    return omega
 
 
 ########################################################################################################################
@@ -206,23 +249,59 @@ def calc_omega_line(self_, z):
 
 
 @nb.njit()
-def calc_omega_line_array(self_, omega, z):
+def calc_omega_line_array(omega, z, ep0a, ep0b, coef, ncoef):
     """
     Function that calculates the omega function for a given point z and fracture.
 
     Parameters
     ----------
-    self_ : np.ndarray[element_dtype]
-        The intersection element
     omega : np.ndarray[np.complex128]
         An array to store the resulting value for the omega function
     z : np.ndarray[np.complex128]
         An array of points in the complex z-plane
+    ep0a : complex128
+        The first endpoint of the line
+    ep0b : complex128
+        The second endpoint of the line
+    coef : np.ndarray[np.complex128]
+        The coefficients of the asymptotic expansion for the omega function
+    ncoef : int
+        The number of coefficients in the asymptotic expansion
 
     Return
     ------
     None
         Edits the omega array in place with the resulting value for the omega function
     """
-    chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
-    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    chi = gf.map_z_line_to_chi_array(z, ep0a, ep0b)
+    mf.asym_expansion_array(omega, chi, coef, ncoef)
+
+
+@nb.njit()
+def calc_omega_line_sum(z, ep0a, ep0b, coef, ncoef):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    z : np.ndarray[np.complex128]
+        An array of points in the complex z-plane
+    ep0a : complex128
+        The first endpoint of the line
+    ep0b : complex128
+        The second endpoint of the line
+    coef : np.ndarray[np.complex128]
+        The coefficients of the asymptotic expansion for the omega function
+    ncoef : int
+        The number of coefficients in the asymptotic expansion
+
+    Return
+    ------
+    None
+        Edits the omega array in place with the resulting value for the omega function
+    """
+    chi = gf.map_z_line_to_chi_array(z, ep0a, ep0b)
+    omega = 0.0 + 0.0j
+    omega += mf.asym_expansion_sum(chi, coef, ncoef)
+
+    return omega

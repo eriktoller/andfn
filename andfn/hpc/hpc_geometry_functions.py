@@ -32,6 +32,32 @@ def map_z_line_to_chi(z, endpoints):
 
 
 @nb.njit(inline="always")
+def map_z_line_to_chi_array(z, endpoint_a, endpoint_b):
+    """
+    Function that maps the exterior of a line in the complex z-plane onto the exterior of the unit circle in the
+    complex chi-plane.
+
+    Parameters
+    ----------
+    z : np.ndarray[np.complex128]
+        A complex point in the complex z-plane
+    endpoint_a : np.complex128
+        First endpoint of the line in the complex z-plane
+    endpoint_b : np.complex128
+        Second endpoint of the line in the complex z-plane
+
+    Returns
+    -------
+    chi : np.ndarray[np.complex128]
+        The corresponding point in the complex chi-plane
+    """
+    # Map via the Z-plane
+    big_z = (2 * z - endpoint_a - endpoint_b) / (endpoint_b - endpoint_a)
+    chi = big_z + np.sqrt(big_z - 1) * np.sqrt(big_z + 1)
+    return chi
+
+
+@nb.njit(inline="always")
 def map_chi_to_z_line(chi, endpoints):
     """
     Function that maps the exterior of the unit circle in the complex chi-plane onto the exterior of a line in the
@@ -47,6 +73,30 @@ def map_chi_to_z_line(chi, endpoints):
     Returns
     -------
     z : complex | np.ndarray[np.complex128]
+        The corresponding point in the complex z-plane
+    """
+    # Map via the Z-plane
+    big_z = 1 / 2 * (chi + 1 / chi)
+    z = 1 / 2 * (big_z * (endpoints[1] - endpoints[0]) + endpoints[0] + endpoints[1])
+    return z
+
+
+@nb.njit(inline="always")
+def map_chi_to_z_line_array(chi, endpoints):
+    """
+    Function that maps the exterior of the unit circle in the complex chi-plane onto the exterior of a line in the
+    complex z-plane.
+
+    Parameters
+    ----------
+    chi : np.ndarray[np.complex128]
+        A point in the complex chi-plane
+    endpoints : np.ndarray[np.complex128]
+        Endpoints of the line in the complex z-plane
+
+    Returns
+    -------
+    z : np.ndarray[np.complex128]
         The corresponding point in the complex z-plane
     """
     # Map via the Z-plane
@@ -72,6 +122,28 @@ def map_z_circle_to_chi(z, r, center=0.0):
     Return
     ------
     chi : complex | np.ndarray[np.complex128]
+        The corresponding point in the complex chi-plane
+    """
+    return (z - center) / r
+
+
+@nb.njit(inline="always")
+def map_z_circle_to_chi_array(z, r, center=0.0):
+    """
+    Function that maps a circle in the complex z-plane onto a unit circle in the complex chi-plane.
+
+    Parameters
+    ----------
+    z : np.ndarray[np.complex128]
+        A point in the complex z-plane
+    r : float
+        Radius of the circle
+    center : np.complex128
+        Center point of the circle in the complex z-plane
+
+    Return
+    ------
+    chi : np.ndarray[np.complex128]
         The corresponding point in the complex chi-plane
     """
     return (z - center) / r

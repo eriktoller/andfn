@@ -49,6 +49,10 @@ dtype_z_arrays = np.dtype(
     [("z0", complex, MAX_NCOEF * 2), ("z1", complex, MAX_NCOEF * 2)]
 )
 
+dtype_omega_array = np.dtype(
+    [("omega0", complex, MAX_NCOEF * 2), ("omega1", complex, MAX_NCOEF * 2)]
+)
+
 logger = logging.getLogger("andfn")
 
 
@@ -103,6 +107,7 @@ def solve(
     get_z_int_array(z_int, discharge_elements, discharge_int)
     z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
     get_z_int_array(z_int_error, element_struc_array, discharge_int)
+    omega_int = np.zeros(num_elements, dtype=dtype_omega_array)
 
     # Discharge matrix
     logger.info("Building discharge matrix...")
@@ -164,6 +169,7 @@ def solve(
                 discharges,
                 discharges_old,
                 z_int,
+                omega_int,
                 lu_matrix,
             )
             error_q = np.max(np.abs(discharges - discharges_old))
@@ -173,6 +179,8 @@ def solve(
                 / (np.max(np.abs(discharges_old)) + 1e-16)
             )
         timeq = time.time() - startq
+
+        # print(build_head_matrix.inspect_types())
 
         # Solve the elements
         starte = time.time()
@@ -600,6 +608,7 @@ def solve_discharge_matrix(
     discharges,
     discharges_old,
     z_int,
+    omega_int,
     lu_matrix,
 ):
     """
@@ -623,6 +632,8 @@ def solve_discharge_matrix(
         The old discharges
     z_int : np.ndarray[dtype_z_arrays]
         The z arrays for the discharge elements
+    omega_int : np.ndarray[dtype_omega_array]
+        The omega arrays for the discharge elements
     lu_matrix : scipy.sparse.linalg.splu
         The LU factorization of the discharge matrix
 
@@ -643,6 +654,7 @@ def solve_discharge_matrix(
         discharge_int,
         head_matrix,
         z_int,
+        omega_int,
     )
     logger.debug(f"Pre solve time: {time.time() - start0}")
 
@@ -671,6 +683,7 @@ def pre_matrix_solve(
     discharge_int,
     head_matrix,
     z_int,
+    omega_int,
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -689,6 +702,8 @@ def pre_matrix_solve(
         The head matrix
     z_int : np.ndarray[dtype_z_arrays]
         The z arrays for the discharge elements
+    omega_int : np.ndarray[dtype_omega_array]
+        The omega arrays for the discharge elements
 
     Returns
     -------
@@ -714,6 +729,7 @@ def pre_matrix_solve(
         discharge_int,
         head_matrix,
         z_int,
+        omega_int,
     )
 
 
@@ -783,6 +799,7 @@ def build_head_matrix(
     discharge_int,
     head_matrix,
     z_int,
+    omega_int,
 ):
     """
     Builds the head matrix for the DFN and stores it.
@@ -801,6 +818,8 @@ def build_head_matrix(
         The head matrix
     z_int : np.ndarray[dtype_z_arrays]
         The z arrays for the discharge elements
+    omega_int : np.ndarray[dtype_omega_array]
+        The omega arrays for the discharge elements
 
     Returns
     -------
@@ -808,25 +827,88 @@ def build_head_matrix(
         The head matrix
     """
 
+    frac0 = element_struc_array["frac0"]
+    frac1 = element_struc_array["frac1"]
+    endpoints0 = element_struc_array["endpoints0"]
+    ep0a = endpoints0[:, 0]
+    ep0b = endpoints0[:, 1]
+    endpoints1 = element_struc_array["endpoints1"]
+    ep1a = endpoints1[:, 0]
+    ep1b = endpoints1[:, 1]
+    coef = element_struc_array["coef"]
+    ncoef = element_struc_array["ncoef"]
+    q = element_struc_array["q"]
+    radius = element_struc_array["radius"]
+    center = element_struc_array["center"]
+    etype = element_struc_array["_type"]
+
+    de_frac0 = discharge_elements["frac0"]
+    de_frac1 = discharge_elements["frac1"]
+    de_type = discharge_elements["_type"]
+    de_phi = discharge_elements["phi"]
+
+    z0_all = z_int["z0"]
+    z1_all = z_int["z1"]
+
     # Add the head for each discharge element
     for j in nb.prange(discharge_elements.size):
-        e = discharge_elements[j]
-        frac0 = fractures_struc_array[e["frac0"]]
-        z0 = z_int["z0"][j][:discharge_int]
-        omega = 0.0 + 0.0j
-        for i in range(discharge_int):
-            omega += hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
-        omega = omega / discharge_int
-        if e["_type"] == 0:  # Intersection
-            frac1 = fractures_struc_array[e["frac1"]]
-            z1 = z_int["z1"][j][:discharge_int]
-            omega1 = 0.0 + 0.0j
-            for i in range(discharge_int):
-                omega1 += hpc_fracture.calc_omega(frac1, z1[i], element_struc_array)
-            omega1 = omega1 / discharge_int
-            head_matrix[j] = np.real(omega1) / frac1["t"] - np.real(omega) / frac0["t"]
-        elif e["_type"] in [2, 3]:  # Well or Constant head line
-            head_matrix[j] = e["phi"] - np.real(omega)
+        fid0 = de_frac0[j]
+        self_0 = fractures_struc_array[fid0]
+        ne0 = self_0["nelements"]
+        const0 = self_0["constant"]
+
+        idx0 = self_0["elements"][:ne0]
+        t0 = self_0["t"]
+        z0 = z0_all[j, :discharge_int]
+
+        omega = hpc_fracture.calc_omega_mean(
+            z0,
+            const0,
+            ne0,
+            self_0["_id"],
+            idx0,
+            frac0,
+            ep0a,
+            ep0b,
+            ep1a,
+            ep1b,
+            coef,
+            ncoef,
+            q,
+            radius,
+            center,
+            etype,
+        )
+        if de_type[j] == 0:  # Intersection
+            fid1 = de_frac1[j]
+            self_1 = fractures_struc_array[fid1]
+            ne1 = self_1["nelements"]
+            const1 = self_1["constant"]
+            idx1 = self_1["elements"][:ne1]
+            t1 = self_1["t"]
+            z1 = z1_all[j, :discharge_int]
+
+            omega1 = hpc_fracture.calc_omega_mean(
+                z1,
+                const1,
+                ne1,
+                self_1["_id"],
+                idx1,
+                frac1,
+                ep0a,
+                ep0b,
+                ep1a,
+                ep1b,
+                coef,
+                ncoef,
+                q,
+                radius,
+                center,
+                etype,
+            )
+            head_matrix[j] = np.real(omega1) / t1 - np.real(omega) / t0
+        elif de_type[j] in [2, 3]:  # Well or Constant head line
+            head_matrix[j] = de_phi[j] - np.real(omega)
 
 
 def build_discharge_matrix(

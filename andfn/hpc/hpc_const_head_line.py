@@ -109,27 +109,68 @@ def calc_omega(self_, z):
 
 
 @nb.njit()
-def calc_omega_array(self_, omega, z):
+def calc_omega_array(omega, z, ep0a, ep0b, coef, ncoef, q):
     """
     Function that calculates the omega function for a given point z and fracture.
 
     Parameters
     ----------
-    self_ : np.ndarray[element_dtype]
-        The intersection element
     omega : np.ndarray[np.complex128]
         An array to store the resulting value for the omega function
     z : np.ndarray[np.complex128]
         An array of points in the complex z-plane
+    ep0a : complex128
+        The first endpoint of the constant head line element
+    ep0b : complex128
+        The second endpoint of the constant head line element
+    coef : np.ndarray[np.complex128]
+        The coefficients of the asymptotic expansion for the constant head line element
+    ncoef : int
+        The number of coefficients in the asymptotic expansion for the constant head line element
+    q : float
+        The discharge for the constant head line element
 
     Return
     ------
     None
             Edits the omega array in place with the resulting value for the omega function
     """
-    chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
-    mf.well_chi_array(omega, chi, self_["q"])
-    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    chi = gf.map_z_line_to_chi_array(z, ep0a, ep0b)
+    mf.well_chi_array(omega, chi, q)
+    mf.asym_expansion_array(omega, chi, coef, ncoef)
+
+
+@nb.njit()
+def calc_omega_sum(z, ep0a, ep0b, coef, ncoef, q):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    z : np.ndarray[np.complex128]
+        An array of points in the complex z-plane
+    ep0a : complex128
+        The first endpoint of the constant head line element
+    ep0b : complex128
+        The second endpoint of the constant head line element
+    coef : np.ndarray[np.complex128]
+        The coefficients of the asymptotic expansion for the constant head line element
+    ncoef : int
+        The number of coefficients in the asymptotic expansion for the constant head line element
+    q : float
+        The discharge for the constant head line element
+
+    Return
+    ------
+    None
+            Edits the omega array in place with the resulting value for the omega function
+    """
+    chi = gf.map_z_line_to_chi_array(z, ep0a, ep0b)
+    omega = 0.0 + 0.0j
+    omega += mf.well_chi_sum(chi, q)
+    omega += mf.asym_expansion_sum(chi, coef, ncoef)
+
+    return omega
 
 
 def calc_w(self_, z):

@@ -72,25 +72,55 @@ def calc_omega(self_, z):
 
 
 @nb.njit()
-def calc_omega_array(self_, omega, z):
+def calc_omega_array(omega, z, radius, coef, ncoef):
     """
     Calculates the omega for the bounding circle.
 
     Parameters
     ----------
-    self_ : np.ndarray[element_dtype]
-        The bounding circle element
     omega : np.ndarray[np.complex128]
         An array to store the resulting omega values.
     z : np.ndarray[np.complex128]
         A point in the complex z plane.
+    radius : np.float64
+        The radius of the bounding circle.
+    coef : np.ndarray[np.complex128]
+        The coefficients of the Taylor series.
+    ncoef : int
+        The number of coefficients in the Taylor series.
 
     Returns
     -------
     None
     """
-    chi = gf.map_z_circle_to_chi(z, self_["radius"])
-    mf.taylor_series_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    chi = gf.map_z_circle_to_chi(z, radius)
+    mf.taylor_series_array(omega, chi, coef, ncoef)
+
+
+@nb.njit()
+def calc_omega_sum(z, radius, coef, ncoef):
+    """
+    Calculates the omega for the bounding circle.
+
+    Parameters
+    ----------
+    z : np.ndarray[np.complex128]
+        A point in the complex z plane.
+    radius : np.float64
+        The radius of the bounding circle.
+    coef : np.ndarray[np.complex128]
+        The coefficients of the Taylor series.
+    ncoef : int
+        The number of coefficients in the Taylor series.
+
+    Returns
+    -------
+    None
+    """
+    chi = gf.map_z_circle_to_chi(z, radius)
+    omega = 0.0 + 0.0j
+    omega += mf.taylor_series_sum(chi, coef, ncoef)
+    return omega
 
 
 # @nb.njit(, inline='always')

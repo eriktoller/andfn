@@ -41,7 +41,7 @@ def asym_expansion(chi, coef):
 
 
 @nb.njit()
-def asym_expansion_array(omega, chi, coef):
+def asym_expansion_array(omega, chi, coef, ncoef):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
     coefficients.
@@ -54,6 +54,8 @@ def asym_expansion_array(omega, chi, coef):
         A point in the complex chi-plane
     coef : np.ndarray[np.complex128]
         An array of coefficients
+    ncoef : int
+        The number of coefficients to use in the expansion
 
     Return
     ------
@@ -61,15 +63,50 @@ def asym_expansion_array(omega, chi, coef):
         Fills the omega array with the resulting values for the asymptotic expansion
     """
     n_omega = omega.size
-    length = len(coef)
 
     for i in range(n_omega):
         tmp = 0.0 + 0.0j
-        for n in range(length - 1):
-            tmp += coef[length - n - 1]
-            tmp /= chi[i]
+        chi_in = chi[i]
+        for n in range(ncoef - 1):
+            tmp += coef[ncoef - n - 1]
+            tmp /= chi_in
         tmp += coef[0]
         omega[i] += tmp
+
+
+@nb.njit()
+def asym_expansion_sum(chi, coef, ncoef):
+    """
+    Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
+    coefficients.
+
+    Parameters
+    ----------
+    chi : np.ndarray[np.complex128]
+        A point in the complex chi-plane
+    coef : np.ndarray[np.complex128]
+        An array of coefficients
+    ncoef : int
+        The number of coefficients to use in the expansion
+
+    Return
+    ------
+    None
+        Fills the omega array with the resulting values for the asymptotic expansion
+    """
+    n_chi = chi.size
+    omega = 0.0 + 0.0j
+
+    for i in range(n_chi):
+        tmp = 0.0 + 0.0j
+        chi_in = chi[i]
+        for n in range(ncoef - 1):
+            tmp += coef[ncoef - n - 1]
+            tmp /= chi_in
+        tmp += coef[0]
+        omega += tmp
+
+    return omega
 
 
 @nb.njit(inline="always")
@@ -129,7 +166,7 @@ def taylor_series(chi, coef):
 
 
 @nb.njit()
-def taylor_series_array(omega, chi, coef):
+def taylor_series_array(omega, chi, coef, ncoef):
     """
     Function that calculates the Taylor series starting from 0 for a given point chi and an array of
     coefficients.
@@ -142,6 +179,8 @@ def taylor_series_array(omega, chi, coef):
         A point in the complex chi-plane
     coef : np.ndarray[np.complex128]
         An array of coefficients
+    ncoef : int
+        The number of coefficients to use in the expansion
 
     Return
     ------
@@ -149,15 +188,48 @@ def taylor_series_array(omega, chi, coef):
         Fills the omega array with the resulting values for the asymptotic expansion
     """
     n_omega = omega.size
-    length = len(coef)
 
     for i in range(n_omega):
         tmp = 0.0 + 0.0j
-        for n in range(length - 1):
-            tmp += coef[length - n - 1]
+        for n in range(ncoef - 1):
+            tmp += coef[ncoef - n - 1]
             tmp *= chi[i]
         tmp += coef[0]
         omega[i] += tmp
+
+
+@nb.njit()
+def taylor_series_sum(chi, coef, ncoef):
+    """
+    Function that calculates the Taylor series starting from 0 for a given point chi and an array of
+    coefficients.
+
+    Parameters
+    ----------
+    chi : np.ndarray[np.complex128]
+        A point in the complex chi-plane
+    coef : np.ndarray[np.complex128]
+        An array of coefficients
+    ncoef : int
+        The number of coefficients to use in the expansion
+
+    Return
+    ------
+    None
+        Fills the omega array with the resulting values for the asymptotic expansion
+    """
+    n_chi = chi.size
+    omega = 0.0 + 0.0j
+
+    for i in range(n_chi):
+        tmp = 0.0 + 0.0j
+        for n in range(ncoef - 1):
+            tmp += coef[ncoef - n - 1]
+            tmp *= chi[i]
+        tmp += coef[0]
+        omega += tmp
+
+    return omega
 
 
 @nb.njit(inline="always")
@@ -241,6 +313,34 @@ def well_chi_array(omega, chi, q):
 
 
 @nb.njit()
+def well_chi_sum(chi, q):
+    """
+    Function that return the complex potential for a well as a function of chi.
+
+    .. math::
+        \omega = \frac{q}{2 \pi} \log(\chi)
+
+    Parameters
+    ----------
+    chi : np.ndarray[np.complex128]
+        A point in the complex chi plane
+    q : float
+        The discharge eof the well.
+
+    Returns
+    -------
+    None
+        Fills the omega array with the resulting values for the complex discharge potential
+    """
+    n = chi.size
+    omega = 0.0 + 0.0j
+    for i in range(n):
+        omega += q / (2 * np.pi) * np.log(chi[i])
+
+    return omega
+
+
+@nb.njit()
 def cauchy_integral_real(
     n, m, thetas, frac0, element_id_, element_struc_array, endpoints0, work_array, coef
 ):
@@ -298,6 +398,65 @@ def cauchy_integral_real(
 
 
 @nb.njit()
+def cauchy_integral_real_array(
+    n, m, thetas, frac0, element_id_, element_struc_array, endpoints0, work_array, coef
+):
+    """
+    FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
+
+    Parameters
+    ----------
+    n : int
+        Number of integration points
+    m : int
+        Number of coefficients
+    thetas : np.ndarray
+        Array with thetas along the unit circle
+    frac0 : np.ndarray
+        The fracture
+    element_id_ : int
+        The element id
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    endpoints0 : np.ndarray[np.complex128]
+        The endpoints of the constant head line
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
+
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        Array of coefficients
+    """
+    # set integral to zero
+    work_array["integral"][:] = 0.0
+    omega_array = np.zeros(n, dtype=np.complex128)
+    hpc_fracture.calc_omega_array(
+        frac0,
+        omega_array,
+        work_array["z_integral"][:n],
+        element_struc_array,
+        element_id_,
+    )
+    work_array["phi"][:n] = np.real(omega_array)
+
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array["exp_array_m"][ii]
+            res_tmp += work_array["phi"][ii] * exp_val
+        work_array["integral"][jj] = res_tmp
+
+    for ii in range(m):
+        coef[ii] = 2 * work_array["integral"][ii] / n
+    coef[0] = coef[0] / 2
+
+
+@nb.njit()
 def find_branch_cuts(
     self_, z_pos, fracture_struc_array, element_struc_array, work_array
 ):
@@ -325,68 +484,78 @@ def find_branch_cuts(
     # Find the branch cuts
     dpsi_corr = np.zeros(self_["nint"] - 1, dtype=float)
 
-    nel = fracture_struc_array[self_["frac0"]]["nelements"]
-    elements_list = fracture_struc_array[self_["frac0"]]["elements"][:nel]
-    elements = element_struc_array[elements_list]
+    f0 = self_["frac0"]
+
+    # nel = fracture_struc_array[f0]["nelements"]
+    # elements_list = fracture_struc_array[f0]["elements"][:nel]
+    # elements = element_struc_array[elements_list]
+
+    elements_idx = fracture_struc_array[f0]["elements"]
+    nel = fracture_struc_array[f0]["nelements"]
     work_array["len_discharge_element"] = 0
 
     cnt = 0
     for ii in range(self_["nint"] - 1):
-        for e in elements:
-            if e["_type"] == 0:  # Intersection
+        for jj in range(nel):
+            e = element_struc_array[elements_idx[jj]]
+            e_type = e["_type"]
+            q = e["q"]
+            eid = e["_id"]
+
+            if e_type == 0:  # Intersection
                 if e["frac0"] == self_["frac0"]:
                     chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                     chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
-                    ln0 = np.imag(np.log(chi0))
-                    ln1 = np.imag(np.log(chi1))
+                    ln0 = np.arctan2(chi0.imag, chi0.real)
+                    ln1 = np.arctan2(chi1.imag, chi1.real)
                     if (
                         np.sign(ln0) != np.sign(ln1)
                         and np.abs(ln0) + np.abs(ln1) > np.pi
                     ):
-                        dpsi_corr[ii] -= e["q"]
+                        dpsi_corr[ii] -= q
                         work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["_id"]
+                        work_array["discharge_element"][cnt] = eid
                         get_sign(self_, work_array, cnt, chi0, chi1, -1)
                         work_array["len_discharge_element"] += 1
                         cnt += 1
                 else:
                     chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints1"])
                     chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints1"])
-                    ln0 = np.imag(np.log(chi0))
-                    ln1 = np.imag(np.log(chi1))
+                    ln0 = np.arctan2(chi0.imag, chi0.real)
+                    ln1 = np.arctan2(chi1.imag, chi1.real)
                     if (
                         np.sign(ln0) != np.sign(ln1)
                         and np.abs(ln0) + np.abs(ln1) > np.pi
                     ):
-                        dpsi_corr[ii] += e["q"]
+                        dpsi_corr[ii] += q
                         work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["_id"]
+                        work_array["discharge_element"][cnt] = eid
                         get_sign(self_, work_array, cnt, chi0, chi1, 1)
                         work_array["len_discharge_element"] += 1
                         cnt += 1
-            elif e["_type"] == 2:  # Well
+            elif e_type == 2:  # Well
                 chi0 = gf.map_z_circle_to_chi(z_pos[ii], e["radius"], e["center"])
                 chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e["radius"], e["center"])
                 if (
                     np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
                     and np.real(chi0) < 0
                 ):
-                    dpsi_corr[ii] -= e["q"]
+                    dpsi_corr[ii] -= q
                     work_array["element_pos"][cnt] = ii
-                    work_array["discharge_element"][cnt] = e["_id"]
+                    work_array["discharge_element"][cnt] = eid
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
                     work_array["len_discharge_element"] += 1
                     cnt += 1
-            elif e["_type"] == 3:  # Constant head line
+            elif e_type == 3:  # Constant head line
                 chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                 chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
                 if (
                     np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
                     and np.real(chi0) < 0
                 ):
-                    dpsi_corr[ii] -= e["q"]
+                    dpsi_corr[ii] -= q
                     work_array["element_pos"][cnt] = ii
-                    work_array["discharge_element"][cnt] = e["_id"]
+                    work_array["discharge_element"][cnt] = eid
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
                     work_array["len_discharge_element"] += 1
                     cnt += 1

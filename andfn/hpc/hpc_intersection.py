@@ -146,34 +146,95 @@ def calc_omega(self_, z, frac_is_id):
 
 
 @nb.njit()
-def calc_omega_array(self_, omega, z, frac_is_id):
+def calc_omega_array(
+    omega, z, frac_is_id, frac0, ep0a, ep0b, ep1a, ep1b, coef, ncoef, q
+):
     """
     Function that calculates the omega function for a given point z and fracture.
 
     Parameters
     ----------
-    self_ : np.ndarray[element_dtype]
-        The intersection element
     omega : np.ndarray[np.complex128]
         An array to store the resulting omega values
     z : np.ndarray[np.complex128]
         An array of points in the complex z-plane
     frac_is_id : np.int64
         The fracture that the point is in
+    frac0 : np.int64
+        The id of the first fracture that the intersection is associated with
+    ep0a : complex128
+        The first endpoint of the first fracture that the intersection is associated with
+    ep0b : complex128
+        The second endpoint of the first fracture that the intersection is associated with
+    ep1a : complex128
+        The first endpoint of the second fracture that the intersection is associated with
+    ep1b : complex128
+        The second endpoint of the second fracture that the intersection is associated with
+    coef : np.ndarray[complex128]
+        The coefficients of the asymptotic expansion for the intersection
+    ncoef : np.int64
+        The number of coefficients in the asymptotic expansion for the intersection
+    q : float
+        The discharge term for the intersection
 
     Return
     ------
     None
     """
     # See if function is in the first or second fracture that the intersection is associated with
-    if frac_is_id == self_["frac0"]:
-        chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
-        mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
-        mf.well_chi(omega, chi, self_["q"])
+    if frac_is_id == frac0:
+        chi = gf.map_z_line_to_chi_array(z, ep0a, ep0b)
+        mf.asym_expansion_array(omega, chi, coef, ncoef)
+        mf.well_chi_array(omega, chi, q)
     else:
-        chi = gf.map_z_line_to_chi(z, self_["endpoints1"])
-        mf.asym_expansion_array(omega, chi, -self_["coef"][: self_["ncoef"]])
-        mf.well_chi(omega, chi, -self_["q"])
+        chi = gf.map_z_line_to_chi_array(z, ep1a, ep1b)
+        mf.asym_expansion_array(omega, chi, -coef, ncoef)
+        mf.well_chi_array(omega, chi, -q)
+
+
+@nb.njit()
+def calc_omega_sum(z, frac_is_id, frac0, ep0a, ep0b, ep1a, ep1b, coef, ncoef, q):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    z : np.ndarray[np.complex128]
+        An array of points in the complex z-plane
+    frac_is_id : np.int64
+        The fracture that the point is in
+    frac0 : np.int64
+        The id of the first fracture that the intersection is associated with
+    ep0a : complex128
+        The first endpoint of the first fracture that the intersection is associated with
+    ep0b : complex128
+        The second endpoint of the first fracture that the intersection is associated with
+    ep1a : complex128
+        The first endpoint of the second fracture that the intersection is associated with
+    ep1b : complex128
+        The second endpoint of the second fracture that the intersection is associated with
+    coef : np.ndarray[complex128]
+        The coefficients of the asymptotic expansion for the intersection
+    ncoef : np.int64
+        The number of coefficients in the asymptotic expansion for the intersection
+    q : float
+        The discharge term for the intersection
+
+    Return
+    ------
+    None
+    """
+    omega = 0.0 + 0.0j
+    # See if function is in the first or second fracture that the intersection is associated with
+    if frac_is_id == frac0:
+        chi = gf.map_z_line_to_chi_array(z, ep0a, ep0b)
+        omega += mf.asym_expansion_sum(chi, coef, ncoef)
+        omega += mf.well_chi_sum(chi, q)
+    else:
+        chi = gf.map_z_line_to_chi_array(z, ep1a, ep1b)
+        omega += mf.asym_expansion_sum(chi, -coef, ncoef)
+        omega += mf.well_chi_sum(chi, -q)
+    return omega
 
 
 def calc_w(self_, z, frac_is_id):
