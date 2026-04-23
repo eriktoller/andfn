@@ -322,6 +322,12 @@ class Fracture:
                 e.frac1.elements.remove(e)
         self.elements.clear()
 
+    def reset(self):
+        """
+        Resets all elements in the fracture.
+        """
+        self.constant = 0.0
+
     def get_discharge_elements(self):
         """
         Returns the elements in the fracture that have a discharge.

@@ -1147,6 +1147,31 @@ class DFN(Constants):
         for i, f in enumerate(self.fractures):
             f.set_id(i)
 
+    def reset(self, ncoef=5, nint=10):
+        """
+        Resets the DFN by resetting all coefficients, constants and discharges.
+
+        Parameters
+        ----------
+        ncoef : int, optional
+            The number of coefficients to use for the elements. The default is 5.
+        nint : int, optional
+            The number of integration points to use for the elements. The default is 10.
+        """
+        logger.info("Resetting the DFN coefficients, constants and discharges.")
+        for f in self.fractures:
+            f.reset()
+
+        for e in self.elements:
+            e.reset(ncoef=ncoef, nint=nint)
+
+        # Reset dependent structures
+        self.discharge_matrix = None
+        self.discharge_elements = None
+        self.lup = None
+
+        logger.info("DFN reset complete.")
+
     def add_structure(self, new_structure):
         """
         Adds a structure to the DFN.
