@@ -9,6 +9,7 @@ import time
 
 import numpy as np
 import numba as nb
+import pandas as pd
 import scipy as sp
 from andfn.hpc import hpc_math_functions as mf
 from andfn.hpc import (
@@ -21,6 +22,7 @@ from andfn.hpc import (
     PARALLEL,
     CACHE,
 )
+from andfn.hpc.hpc_solve_cuda import build_head_matrix_cuda
 from andfn.element import MAX_NCOEF, MAX_ELEMENTS
 
 dtype_work = np.dtype(
@@ -644,7 +646,7 @@ def solve_discharge_matrix(
     element_struc_array : np.ndarray[element_dtype]
         The array of elements
     """
-
+    gpu_head_matrix = head_matrix.copy()
     # pre solver
     start0 = time.time()
     pre_matrix_solve(
@@ -657,6 +659,37 @@ def solve_discharge_matrix(
         omega_int,
     )
     logger.debug(f"Pre solve time: {time.time() - start0}")
+
+    # used teh CUDA implementation an comute a copy of head matrix on the GPU for comparison
+    start_cuda = time.time()
+    build_head_matrix_cuda(
+        fractures_struc_array,
+        element_struc_array,
+        discharge_elements,
+        discharge_int,
+        gpu_head_matrix,
+        z_int,
+        omega_int,
+    )
+    logger.debug(f"CUDA head matrix build time: {time.time() - start_cuda}")
+    # Check if the head matrix is the same as the one computed on the GPU
+    if not np.allclose(head_matrix, gpu_head_matrix, atol=1e-10):
+        logger.warning("Head matrix computed on CPU and GPU are not close!")
+        diff = np.abs(head_matrix - gpu_head_matrix)
+        max_diff = np.max(diff)
+        df = pd.DataFrame(
+            [
+                head_matrix.flatten(),
+                gpu_head_matrix.flatten(),
+                diff.flatten(),
+                discharge_elements["_type"].flatten(),
+            ]
+        ).T
+        df.columns = ["CPU", "GPU", "Difference", "Element type"]
+        df.to_csv("head_matrix_comparison.csv", index=False, sep=";")
+        logger.warning(f"Max difference: {max_diff}")
+    else:
+        logger.info("Head matrix computed on CPU and GPU are close!")
 
     # Solve the discharge matrix
     start0 = time.time()
