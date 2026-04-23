@@ -251,6 +251,7 @@ class Element:
         self.error = 1.0
         self.ncoef = 5
         self.nint = 10
+        self.q = 0.0
         self.coef = np.zeros(self.ncoef, dtype=complex)
         # self.thetas = np.linspace(
         #    start=0, stop=2 * np.pi, num=self.nint, endpoint=False
@@ -281,6 +282,27 @@ class Element:
             The string representation of the element.
         """
         return self.__str__()
+
+    def reset(self, ncoef=5, nint=10):
+        """
+        Reset the element to its initial state.
+
+        Parameters
+        ----------
+        ncoef : int
+            The number of coefficients in the expansion.
+        nint : int
+            The number of integration points in solver.
+
+        Returns
+        -------
+        None. The element is updated in place.
+        """
+        self.error = 1.0
+        self.q = 0.0
+        self.ncoef = ncoef
+        self.nint = nint
+        self.coef = np.zeros(self.ncoef, dtype=complex)
 
     def set_id(self, _id):
         """
