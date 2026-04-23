@@ -3,7 +3,7 @@ requires = ["setuptools>64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-version = "0.1.13"
+version = "0.1.14"
 name = "andfn"
 description = "An analytic element model for discrete fracture networks"
 authors = [
@@ -30,11 +30,12 @@ dependencies = [
 ]
 
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Science/Research",
-    "Intended Audience :: Other Audience",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
 

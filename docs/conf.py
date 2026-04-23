@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "andfn"
 copyright = "2025, Erik A. L. Toller"
 author = "Erik A. L. Toller"
-release = "0.1.13"
+release = "0.1.14"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
