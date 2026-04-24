@@ -126,7 +126,7 @@ def _map_z_circle_to_chi(z_re, z_im, r, c_re, c_im):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _asym_expansion_pt(chi_re, chi_im, coef_re, coef_im, ncoef):
     """Asymptotic expansion  Σ aₙ / χⁿ  for a single χ.  Returns (re, im)."""
     tmp_re = 0.0
@@ -144,7 +144,7 @@ def _asym_expansion_pt(chi_re, chi_im, coef_re, coef_im, ncoef):
     return tmp_re + coef_re[0], tmp_im + coef_im[0]
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _taylor_series_pt(chi_re, chi_im, coef_re, coef_im, ncoef):
     """Taylor series  Σ aₙ χⁿ  for a single χ.  Returns (re, im)."""
     tmp_re = 0.0
@@ -159,7 +159,7 @@ def _taylor_series_pt(chi_re, chi_im, coef_re, coef_im, ncoef):
     return tmp_re + coef_re[0], tmp_im + coef_im[0]
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _well_chi_pt(chi_re, chi_im, q):
     """Well potential  (q/2π) log(χ)  for a single χ.  Returns (re, im)."""
     log_re, log_im = _clog(chi_re, chi_im)
@@ -175,7 +175,7 @@ def _well_chi_pt(chi_re, chi_im, q):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _omega_intersection_pt(
     z_re,
     z_im,
@@ -218,13 +218,13 @@ def _omega_intersection_pt(
         return -(ae_re + wc_re), -(ae_im + wc_im)
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _omega_bounding_circle_pt(z_re, z_im, radius, coef_re, coef_im, ncoef):
     chi_re, chi_im = _map_z_circle_to_chi(z_re, z_im, radius, 0.0, 0.0)
     return _taylor_series_pt(chi_re, chi_im, coef_re, coef_im, ncoef)
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _omega_well_pt(z_re, z_im, radius, c_re, c_im, q):
     chi_re, chi_im = _map_z_circle_to_chi(z_re, z_im, radius, c_re, c_im)
     if _cabs(chi_re, chi_im) < 1.0 - 1e-12:
@@ -232,7 +232,7 @@ def _omega_well_pt(z_re, z_im, radius, c_re, c_im, q):
     return _well_chi_pt(chi_re, chi_im, q)
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _omega_const_head_pt(
     z_re, z_im, ep0a_re, ep0a_im, ep0b_re, ep0b_im, coef_re, coef_im, ncoef, q
 ):
@@ -242,7 +242,7 @@ def _omega_const_head_pt(
     return wc_re + ae_re, wc_im + ae_im
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _omega_imp_circle_pt(z_re, z_im, radius, c_re, c_im, coef_re, coef_im, ncoef):
     chi_re, chi_im = _map_z_circle_to_chi(z_re, z_im, radius, c_re, c_im)
     if _cabs(chi_re, chi_im) < 1.0 - 1e-10:
@@ -250,7 +250,7 @@ def _omega_imp_circle_pt(z_re, z_im, radius, c_re, c_im, coef_re, coef_im, ncoef
     return _asym_expansion_pt(chi_re, chi_im, coef_re, coef_im, ncoef)
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _omega_imp_line_pt(
     z_re, z_im, ep0a_re, ep0a_im, ep0b_re, ep0b_im, coef_re, coef_im, ncoef
 ):
@@ -268,17 +268,16 @@ def _omega_imp_line_pt(
 # ══════════════════════════════════════════════════════════════════��════════════
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(device=True)
 def _omega_one_point(
     z_re,
     z_im,
     frac_id,
     fid,  # row index into frac_elements
-    frac_elements,  # 2-D int32 [nfrac, MAX_ELEMENTS_PER_FRAC]
+    frac_elements,  # 2-D int32 [nfrac, MAX_ELEMENTS_PER_FRAC]  (global)
     nelements,
     el_type,
     el_frac0,
-    el_frac_compare,  # el_frac_compare = el_frac0 or el_frac1
     el_ep0a_re,
     el_ep0a_im,
     el_ep0b_re,
@@ -295,36 +294,21 @@ def _omega_one_point(
     el_center_re,
     el_center_im,
 ):
-    """Return (omega_re, omega_im) for z-point (z_re, z_im) on fracture fid.
-
-    The fracture constant is NOT included — it must be added once (not per
-    z-point) by the caller to match the CPU ``calc_omega_mean`` semantics.
-
-    ``el_frac_compare`` should be ``el_frac0`` when computing the frac0 omega,
-    and ``el_frac1`` when computing the frac1 omega.  This mirrors the CPU
-    ``calc_omega_mean`` which passes ``element_struc_array["frac0"]`` for the
-    first call and ``element_struc_array["frac1"]`` for the second call.
-    In both cases the condition ``frac_id == el_frac_compare[el]`` evaluates
-    to True, so **both calls use ep0a/ep0b with positive coefficients**.  The
-    else branch (ep1a/ep1b, negated coef) is never reached by
-    ``build_head_matrix``.
-    """
+    """Return (omega_re, omega_im) using global frac_elements array (fallback)."""
     o_re = 0.0
     o_im = 0.0
-
     for k in range(nelements):
         el = frac_elements[fid, k]
         etype = el_type[el]
         ncoef = el_ncoef[el]
         cr = el_coef_re[el]
         ci = el_coef_im[el]
-
-        if etype == 0:  # Intersection
+        if etype == 0:
             dr, di = _omega_intersection_pt(
                 z_re,
                 z_im,
                 frac_id,
-                el_frac_compare[el],
+                el_frac0[el],
                 el_ep0a_re[el],
                 el_ep0a_im[el],
                 el_ep0b_re[el],
@@ -338,18 +322,13 @@ def _omega_one_point(
                 ncoef,
                 el_q[el],
             )
-        elif etype == 1:  # Bounding circle
+        elif etype == 1:
             dr, di = _omega_bounding_circle_pt(z_re, z_im, el_radius[el], cr, ci, ncoef)
-        elif etype == 2:  # Well
+        elif etype == 2:
             dr, di = _omega_well_pt(
-                z_re,
-                z_im,
-                el_radius[el],
-                el_center_re[el],
-                el_center_im[el],
-                el_q[el],
+                z_re, z_im, el_radius[el], el_center_re[el], el_center_im[el], el_q[el]
             )
-        elif etype == 3:  # Constant head line
+        elif etype == 3:
             dr, di = _omega_const_head_pt(
                 z_re,
                 z_im,
@@ -362,7 +341,7 @@ def _omega_one_point(
                 ncoef,
                 el_q[el],
             )
-        elif etype == 4:  # Impermeable circle
+        elif etype == 4:
             dr, di = _omega_imp_circle_pt(
                 z_re,
                 z_im,
@@ -373,7 +352,116 @@ def _omega_one_point(
                 ci,
                 ncoef,
             )
-        elif etype == 5:  # Impermeable line
+        elif etype == 5:
+            dr, di = _omega_imp_line_pt(
+                z_re,
+                z_im,
+                el_ep0a_re[el],
+                el_ep0a_im[el],
+                el_ep0b_re[el],
+                el_ep0b_im[el],
+                cr,
+                ci,
+                ncoef,
+            )
+        else:
+            dr, di = 0.0, 0.0
+        o_re += dr
+        o_im += di
+    return o_re, o_im
+
+
+@cuda.jit(device=True)
+def _omega_one_point_sh(
+    z_re,
+    z_im,
+    frac_id,
+    fid,
+    sh_el,  # 1-D int32 shared-memory array of element indices (length nelements)
+    nelements,
+    el_type,
+    el_frac0,
+    el_ep0a_re,
+    el_ep0a_im,
+    el_ep0b_re,
+    el_ep0b_im,
+    el_ep1a_re,
+    el_ep1a_im,
+    el_ep1b_re,
+    el_ep1b_im,
+    el_coef_re,
+    el_coef_im,
+    el_ncoef,
+    el_q,
+    el_radius,
+    el_center_re,
+    el_center_im,
+):
+    """Return (omega_re, omega_im) using pre-loaded shared-memory element indices.
+
+    ``sh_el[k]`` must contain ``frac_elements[fid, k]`` for k in 0..nelements-1,
+    cooperatively loaded by all threads in the block before this call.
+    Reads element indices from shared memory (L1, ~4 cycles) instead of the
+    global ``frac_elements`` 2-D array (DRAM, ~100–300 cycles per miss).
+    """
+    o_re = 0.0
+    o_im = 0.0
+    for k in range(nelements):
+        el = sh_el[k]  # L1 shared memory read
+        etype = el_type[el]
+        ncoef = el_ncoef[el]
+        cr = el_coef_re[el]
+        ci = el_coef_im[el]
+        if etype == 0:
+            dr, di = _omega_intersection_pt(
+                z_re,
+                z_im,
+                frac_id,
+                el_frac0[el],
+                el_ep0a_re[el],
+                el_ep0a_im[el],
+                el_ep0b_re[el],
+                el_ep0b_im[el],
+                el_ep1a_re[el],
+                el_ep1a_im[el],
+                el_ep1b_re[el],
+                el_ep1b_im[el],
+                cr,
+                ci,
+                ncoef,
+                el_q[el],
+            )
+        elif etype == 1:
+            dr, di = _omega_bounding_circle_pt(z_re, z_im, el_radius[el], cr, ci, ncoef)
+        elif etype == 2:
+            dr, di = _omega_well_pt(
+                z_re, z_im, el_radius[el], el_center_re[el], el_center_im[el], el_q[el]
+            )
+        elif etype == 3:
+            dr, di = _omega_const_head_pt(
+                z_re,
+                z_im,
+                el_ep0a_re[el],
+                el_ep0a_im[el],
+                el_ep0b_re[el],
+                el_ep0b_im[el],
+                cr,
+                ci,
+                ncoef,
+                el_q[el],
+            )
+        elif etype == 4:
+            dr, di = _omega_imp_circle_pt(
+                z_re,
+                z_im,
+                el_radius[el],
+                el_center_re[el],
+                el_center_im[el],
+                cr,
+                ci,
+                ncoef,
+            )
+        elif etype == 5:
             dr, di = _omega_imp_line_pt(
                 z_re,
                 z_im,
@@ -484,6 +572,8 @@ def _build_head_matrix_kernel(
     z1_re,
     z1_im,
     discharge_int,
+    # ── output index (inverse sort permutation) ───────────────────────────
+    de_out_idx,  # int64 [n_de]: de_out_idx[sorted_j] = original head_matrix row
     # ── output ────────────────────────────────────────────────────────────
     head_matrix,
 ):
@@ -529,7 +619,6 @@ def _build_head_matrix_kernel(
             ne0,
             el_type,
             el_frac0,
-            el_frac0,  # compare against frac0 — matches CPU first call
             el_ep0a_re,
             el_ep0a_im,
             el_ep0b_re,
@@ -573,7 +662,6 @@ def _build_head_matrix_kernel(
                 ne1,
                 el_type,
                 el_frac0,
-                el_frac1,  # compare against el_frac1 — CPU passes frac1 array, so fid1_id == element["frac1"] → True → ep0a/ep0b, +coef
                 el_ep0a_re,
                 el_ep0a_im,
                 el_ep0b_re,
@@ -605,22 +693,26 @@ def _build_head_matrix_kernel(
     # Matches CPU: omega_mean = (constant + Σ_el Σ_i c(el,zi)) / n
     if i == 0:
         omega0_mean = (const0 + sh_omega0[0]) / n
+        out_row = de_out_idx[
+            j
+        ]  # map sorted block index back to original head_matrix row
 
         if de_type_j == 0:
             omega1_mean = (const1 + sh_omega1[0]) / n
-            head_matrix[j] = omega1_mean / t1 - omega0_mean / t0
+            head_matrix[out_row] = omega1_mean / t1 - omega0_mean / t0
         elif de_type_j == 2 or de_type_j == 3:
-            head_matrix[j] = de_phi[j] - omega0_mean
+            head_matrix[out_row] = de_phi[j] - omega0_mean
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Device array cache
 #
 # Static arrays (geometry, integration points) are uploaded once on the first
-# call and reused every iteration.  Only the three dynamic arrays that change
+# call and reused every iteration.  Only the arrays that change
 # between solver iterations are re-uploaded each call:
 #   • frac_constant  — zeroed then updated by post_matrix_solve
 #   • el_q           — zeroed then updated by post_matrix_solve
+#   • el_ncoef       — increased by element_solver2 each iteration
 #   • el_coef_re/im  — updated by the element solver each iteration
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -631,16 +723,22 @@ class _DeviceCache:
     def __init__(self):
         self.d = {}  # static device arrays
         self.d_dynamic = {}  # pre-allocated device buffers for dynamic arrays
+        self.h_coef_re = None  # pinned host buffer (nel, MAX_COEF) – reused every call
+        self.h_coef_im = None  # pinned host buffer (nel, MAX_COEF) – reused every call
         self.d_head_matrix = None
         self.initialised = False
         self.n_de = 0
+        self.max_el_shared = 0  # the value used when current device arrays were built
 
     def invalidate(self):
         """Force re-upload of static arrays on the next call (e.g. after mesh change)."""
         self.initialised = False
         self.d.clear()
         self.d_dynamic.clear()
+        self.h_coef_re = None
+        self.h_coef_im = None
         self.d_head_matrix = None
+        self.max_el_shared = 0
 
 
 _device_cache = _DeviceCache()
@@ -649,20 +747,43 @@ _device_cache = _DeviceCache()
 def _upload_static(
     cache, fractures_struc_array, element_struc_array, discharge_elements, z_int
 ):
-    """Extract and upload all static (geometry) arrays to the device."""
-    # ── discharge elements ────────────────────────────────────────────────
+    """Extract and upload all static (geometry) arrays to the device.
+
+    Discharge elements are **sorted by frac0** before upload so that
+    consecutive CUDA blocks process elements belonging to the same fracture.
+    This keeps the fracture's element coefficient data (el_coef_re/im) hot in
+    the GPU L2 cache, reducing DRAM bandwidth by up to N× where N is the
+    average number of discharge elements per fracture.
+
+    ``de_out_idx`` is the inverse permutation: ``de_out_idx[sorted_j]`` gives
+    the original row in ``head_matrix`` that block ``sorted_j`` must write to.
+    """
+    # ── sort discharge elements by frac0 for L2 cache friendliness ────────
+    frac0_arr = np.ascontiguousarray(discharge_elements["frac0"]).astype(np.int64)
+    # sort_order[sorted_j] = original_j
+    # GPU block j processes the element originally at position sort_order[j],
+    # so it must write to head_matrix[sort_order[j]].
+    sort_order = np.argsort(frac0_arr, kind="stable")  # stable preserves frac1 order
+
+    de = discharge_elements[sort_order]  # sorted view
+
     cache.d["de_frac0"] = cuda.to_device(
-        np.ascontiguousarray(discharge_elements["frac0"]).astype(np.int64)
+        np.ascontiguousarray(de["frac0"]).astype(np.int64)
     )
     cache.d["de_frac1"] = cuda.to_device(
-        np.ascontiguousarray(discharge_elements["frac1"]).astype(np.int64)
+        np.ascontiguousarray(de["frac1"]).astype(np.int64)
     )
     cache.d["de_type"] = cuda.to_device(
-        np.ascontiguousarray(discharge_elements["_type"]).astype(np.int64)
+        np.ascontiguousarray(de["_type"]).astype(np.int64)
     )
     cache.d["de_phi"] = cuda.to_device(
-        np.ascontiguousarray(discharge_elements["phi"]).astype(np.float64)
+        np.ascontiguousarray(de["phi"]).astype(np.float64)
     )
+    # de_out_idx[sorted_j] = original_j  — maps block index back to head_matrix row
+    cache.d["de_out_idx"] = cuda.to_device(sort_order.astype(np.int64))
+
+    # also store the sorted z_int rows (z_int is indexed by discharge element order)
+    z_int_sorted = z_int[sort_order]
 
     # ── fractures — static fields ─────────────────────────────────────────
     cache.d["frac_t"] = cuda.to_device(
@@ -688,9 +809,6 @@ def _upload_static(
     cache.d["el_frac1"] = cuda.to_device(
         np.ascontiguousarray(element_struc_array["frac1"]).astype(np.int64)
     )
-    cache.d["el_ncoef"] = cuda.to_device(
-        np.ascontiguousarray(element_struc_array["ncoef"]).astype(np.int64)
-    )
     cache.d["el_radius"] = cuda.to_device(
         np.ascontiguousarray(element_struc_array["radius"]).astype(np.float64)
     )
@@ -713,8 +831,8 @@ def _upload_static(
     cache.d["el_center_im"] = cuda.to_device(np.ascontiguousarray(center_all.imag))
 
     # ── integration points (fixed once z_int is computed) ─────────────────
-    z0_all = np.ascontiguousarray(z_int["z0"])
-    z1_all = np.ascontiguousarray(z_int["z1"])
+    z0_all = np.ascontiguousarray(z_int_sorted["z0"])
+    z1_all = np.ascontiguousarray(z_int_sorted["z1"])
     cache.d["z0_re"] = cuda.to_device(np.ascontiguousarray(z0_all.real))
     cache.d["z0_im"] = cuda.to_device(np.ascontiguousarray(z0_all.imag))
     cache.d["z1_re"] = cuda.to_device(np.ascontiguousarray(z1_all.real))
@@ -725,8 +843,26 @@ def _upload_static(
     nel = element_struc_array.shape[0]
     cache.d_dynamic["frac_constant"] = cuda.device_array(nf, dtype=np.float64)
     cache.d_dynamic["el_q"] = cuda.device_array(nel, dtype=np.float64)
-    cache.d_dynamic["el_coef_re"] = cuda.device_array((nel, MAX_COEF), dtype=np.float64)
-    cache.d_dynamic["el_coef_im"] = cuda.device_array((nel, MAX_COEF), dtype=np.float64)
+    cache.d_dynamic["el_ncoef"] = cuda.device_array(nel, dtype=np.int64)
+
+    # Derive the coef width from the actual element dtype so device buffers
+    # always match the host array — element_struc_array may have been built
+    # with a tight dtype smaller than the global MAX_COEF constant.
+    _coef_shape = element_struc_array.dtype["coef"].shape
+    actual_max_coef = int(_coef_shape[0]) if _coef_shape else MAX_COEF
+    cache.actual_max_coef = actual_max_coef  # remember for _update_dynamic
+
+    cache.d_dynamic["el_coef_re"] = cuda.device_array(
+        (nel, actual_max_coef), dtype=np.float64
+    )
+    cache.d_dynamic["el_coef_im"] = cuda.device_array(
+        (nel, actual_max_coef), dtype=np.float64
+    )
+
+    # Pre-allocate pinned (page-locked) host buffers for coef arrays.
+    # Pinned memory enables faster PCIe transfers and avoids malloc every call.
+    cache.h_coef_re = cuda.pinned_array((nel, actual_max_coef), dtype=np.float64)
+    cache.h_coef_im = cuda.pinned_array((nel, actual_max_coef), dtype=np.float64)
 
     # ── pre-allocate head matrix output buffer ─────────────────────────────
     cache.d_head_matrix = cuda.device_array(
@@ -738,16 +874,50 @@ def _upload_static(
 
 
 def _update_dynamic(cache, fractures_struc_array, element_struc_array):
-    """Copy only the arrays that change between solver iterations to the device."""
+    """Copy only the arrays that change between solver iterations to the device.
+
+    Optimisations
+    -------------
+    * ``frac_constant``, ``el_q``, ``el_ncoef`` are small — transferred in full.
+    * ``el_coef`` reuses pre-allocated pinned host buffers (no malloc per call).
+      Only the first ``active_cols`` columns are filled; the rest stay zero.
+      The kernel ignores columns beyond ``el_ncoef[el]`` so zeros are safe.
+    """
     cache.d_dynamic["frac_constant"].copy_to_device(
         np.ascontiguousarray(fractures_struc_array["constant"]).astype(np.float64)
     )
     cache.d_dynamic["el_q"].copy_to_device(
         np.ascontiguousarray(element_struc_array["q"]).astype(np.float64)
     )
+    ncoef_arr = np.ascontiguousarray(element_struc_array["ncoef"]).astype(np.int64)
+    cache.d_dynamic["el_ncoef"].copy_to_device(ncoef_arr)
+
+    max_ncoef = int(ncoef_arr.max()) if ncoef_arr.size > 0 else 1
+    actual_max_coef = getattr(cache, "actual_max_coef", MAX_COEF)
+    active_cols = min(((max_ncoef + 31) // 32) * 32, actual_max_coef)
+
     coef_all = np.ascontiguousarray(element_struc_array["coef"])
-    cache.d_dynamic["el_coef_re"].copy_to_device(np.ascontiguousarray(coef_all.real))
-    cache.d_dynamic["el_coef_im"].copy_to_device(np.ascontiguousarray(coef_all.imag))
+    # coef_all may have fewer columns than active_cols if the structured-array
+    # dtype was built with a smaller MAX_COEF — clamp to what is available.
+    src_cols = min(active_cols, coef_all.shape[1])
+
+    # Reuse pinned host buffers — zero only the active region then fill it.
+    h_re = cache.h_coef_re
+    h_im = cache.h_coef_im
+    h_re[:, :src_cols] = coef_all[:, :src_cols].real
+    h_im[:, :src_cols] = coef_all[:, :src_cols].imag
+    # Zero any columns between src_cols and active_cols (stale or padding)
+    if src_cols < active_cols:
+        h_re[:, src_cols:active_cols] = 0.0
+        h_im[:, src_cols:active_cols] = 0.0
+    # Zero columns beyond active_cols that may hold stale data from a prior
+    # iteration with a larger active_cols value.
+    if active_cols < actual_max_coef:
+        h_re[:, active_cols:] = 0.0
+        h_im[:, active_cols:] = 0.0
+
+    cache.d_dynamic["el_coef_re"].copy_to_device(h_re)
+    cache.d_dynamic["el_coef_im"].copy_to_device(h_im)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -763,6 +933,7 @@ def build_head_matrix_cuda(
     head_matrix,
     z_int,
     omega_int,
+    _skip_dynamic=False,
 ):
     """
     CUDA version of ``build_head_matrix``.
@@ -770,7 +941,15 @@ def build_head_matrix_cuda(
     Static geometric arrays are uploaded to the GPU once on the first call
     and cached for all subsequent iterations.  Only the three arrays that
     change between solver iterations (``frac_constant``, ``el_q``,
-    ``el_coef``) are re-uploaded each call, minimising PCIe transfer time.
+    ``el_coef``) are re-uploaded each call via ``_update_dynamic``, which
+    uses pre-allocated pinned host buffers to minimise PCIe transfer time.
+
+    Parameters
+    ----------
+    _skip_dynamic : bool, optional
+        If ``True``, skip the ``_update_dynamic`` step (data already on
+        device).  Use **only** in benchmarks to measure pure kernel time.
+        Do **not** use in the actual solver.
 
     Call ``_device_cache.invalidate()`` if the mesh/fracture layout changes.
     """
@@ -786,8 +965,20 @@ def build_head_matrix_cuda(
     if n_de == 0:
         return
 
-    # ── first call: upload static arrays and allocate device buffers ──────
-    if not _device_cache.initialised or _device_cache.n_de != n_de:
+    # ── compute the shared-memory size needed for this DFN ───────────────
+    # Round up to the next multiple of 32 for alignment; cap at MAX_ELEMENTS_PER_FRAC.
+    raw_max = int(fractures_struc_array["nelements"].max())
+    max_el_shared = min(
+        ((raw_max + 31) // 32) * 32,
+        MAX_ELEMENTS_PER_FRAC,
+    )
+
+    # ── first call (or mesh change): upload static arrays ────────────────
+    if (
+        not _device_cache.initialised
+        or _device_cache.n_de != n_de
+        or _device_cache.max_el_shared != max_el_shared
+    ):
         _upload_static(
             _device_cache,
             fractures_struc_array,
@@ -795,9 +986,11 @@ def build_head_matrix_cuda(
             discharge_elements,
             z_int,
         )
+        _device_cache.max_el_shared = max_el_shared
 
     # ── every call: upload only the dynamic arrays ────────────────────────
-    _update_dynamic(_device_cache, fractures_struc_array, element_struc_array)
+    if not _skip_dynamic:
+        _update_dynamic(_device_cache, fractures_struc_array, element_struc_array)
 
     d = _device_cache.d
     dd = _device_cache.d_dynamic
@@ -831,7 +1024,7 @@ def build_head_matrix_cuda(
         d["el_ep1b_im"],
         dd["el_coef_re"],
         dd["el_coef_im"],
-        d["el_ncoef"],
+        dd["el_ncoef"],
         dd["el_q"],
         d["el_radius"],
         d["el_center_re"],
@@ -841,6 +1034,7 @@ def build_head_matrix_cuda(
         d["z1_re"],
         d["z1_im"],
         discharge_int,
+        d["de_out_idx"],
         d_head_matrix,
     )
 

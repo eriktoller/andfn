@@ -647,6 +647,7 @@ def solve_discharge_matrix(
         The array of elements
     """
     gpu_head_matrix = head_matrix.copy()
+    cpu_head_matrix = head_matrix.copy()
     # pre solver
     start0 = time.time()
     pre_matrix_solve(
@@ -659,6 +660,14 @@ def solve_discharge_matrix(
         omega_int,
     )
     logger.debug(f"Pre solve time: {time.time() - start0}")
+    build_head_matrix_old(
+        fractures_struc_array,
+        element_struc_array,
+        discharge_elements,
+        discharge_int,
+        cpu_head_matrix,
+        z_int,
+    )
 
     # used teh CUDA implementation an comute a copy of head matrix on the GPU for comparison
     start_cuda = time.time()
@@ -672,6 +681,10 @@ def solve_discharge_matrix(
         omega_int,
     )
     logger.debug(f"CUDA head matrix build time: {time.time() - start_cuda}")
+
+    # dftmp = np.vstack(
+    #    [head_matrix.flatten(), gpu_head_matrix.flatten(), cpu_head_matrix.flatten()]
+    # ).T
     # Check if the head matrix is the same as the one computed on the GPU
     if not np.allclose(head_matrix, gpu_head_matrix, atol=1e-10):
         logger.warning("Head matrix computed on CPU and GPU are not close!")
@@ -681,11 +694,22 @@ def solve_discharge_matrix(
             [
                 head_matrix.flatten(),
                 gpu_head_matrix.flatten(),
+                cpu_head_matrix.flatten(),
                 diff.flatten(),
                 discharge_elements["_type"].flatten(),
+                discharge_elements["q"].flatten(),
+                fractures_struc_array["constant"].flatten(),
             ]
         ).T
-        df.columns = ["CPU", "GPU", "Difference", "Element type"]
+        df.columns = [
+            "CPU",
+            "GPU",
+            "CPU old",
+            "Difference",
+            "Element type",
+            "Q",
+            "Fracture constant",
+        ]
         df.to_csv("head_matrix_comparison.csv", index=False, sep=";")
         logger.warning(f"Max difference: {max_diff}")
     else:
@@ -825,6 +849,60 @@ def get_old_discharges(element_struc_array, fractures_struc_array, discharge_ele
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
+def build_head_matrix_old(
+    fractures_struc_array,
+    element_struc_array,
+    discharge_elements,
+    discharge_int,
+    head_matrix,
+    z_int,
+):
+    """
+    Builds the head matrix for the DFN and stores it.
+
+    Parameters
+    ----------
+    fractures_struc_array : np.ndarray[fracture_dtype]
+        Array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    discharge_elements : np.ndarray[element_dtype]
+        The discharge elements
+    discharge_int : int
+        The number of integration points
+    head_matrix : np.ndarray[dtype_head_matrix]
+        The head matrix
+    z_int : np.ndarray[dtype_z_arrays]
+        The z arrays for the discharge elements
+
+    Returns
+    -------
+    matrix : np.ndarray
+        The head matrix
+    """
+
+    # Add the head for each discharge element
+    for j in nb.prange(discharge_elements.size):
+        e = discharge_elements[j]
+        frac0 = fractures_struc_array[e["frac0"]]
+        z0 = z_int["z0"][j][:discharge_int]
+        omega = 0.0 + 0.0j
+        for i in range(discharge_int):
+            omega += hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
+        omega = omega / discharge_int
+        if e["_type"] == 0:  # Intersection
+            frac1 = fractures_struc_array[e["frac1"]]
+            z1 = z_int["z1"][j][:discharge_int]
+            omega1 = 0.0 + 0.0j
+            for i in range(discharge_int):
+                omega1 += hpc_fracture.calc_omega(frac1, z1[i], element_struc_array)
+            omega1 = omega1 / discharge_int
+            head_matrix[j] = np.real(omega1) / frac1["t"] - np.real(omega) / frac0["t"]
+        elif e["_type"] in [2, 3]:  # Well or Constant head line
+            head_matrix[j] = e["phi"] - np.real(omega)
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
 def build_head_matrix(
     fractures_struc_array,
     element_struc_array,
@@ -861,7 +939,6 @@ def build_head_matrix(
     """
 
     frac0 = element_struc_array["frac0"]
-    frac1 = element_struc_array["frac1"]
     endpoints0 = element_struc_array["endpoints0"]
     ep0a = endpoints0[:, 0]
     ep0b = endpoints0[:, 1]
@@ -927,7 +1004,7 @@ def build_head_matrix(
                 ne1,
                 self_1["_id"],
                 idx1,
-                frac1,
+                frac0,
                 ep0a,
                 ep0b,
                 ep1a,
