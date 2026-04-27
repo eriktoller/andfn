@@ -1369,3 +1369,64 @@ def convert_normal_to_strike_dip(normal):
     strike = -np.arctan2(normal[0], normal[1])
     dip = -np.arcsin(normal[2])
     return np.rad2deg(strike), np.rad2deg(dip)
+
+
+def copy_dfn(fractures):
+    """
+    This function creates a copy of a list of fractures. This is used to create a new list of fractures with the same properties as the original list, but with different intersection elements.
+
+    The copy included only the fractures and the intersections.
+
+    Parameters
+    ----------
+    fractures : list
+        A list of fractures to copy.
+
+    Returns
+    -------
+    fracs : list
+        A new list of fractures with the same properties as the original list, but with different intersection elements.
+    """
+    fracs = []
+    elms_labels = []
+    elms_ep0 = []
+    elms_ep1 = []
+    elms_f0 = []
+    elms_f1 = []
+    elms_ncoef = []
+    elms_nint = []
+    processed_elms = set()
+    for f in fractures:
+        fracs.append(
+            andfn.fracture.Fracture(
+                f.label,
+                f.t,
+                f.radius,
+                f.center,
+                f.normal,
+                f.aperture,
+            )
+        )
+        for e in f.elements:
+            if e._type == 0 and e.label not in processed_elms:
+                elms_labels.append(e.label)
+                elms_ep0.append(e.endpoints0)
+                elms_ep1.append(e.endpoints1)
+                # get the frac0 index in fractures
+                elms_f0.append(fractures.index(e.frac0))
+                elms_f1.append(fractures.index(e.frac1))
+                elms_ncoef.append(e.ncoef)
+                elms_nint.append(e.nint)
+                processed_elms.add(e.label)
+    for i in range(len(elms_labels)):
+        andfn.intersection.Intersection(
+            elms_labels[i],
+            elms_ep0[i],
+            elms_ep1[i],
+            fracs[elms_f0[i]],
+            fracs[elms_f1[i]],
+            ncoef=elms_ncoef[i],
+            nint=elms_nint[i],
+        )
+
+    return fracs
