@@ -8,7 +8,7 @@ Method (AEM).
 # version number
 __name__ = "andfn"
 __author__ = "Erik A.L. Toller"
-__version__ = "0.1.15"
+__version__ = "0.1.16"
 
 # Import all classes and functions
 from andfn.bounding import BoundingCircle
@@ -20,7 +20,12 @@ from andfn.impermeable_object import ImpermeableCircle, ImpermeableLine
 from andfn.structures import ConstantHeadPrism, ImpermeablePrism
 from andfn.regions import RectangularRegion
 from andfn.dfn import DFN
-from andfn.geometry_functions import map_2d_to_3d, map_3d_to_2d, fracture_intersection
+from andfn.geometry_functions import (
+    map_2d_to_3d,
+    map_3d_to_2d,
+    fracture_intersection,
+    copy_dfn,
+)
 
 __all__ = [
     "BoundingCircle",
@@ -37,4 +42,5 @@ __all__ = [
     "map_2d_to_3d",
     "map_3d_to_2d",
     "fracture_intersection",
+    "copy_dfn",
 ]

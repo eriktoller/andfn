@@ -2323,11 +2323,15 @@ class DFN(Constants):
             fracs_arr = fracs_arr[idx]
 
         # --- Compute heads & points ---
+        time_heads = time.time()
         h = 1 / (n_layers + 1)
         partitions = int(2 * np.pi / h / n_layers)
         z_array, base_faces = generate_disk(partitions, n_layers)
         heads, pnts_3d = hpc_get_heads(
             fracs_arr, self.elements_struc_array_hpc, z_array
+        )
+        logger.info(
+            f"Calculating heads and points took {time.time() - time_heads:.2f} seconds."
         )
 
         # --- Debug filtering BEFORE mesh creation ---
