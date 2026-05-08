@@ -19,6 +19,7 @@ from andfn import geometry_functions as gf
 from .constants import Constants, dtype_constants
 from .fracture import Fracture
 from .hpc.hpc_solve import solve as hpc_solve
+from .hpc.hpc_solve import compute_bnd_error as hpc_compute_bnd_error
 from .hpc.hpc_fracture import (
     get_flow_nets as hpc_get_flow_nets,
     get_heads as hpc_get_heads,
@@ -860,6 +861,7 @@ class DFN(Constants):
                     )
                 cnt += 1
                 e.unconsolidate_hpc(e_struc, e_idx, fractures)
+            print()  # new line after unconsolidating elements
 
         else:
             for i, f in enumerate(self.fractures):
@@ -1629,7 +1631,7 @@ class DFN(Constants):
                 e.endpoints0 = new_endpoints0
                 e.endpoints1 = new_endpoints1
 
-    def remove_small_elements(self, min_length):
+    def remove_small_elements(self, min_length, radius_fraction=False):
         """
         Removes elements from the DFN that are smaller than the specified minimum length.
 
@@ -1637,6 +1639,8 @@ class DFN(Constants):
         ----------
         min_length : float
             The minimum length of the elements to keep.
+        radius_fraction: bool
+            Weather of not the min_length should be scaled to the fracture radius
         """
         if self.elements is None:
             self.get_elements()
@@ -1644,20 +1648,26 @@ class DFN(Constants):
         cnt = 0
         for f in self.fractures:
             elements_to_remove = []
+            tol_len = min_length * f.radius if radius_fraction else min_length
             for e in f.elements:
                 if isinstance(e, Intersection):
                     length = np.linalg.norm(e.endpoints0[1] - e.endpoints0[0])
-                    if length < min_length:
+                    if length < tol_len:
                         elements_to_remove.append(e)
                 elif isinstance(e, (ConstantHeadLine, ImpermeableLine)):
                     length = np.linalg.norm(e.endpoints0[1] - e.endpoints0[0])
-                    if length < min_length:
+                    if length < tol_len:
                         elements_to_remove.append(e)
             for e in elements_to_remove:
                 f.delete_element(e)
                 del e
                 cnt += 1
-        logger.info(f"Removed {cnt} elements smaller than {min_length} units.")
+        if radius_fraction:
+            logger.info(
+                f"Removed {cnt} elements smaller than {min_length}*radius units."
+            )
+        else:
+            logger.info(f"Removed {cnt} elements smaller than {min_length} units.")
 
         # Check if fractures have no elements and remove them
         flen = len(self.fractures)
@@ -1847,6 +1857,44 @@ class DFN(Constants):
         if unconsolidate:
             logger.info("Unconsolidating DFN...")
             self.unconsolidate_dfn(hpc=True)
+
+    def check_boundary_conditions(self):
+        """
+        Checks if the boundary conditions are correctly applied to the DFN.
+
+        Calls the HPC ``compute_bnd_error`` wrapper which reconstructs the
+        work-array fields (``element_pos``, ``len_discharge_element``,
+        ``dpsi_corr``) from the solved element array and then evaluates the
+        per-element boundary-condition error.
+
+        Returns
+        -------
+        bnd_error : np.ndarray[float64]
+            Per-element boundary condition error (same length as the element
+            structured array).  Returns ``None`` if the DFN has not been
+            solved yet.
+        """
+        logger.info("Checking boundary conditions...")
+        if self.elements_struc_array is None or self.fractures_struc_array_hpc is None:
+            logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
+            return None
+
+        bnd_error = hpc_compute_bnd_error(
+            self.fractures_struc_array_hpc,
+            self.elements_struc_array,
+            self.discharge_int,
+            self.constants,
+        )
+
+        max_err = float(np.max(bnd_error[:, 0]))
+        mean_err = float(np.mean(bnd_error[:, 0]))
+        error_99 = float(np.percentile(bnd_error[:, 0], 99))
+        error_95 = float(np.percentile(bnd_error[:, 0], 95))
+        error_90 = float(np.percentile(bnd_error[:, 0], 90))
+        logger.info(
+            f"Boundary condition check: max error = {max_err:.3e}, mean error = {mean_err:.3e}, 99th percentile error = {error_99:.3e}, 95th percentile error = {error_95:.3e}, 90th percentile error = {error_90:.3e}"
+        )
+        return bnd_error
 
     ####################################################################################################################
     #                    Plotting functions                                                                            #
