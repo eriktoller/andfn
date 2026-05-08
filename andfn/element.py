@@ -491,65 +491,64 @@ class Element:
         setattr(self, "q", q)
         setattr(self, "error", error)
 
+    def plot(self, pl, line_width, color, point_size=5):
+        """
+        Plot the element using the given plotter.
 
-def plot(self, pl, line_width, color, point_size=5):
-    """
-    Plot the element using the given plotter.
+        Parameters
+        ----------
+        pl : pyvista.Plotter
+            The plotter to use for plotting.
+        line_width : float
+            The width of the lines in the plot.
+        color : str
+            The color of the element in the plot, if None the default color will be used.
+        point_size : float
+            The size of the points in the plot.
 
-    Parameters
-    ----------
-    pl : pyvista.Plotter
-        The plotter to use for plotting.
-    line_width : float
-        The width of the lines in the plot.
-    color : str
-        The color of the element in the plot, if None the default color will be used.
-    point_size : float
-        The size of the points in the plot.
-
-    Returns
-    -------
-    None
-        The element is plotted in the plotter.
-    """
-    if self._type in [
-        0,
-        3,
-        5,
-    ]:  # Intersection, Constant Head Line, Impermeable Line
-        line = gf.map_2d_to_3d(self.endpoints0, self.frac0)
-        pl.add_mesh(
-            pv.Line(line[0], line[1]),
-            color=color if color is not None else ELEMENT_COLORS[self._type],
-            line_width=line_width,
-            show_edges=True,
-            render_points_as_spheres=True,
-            point_size=5,
-            show_vertices=True,
-        )
-    elif self._type == 1:  # Bounding Circle
-        point = gf.map_2d_to_3d(0 + 0j, self.frac0)
-        pl.add_mesh(
-            pv.Polygon(
-                center=point,
-                radius=self.radius,
-                normal=self.frac0.normal,
-                n_sides=50,
-                fill=False,
-            ),
-            color=color if color is not None else ELEMENT_COLORS[self._type],
-            line_width=line_width,
-        )
-    elif self._type in [1, 2, 4]:  # Bounding Circle, Well, Impermeable Circle
-        point = gf.map_2d_to_3d(self.center, self.frac0)
-        pl.add_mesh(
-            pv.Polygon(
-                center=point,
-                radius=self.radius,
-                normal=self.frac0.normal,
-                n_sides=50,
-                fill=False,
-            ),
-            color=color if color is not None else ELEMENT_COLORS[self._type],
-            line_width=line_width,
-        )
+        Returns
+        -------
+        None
+            The element is plotted in the plotter.
+        """
+        if self._type in [
+            0,
+            3,
+            5,
+        ]:  # Intersection, Constant Head Line, Impermeable Line
+            line = gf.map_2d_to_3d(self.endpoints0, self.frac0)
+            pl.add_mesh(
+                pv.Line(line[0], line[1]),
+                color=color if color is not None else ELEMENT_COLORS[self._type],
+                line_width=line_width,
+                show_edges=True,
+                render_points_as_spheres=True,
+                point_size=5,
+                show_vertices=True,
+            )
+        elif self._type == 1:  # Bounding Circle
+            point = gf.map_2d_to_3d(0 + 0j, self.frac0)
+            pl.add_mesh(
+                pv.Polygon(
+                    center=point,
+                    radius=self.radius,
+                    normal=self.frac0.normal,
+                    n_sides=50,
+                    fill=False,
+                ),
+                color=color if color is not None else ELEMENT_COLORS[self._type],
+                line_width=line_width,
+            )
+        elif self._type in [1, 2, 4]:  # Bounding Circle, Well, Impermeable Circle
+            point = gf.map_2d_to_3d(self.center, self.frac0)
+            pl.add_mesh(
+                pv.Polygon(
+                    center=point,
+                    radius=self.radius,
+                    normal=self.frac0.normal,
+                    n_sides=50,
+                    fill=False,
+                ),
+                color=color if color is not None else ELEMENT_COLORS[self._type],
+                line_width=line_width,
+            )

@@ -1201,7 +1201,7 @@ def fill_discharge_matrix(
             ptr += 1
 
 
-# @nb.njit( parallel=PARALLEL, cache=CACHE)
+@nb.njit(parallel=PARALLEL, cache=CACHE)
 def get_bnd_error(
     num_elements,
     fracture_struc_array,
@@ -1249,24 +1249,13 @@ def get_bnd_error(
     cnt_bnd = 0
 
     # Add the head for each discharge element
-    for j in range(num_elements * 0):
+    for j in range(num_elements):
         e = element_struc_array[j]
         if e["_type"] == 2:  # Well
-            bnd_error[j] = 0.0
+            bnd_error[j, 0] = 0.0
+            bnd_error[j, 1] = e["_type"]
+            bnd_error[j, 2] = e["q"]
             continue
-        coefs = e["coef"][: e["ncoef"]]
-        coef0 = np.max(np.abs(coefs[1:2]))
-        coef1 = np.max(np.abs(coefs[-2:]))
-        coef_ratio_re = np.abs(np.real(coefs[-1]) / np.real(coefs[2]))
-        coef_ratio_im = np.abs(np.imag(coefs[-1]) / np.imag(coefs[2]))
-        coef_ratio_re = np.abs(np.real(coefs[-1]) / coef0)
-        coef_ratio_im = np.abs(np.imag(coefs[-1]) / coef0)
-        coef_ratio = np.nanmax([coef_ratio_re, coef_ratio_im])
-        coef_ratio = coef1 / coef0
-        if coef_ratio < 0.4:
-            coef_ratio = 0.0
-        if np.max(np.abs(coefs[1:2])) < max_error:
-            coef_ratio = 0.0
         if e["_type"] in [0, 3]:  # Intersection, Constant head line
             frac0 = fracture_struc_array[e["frac0"]]
             z0 = z_int["z0"][j][:discharge_int]
@@ -1275,7 +1264,7 @@ def get_bnd_error(
                 omega_vec[i] = hpc_fracture.calc_omega(
                     frac0, z0[i], element_struc_array
                 )
-            omega = np.sum(omega_vec) / discharge_int
+            # omega = np.sum(omega_vec) / discharge_int
             if e["_type"] == 0:  # Intersection
                 frac1 = fracture_struc_array[e["frac1"]]
                 z1 = z_int["z1"][j][:discharge_int]
@@ -1284,70 +1273,111 @@ def get_bnd_error(
                     omega1_vec[i] = hpc_fracture.calc_omega(
                         frac1, z1[i], element_struc_array
                     )
-                omega1 = np.sum(omega1_vec) / discharge_int
-                head1 = np.real(omega1) / frac1["t"]
-                head0 = np.real(omega) / frac0["t"]
-                bnd_error[j] = np.abs((head1 - head0) / head1)
-                if j == 450:
-                    logger.debug(f"450: {head1}, {head0}, {bnd_error[450]}")
+                # omega1 = np.sum(omega1_vec) / discharge_int
+                head1 = np.real(omega1_vec) / frac1["t"]
+                head0 = np.real(omega_vec) / frac0["t"]
+                bnd_error[j, 0] = np.max(
+                    np.abs(head1 - head0) / np.mean(head0)
+                )  # np.abs((head1 - head0) / head1)
+                bnd_error[j, 1] = e["_type"]
+                bnd_error[j, 2] = e["q"]
             else:  # Well or Constant head line
-                bnd_error[j] = np.abs((e["phi"] - np.real(omega)) / e["phi"])
+                bnd_error[j, 0] = np.max(
+                    np.abs((e["phi"] - np.real(omega_vec)) / e["phi"])
+                )
+                bnd_error[j, 1] = e["_type"]
+                bnd_error[j, 2] = e["q"]
         elif e["_type"] == 1:  # Bounding circle
+            # The bounding circle is impermeable: ψ = Im(ω) must be constant
+            # around the circle.  ψ is multi-valued: every time the integration
+            # path crosses a branch cut of another element the raw Im(ω) jumps
+            # by ±q.  find_branch_cuts locates these crossings and gives the
+            # correction dpsi_corr[ii] for each interval [ii, ii+1].
+            # After subtracting those jumps, the corrected ψ should be flat;
+            # the peak-to-peak range of the corrected ψ is the true error.
             frac0 = fracture_struc_array[e["frac0"]]
-            z0 = z_int["z0"][j][:discharge_int]
-            omega_vec = np.zeros(discharge_int, dtype=np.complex128)
-            w_vec = np.zeros(discharge_int, dtype=np.complex128)
-            for i in range(discharge_int):
-                omega_vec[i] = hpc_fracture.calc_omega(
-                    frac0, z0[i], element_struc_array
-                )
-                w_vec[i] = hpc_fracture.calc_w(frac0, z0[i], element_struc_array)
-            # The angle of w_vec
-            phi_min = np.min(np.real(omega_vec))
-            phi_max = np.max(np.real(omega_vec))
-            ids = frac0["elements"][: frac0["nelements"]]
-            phi_max1, phi_min1, z_max, z_min, l_min, l_max = get_max_min_phi(
-                element_struc_array,
-                fracture_struc_array,
-                ids,
-                e["frac0"],
-                z_int,
-                discharge_int,
+            nint = int(e["nint"]) * 0 + discharge_int
+
+            # nint evenly-spaced points on the bounding circle in z-plane
+            # theta = np.linspace(0.0, 2.0 * np.pi, nint, endpoint=False)
+            # z_pos = gf.map_chi_to_z_circle(
+            #    np.exp(1j * theta), e["radius"], e["center"]
+            # )
+            # theta = np.arange(nint) * (2.0 * np.pi / nint)
+            z_pos = z_int["z0"][j][:discharge_int]
+
+            # Locate branch cuts and fill work_array[j] fields
+            mf.find_branch_cuts(
+                e, z_pos, fracture_struc_array, element_struc_array, work_array[j]
             )
-            if np.abs(phi_max1 - phi_min1) < 1e-2 - 1e30:
-                phi_error = 0.0
-            else:
-                if phi_max < phi_max1:
-                    phi_max = phi_max1
-                if phi_min > phi_min1:
-                    phi_min = phi_min1
-                phi_error = np.max(
-                    [
-                        np.abs((phi_max - phi_max1) / phi_max),
-                        np.abs((phi_min - phi_min1) / phi_min),
-                    ]
+
+            # Build dpsi_corr vector (length nint-1) from work_array results
+            dpsi_corr = np.zeros(nint)
+            for k in range(work_array[j]["len_discharge_element"]):
+                ek = element_struc_array[work_array[j]["discharge_element"][k]]
+                pos = int(work_array[j]["element_pos"][k])
+                dpsi_corr[pos] += ek["q"] * work_array[j]["sign_array"][k]
+
+            # Evaluate ω at each of the nint points
+            omega_pts = np.zeros(nint, dtype=np.complex128)
+            for i in range(nint):
+                omega_pts[i] = hpc_fracture.calc_omega(
+                    frac0, z_pos[i], element_struc_array
                 )
-            dpsi = np.imag(omega_vec[1:] - omega_vec[:-1])
-            dpsi_pos = work_array[j]["element_pos"][
-                : work_array[j]["len_discharge_element"]
-            ]
-            dpsi_corr = e["dpsi_corr"][dpsi_pos]
-            corr_pos = np.floor(dpsi_pos * (discharge_int / e["nint"])).astype(int)
-            corr_dpsi_corr = np.zeros(discharge_int)
-            for i in range(len(dpsi_pos)):
-                corr_dpsi_corr[corr_pos[i]] += dpsi_corr[i]
-            dpsi = dpsi - corr_dpsi_corr[:-1]
-            omega = np.abs(np.sum(np.real(omega_vec)) / discharge_int)
 
-            rmse = np.sqrt(np.sum((dpsi - omega) ** 2) / discharge_int) * 0
+            # Reconstruct corrected ψ by integrating branch-cut-corrected increments
+            psi = np.zeros(nint)
+            psi[0] = np.imag(omega_pts[0])
+            for ii in range(nint - 1):
+                raw_dpsi = np.imag(omega_pts[ii + 1]) - np.imag(omega_pts[ii])
+                psi[ii + 1] = psi[ii] + (raw_dpsi - dpsi_corr[ii])
 
-            bnd_error[j] = rmse
+            # Normalisation strategy
+            # ----------------------
+            # The error is Δψ / norm, aiming for a dimensionless relative
+            # measure of how well ψ = const is satisfied.
+            #
+            # Primary scale: phi_range = max(Re ω) - min(Re ω) on the circle.
+            #   * phi_range = T · h_range, so Δψ/phi_range = Δψ/(T·h_range)
+            #     is a true dimensionless ratio independent of T.
+            #   * It is already computed from omega_pts and naturally reflects
+            #     the actual conditions on the fracture.
+            #
+            # Floor: T · radius · max_error
+            #   * When T is very small, phi_range = T·h_range is inherently
+            #     tiny even under a large head gradient, so phi_range alone
+            #     can give a misleading (huge) error for a well-converged
+            #     low-T fracture.
+            #   * T · radius is the natural ψ-scale of the fracture (same
+            #     units as φ).  Multiplying by max_error means: "if the
+            #     potential variation is already below what T could produce
+            #     at the target accuracy, the fracture is effectively at rest
+            #     and the BC is trivially satisfied."
+            #   * This floor is proportional to T, so it shrinks correctly
+            #     for low-T fractures without being as aggressive as T·radius
+            #     alone.
+            phi_range = np.max(np.real(omega_pts)) - np.min(np.real(omega_pts))
+            t_floor = phi_range / frac0["t"]
 
-            if phi_error > bnd_error[j]:
-                bnd_error[j] = phi_error
+            nel = frac0["nelements"]
+            el_ids = frac0["elements"][:nel]
+            sum_q = 0.0
+            for k in range(nel):
+                ek = element_struc_array[el_ids[k]]
+                if ek["_type"] in (0, 2, 3):
+                    sum_q += np.abs(ek["q"])
+            norm = max(sum_q, 1e-300)
+            if norm < frac0["t"] / e["radius"]:
+                norm = max(norm, t_floor)
 
-        if bnd_error[j] < coef_ratio:
-            bnd_error[j] = coef_ratio
+            bnd_error[j, 0] = (
+                (np.max(psi) - np.min(psi)) / norm if norm > 1e-299 else 0.0
+            )
+            bnd_error[j, 1] = e["_type"]
+            bnd_error[j, 2] = sum_q
+            bnd_error[j, 3] = phi_range
+            bnd_error[j, 4] = t_floor
+            bnd_error[j, 5] = norm
 
     return cnt_bnd
 
@@ -1497,3 +1527,60 @@ def set_new_ncoef(self_, n, nint_mult=2):
         self_["thetas"][: self_["nint"]] = np.linspace(
             start=0, stop=2 * np.pi - 2 * np.pi / self_["nint"], num=self_["nint"]
         )
+
+
+def compute_bnd_error(
+    fracture_struc_array,
+    element_struc_array,
+    discharge_int,
+    constants,
+):
+    """
+    Wrapper that calls get_bnd_error after allocating the required scratch arrays.
+
+    For bounding circle elements, get_bnd_error internally calls find_branch_cuts
+    to compute the branch-cut corrections and reconstruct the corrected ψ.
+
+    Parameters
+    ----------
+    fracture_struc_array : np.ndarray[fracture_dtype]
+        Array of fractures (from dfn.fractures_struc_array_hpc)
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements (from dfn.elements_struc_array, the solved result)
+    discharge_int : int
+        Number of integration points
+    constants : np.ndarray[constants_dtype]
+        Solver constants
+
+    Returns
+    -------
+    bnd_error : np.ndarray[float64]
+        Per-element boundary condition error
+    """
+    num_elements = len(element_struc_array)
+
+    # Scratch arrays – work_array is zero-initialised;
+    # find_branch_cuts resets len_discharge_element itself.
+    work_array = np.zeros(num_elements, dtype=dtype_work)
+    z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
+
+    # z_int is only used for intersection / well / const-head rows
+    get_z_int_array(z_int, element_struc_array, discharge_int)
+
+    max_error = float(constants["MAX_ERROR"])
+    bnd_error = np.zeros([num_elements, 6], dtype=np.float64)
+
+    get_bnd_error(
+        num_elements,
+        fracture_struc_array,
+        element_struc_array,
+        work_array,
+        discharge_int,
+        bnd_error,
+        z_int,
+        0,  # nit – not used inside get_bnd_error
+        max_error,
+        constants,
+    )
+
+    return bnd_error

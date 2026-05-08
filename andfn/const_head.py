@@ -124,7 +124,7 @@ class ConstantHeadLine(Element):
         omega = frac_is.calc_omega(z)
         return omega
 
-    def z_array_tracking(self, n, offset=1e-3):
+    def z_array_tracking(self, n, offset=1e-3, on_frac_center=False):
         """
         Create an array of z points along the constant head line with an offset.
 
@@ -134,13 +134,25 @@ class ConstantHeadLine(Element):
             The number of points to create
         offset : float
             The offset to use
+        on_frac_center : bool, optional
+            Whether to place the points on the side closer to the center of the fracture or not
 
         Returns
         -------
         np.ndarray
             The array of z points
         """
-        chi = np.exp(1j * np.linspace(0, 2 * np.pi, n, endpoint=False)) * (1 + offset)
+        start = 0
+        stop = 2 * np.pi
+        if on_frac_center:
+            chi_test = np.exp(1j * np.pi / 2) * (1 + offset)
+            z_test = gf.map_chi_to_z_line(chi_test, self.endpoints0)
+            center_line = (self.endpoints0[0] + self.endpoints0[1]) / 2
+            if np.abs(z_test - self.frac0.center) < np.abs(z_test - center_line):
+                stop = np.pi
+            else:
+                start = np.pi
+        chi = np.exp(1j * np.linspace(start, stop, n, endpoint=False)) * (1 + offset)
         return gf.map_chi_to_z_line(chi, self.endpoints0)
 
     def calc_omega(self, z):

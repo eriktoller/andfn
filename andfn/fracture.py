@@ -277,7 +277,7 @@ class Fracture:
         ]
         self.constant = fracture_struc_array["constant"]
 
-        self.label = fracture_index_array["label"]
+        # self.label = fracture_index_array["label"]
 
     def add_element(self, new_element):
         """
