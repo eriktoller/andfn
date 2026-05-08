@@ -345,10 +345,10 @@ def fracture_intersection(frac0, frac1):
         and np.linalg.norm(x - frac1.center) <= frac1.radius + 1e-8
     ]
 
-    if len(valid) != 2:
+    if len(valid) < 2:
         return None, None
 
-    p0, p1 = valid
+    p0, p1 = valid[0], valid[1]
 
     endpoints0 = np.array([map_3d_to_2d(p0, frac0), map_3d_to_2d(p1, frac0)])
     endpoints1 = np.array([map_3d_to_2d(p0, frac1), map_3d_to_2d(p1, frac1)])
