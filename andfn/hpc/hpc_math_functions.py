@@ -299,7 +299,7 @@ def cauchy_integral_real(
 
 @nb.njit()
 def find_branch_cuts(
-    self_, z_pos, fracture_struc_array, element_struc_array, work_array
+    self_, z_pos, fracture_struc_array, element_struc_array, work_array, nint
 ):
     """
     Find the branch cuts for the fracture.
@@ -316,6 +316,8 @@ def find_branch_cuts(
         The array of elements
     work_array : np.ndarray[dtype_work]
         The work array
+    nint : int
+            The number of integration points
 
     Returns
     -------
@@ -323,7 +325,7 @@ def find_branch_cuts(
         The correction to the potential due to the branch cuts
     """
     # Find the branch cuts
-    dpsi_corr = np.zeros(self_["nint"] - 1, dtype=float)
+    dpsi_corr = np.zeros(nint - 1, dtype=float)
 
     nel = fracture_struc_array[self_["frac0"]]["nelements"]
     elements_list = fracture_struc_array[self_["frac0"]]["elements"][:nel]
@@ -331,13 +333,15 @@ def find_branch_cuts(
     work_array["len_discharge_element"] = 0
 
     cnt = 0
-    for ii in range(self_["nint"] - 1):
+    for ii in range(nint - 1):
         for e in elements:
             if e["_type"] == 0:  # Intersection
                 if e["frac0"] == self_["frac0"]:
                     chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                     chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
-                    ln0 = np.imag(np.log(chi0))
+                    ln0 = np.imag(
+                        np.log(chi0)
+                    )  # TODO: check if this is correct, it has issues with small lines
                     ln1 = np.imag(np.log(chi1))
                     if (
                         np.sign(ln0) != np.sign(ln1)
@@ -367,10 +371,9 @@ def find_branch_cuts(
             elif e["_type"] == 2:  # Well
                 chi0 = gf.map_z_circle_to_chi(z_pos[ii], e["radius"], e["center"])
                 chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e["radius"], e["center"])
-                if (
-                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
-                    and np.real(chi0) < 0
-                ):
+                ln0 = np.imag(np.log(chi0))
+                ln1 = np.imag(np.log(chi1))
+                if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
                     dpsi_corr[ii] -= e["q"]
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
@@ -380,10 +383,9 @@ def find_branch_cuts(
             elif e["_type"] == 3:  # Constant head line
                 chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                 chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
-                if (
-                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
-                    and np.real(chi0) < 0
-                ):
+                ln0 = np.imag(np.log(chi0))
+                ln1 = np.imag(np.log(chi1))
+                if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
                     dpsi_corr[ii] -= e["q"]
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
@@ -436,7 +438,12 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
                 work_array["exp_array_p"][: self_["nint"]], self_["endpoints0"]
             )
         find_branch_cuts(
-            self_, z_pos, fracture_struc_array, element_struc_array, work_array
+            self_,
+            z_pos,
+            fracture_struc_array,
+            element_struc_array,
+            work_array,
+            self_["nint"],
         )
     # set dpsi_corr to zero
     self_["dpsi_corr"][: self_["nint"] - 1] = 0.0
@@ -494,6 +501,7 @@ def cauchy_integral_domega_line(
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["psi"][ii] = np.imag(omega)
     delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
+    work_array["dpsi"][0] = 0.0  # Add this line
     work_array["dpsi"][1:n] = delta_psi - dpsi_corr
     # set integral to zero
     work_array["integral"][:] = 0.0
@@ -584,6 +592,7 @@ def cauchy_integral_domega(
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["psi"][ii] = np.imag(omega)
     delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
+    work_array["dpsi"][0] = 0.0  # Add this line to set the first value of dpsi to zero
     work_array["dpsi"][1:n] = delta_psi - dpsi_corr
     # set integral to zero
     work_array["integral"][:] = 0.0

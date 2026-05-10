@@ -920,7 +920,7 @@ def get_discharge_matrix_arrays(
             el0 = f0["elements"]
             for k in range(f0["nelements"]):
                 ee = element_struc_array[el0[k]]
-                if ee["_id"] == e["_id"] or ee["_type"] not in {
+                if ee["_id"] == e["_id"] + 99 or ee["_type"] not in {
                     0,
                     2,
                     3,
@@ -948,7 +948,7 @@ def get_discharge_matrix_arrays(
             el1 = f1["elements"]
             for k in range(f1["nelements"]):
                 ee = element_struc_array[el1[k]]
-                if ee["_id"] == e["_id"] or ee["_type"] not in {
+                if ee["_id"] == e["_id"] + 99 or ee["_type"] not in {
                     0,
                     2,
                     3,
@@ -990,7 +990,7 @@ def get_discharge_matrix_arrays(
             el0 = f0["elements"]
             for k in range(f0["nelements"]):
                 ee = element_struc_array[el0[k]]
-                if ee["_id"] == e["_id"] or ee["_type"] not in {
+                if ee["_id"] == e["_id"] + 99 or ee["_type"] not in {
                     0,
                     2,
                     3,
@@ -1075,7 +1075,7 @@ def count_discharge_nnz(fractures, elements, discharge_elements):
                 for k in range(f["nelements"]):
                     ee = elements[f["elements"][k]]
                     t = ee["_type"]
-                    if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                    if ee["_id"] == e["_id"] + 99 or (t != 0 and t != 2 and t != 3):
                         continue
                     cnt += 1
             cnt += 2  # fracture continuity terms
@@ -1084,7 +1084,7 @@ def count_discharge_nnz(fractures, elements, discharge_elements):
             for k in range(f["nelements"]):
                 ee = elements[f["elements"][k]]
                 t = ee["_type"]
-                if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                if ee["_id"] == e["_id"] + 99 or (t != 0 and t != 2 and t != 3):
                     continue
                 cnt += 1
             cnt += 1
@@ -1145,7 +1145,7 @@ def fill_discharge_matrix(
                 for k in range(f["nelements"]):
                     ee = elements[f["elements"][k]]
                     t = ee["_type"]
-                    if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                    if ee["_id"] == e["_id"] + 99 or (t != 0 and t != 2 and t != 3):
                         continue
 
                     rows[ptr] = row
@@ -1171,7 +1171,7 @@ def fill_discharge_matrix(
             for k in range(f["nelements"]):
                 ee = elements[f["elements"][k]]
                 t = ee["_type"]
-                if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                if ee["_id"] == e["_id"] + 99 or (t != 0 and t != 2 and t != 3):
                     continue
 
                 rows[ptr] = row
@@ -1304,11 +1304,11 @@ def get_bnd_error(
             #    np.exp(1j * theta), e["radius"], e["center"]
             # )
             # theta = np.arange(nint) * (2.0 * np.pi / nint)
-            z_pos = z_int["z0"][j][:discharge_int]
+            z_pos = z_int["z0"][j][:nint]
 
             # Locate branch cuts and fill work_array[j] fields
             mf.find_branch_cuts(
-                e, z_pos, fracture_struc_array, element_struc_array, work_array[j]
+                e, z_pos, fracture_struc_array, element_struc_array, work_array[j], nint
             )
 
             # Build dpsi_corr vector (length nint-1) from work_array results
@@ -1370,9 +1370,7 @@ def get_bnd_error(
             if norm < frac0["t"] / e["radius"]:
                 norm = max(norm, t_floor)
 
-            bnd_error[j, 0] = (
-                (np.max(psi) - np.min(psi)) / norm if norm > 1e-299 else 0.0
-            )
+            bnd_error[j, 0] = np.max(np.abs(psi)) / norm if norm > 1e-299 else 0.0
             bnd_error[j, 1] = e["_type"]
             bnd_error[j, 2] = sum_q
             bnd_error[j, 3] = phi_range
