@@ -1264,6 +1264,7 @@ def get_bnd_error(
                 omega_vec[i] = hpc_fracture.calc_omega(
                     frac0, z0[i], element_struc_array
                 )
+            head0 = np.real(omega_vec) / frac0["t"]
             # omega = np.sum(omega_vec) / discharge_int
             if e["_type"] == 0:  # Intersection
                 frac1 = fracture_struc_array[e["frac1"]]
@@ -1275,16 +1276,14 @@ def get_bnd_error(
                     )
                 # omega1 = np.sum(omega1_vec) / discharge_int
                 head1 = np.real(omega1_vec) / frac1["t"]
-                head0 = np.real(omega_vec) / frac0["t"]
                 bnd_error[j, 0] = np.max(
                     np.abs(head1 - head0) / np.mean(head0)
                 )  # np.abs((head1 - head0) / head1)
                 bnd_error[j, 1] = e["_type"]
                 bnd_error[j, 2] = e["q"]
             else:  # Well or Constant head line
-                bnd_error[j, 0] = np.max(
-                    np.abs((e["phi"] - np.real(omega_vec)) / e["phi"])
-                )
+                head = e["phi"] / frac0["t"]
+                bnd_error[j, 0] = np.max(np.abs(head - head0) / head)
                 bnd_error[j, 1] = e["_type"]
                 bnd_error[j, 2] = e["q"]
         elif e["_type"] == 1:  # Bounding circle
