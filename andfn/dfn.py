@@ -678,19 +678,19 @@ class DFN(Constants):
 
         for name in elements_struc_array.dtype.names:
             if np.issubdtype(element_dtype_hpc[name], np.int_):
-                elements_struc_array[name][0] = -1
+                elements_struc_array[name][:] = -1
             elif np.issubdtype(element_dtype_hpc[name], np.float64):
-                elements_struc_array[name][0] = np.nan
+                elements_struc_array[name][:] = np.nan
             elif np.issubdtype(element_dtype_hpc[name], np.complex128):
-                elements_struc_array[name][0] = np.nan + 1j * np.nan
+                elements_struc_array[name][:] = np.nan + 1j * np.nan
             elif name == "thetas" or name == "dpsi_corr":
-                elements_struc_array[name][0] = np.zeros(
+                elements_struc_array[name][:] = np.zeros(
                     MAX_NCOEF * 2, dtype=np.float64
                 )
             elif name == "coef" or name == "old_coef":
-                elements_struc_array[name][0] = np.zeros(MAX_NCOEF, dtype=np.complex128)
+                elements_struc_array[name][:] = np.zeros(MAX_NCOEF, dtype=np.complex128)
             elif name == "endpoints0" or name == "endpoints1":
-                elements_struc_array[name][0] = np.full(
+                elements_struc_array[name][:] = np.full(
                     2, np.nan + 1j * np.nan, dtype=np.complex128
                 )
 

@@ -1370,9 +1370,7 @@ def get_bnd_error(
             if norm < frac0["t"] / e["radius"]:
                 norm = max(norm, t_floor)
 
-            bnd_error[j, 0] = (
-                (np.max(psi) - np.min(psi)) / norm if norm > 1e-299 else 0.0
-            )
+            bnd_error[j, 0] = np.max(np.abs(psi)) / norm if norm > 1e-299 else 0.0
             bnd_error[j, 1] = e["_type"]
             bnd_error[j, 2] = sum_q
             bnd_error[j, 3] = phi_range

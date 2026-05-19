@@ -408,10 +408,11 @@ class Element:
         struc_array = initiate_elements_array_hpc()
 
         for key in self.__dict__.keys():
-            if key in element_dtype.names:
+            if key in element_dtype_hpc.names:
                 if key in ["frac0", "frac1"]:
                     struc_array[key][0] = self.__dict__[key]._id
                 elif key in ["thetas", "coef", "old_coef", "dpsi_corr"]:
+                    struc_array[key][0][:] = 0  # zero entire slot first
                     struc_array[key][0][: self.__dict__[key].size] = self.__dict__[key]
                 else:
                     struc_array[key][0] = self.__dict__[key]
@@ -440,10 +441,11 @@ class Element:
         None. The element is updated in place.
         """
         for key in self.__dict__.keys():
-            if key in element_dtype.names:
+            if key in element_dtype_hpc.names:
                 if key in ["frac0", "frac1"]:
                     struc_array[key][i] = self.__dict__[key]._id
                 elif key in ["thetas", "coef", "old_coef", "dpsi_corr"]:
+                    struc_array[key][0][:] = 0  # zero entire slot first
                     struc_array[key][i][: self.__dict__[key].size] = self.__dict__[key]
                 else:
                     struc_array[key][i] = self.__dict__[key]
