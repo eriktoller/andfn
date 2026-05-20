@@ -40,6 +40,7 @@ from .element import (
     ELEMENT_COLORS,
     MAX_ELEMENTS,
     MAX_NCOEF,
+    element_types,
 )
 
 # Custom colormaps
@@ -1891,10 +1892,12 @@ class DFN(Constants):
         error_99 = float(np.percentile(bnd_error[:, 0], 99))
         error_95 = float(np.percentile(bnd_error[:, 0], 95))
         error_90 = float(np.percentile(bnd_error[:, 0], 90))
+        max_type = int(bnd_error[np.argmax(bnd_error[:, 0]), 1])
+        max_index = np.argmax(bnd_error[:, 0])
         logger.info(
-            f"Boundary condition check: max error = {max_err:.3e}, mean error = {mean_err:.3e}, 99th percentile error = {error_99:.3e}, 95th percentile error = {error_95:.3e}, 90th percentile error = {error_90:.3e}"
+            f"Boundary condition check: max error = {max_err:.3e} (type: {element_types[int(max_type)]}, index: {max_index}), mean error = {mean_err:.3e}, 99th percentile error = {error_99:.3e}, 95th percentile error = {error_95:.3e}, 90th percentile error = {error_90:.3e}"
         )
-        return bnd_error
+        return bnd_error, max_index
 
     ####################################################################################################################
     #                    Plotting functions                                                                            #
@@ -2453,7 +2456,7 @@ class DFN(Constants):
         logger.info(f"Plotting hydraulic head took {time.time() - start:.2f} seconds.")
 
     def plot_elements(
-        self, pl, color=None, elements=None, line_width=3.0, const_elements=False
+        self, pl, color=None, elements=None, line_width=3.0, head_elements=False
     ):
         """
         Plots the elements in the DFN.
@@ -2468,7 +2471,7 @@ class DFN(Constants):
             The list of elements to plot. If None, all elements are plotted.
         line_width : float
             The line width of the elements.
-        const_elements : bool
+        head_elements : bool
             Whether to only plot the constant head elements. Default is False.
         """
         # Check if the elements have been stored in the DFN
@@ -2480,8 +2483,12 @@ class DFN(Constants):
             elements = self.elements
         if not isinstance(elements, list):
             elements = [elements]
-        if const_elements:
-            elements = [e for e in elements if isinstance(e, (ConstantHeadLine, Well))]
+        if head_elements:
+            elements = [
+                e
+                for e in elements
+                if isinstance(e, (ConstantHeadLine, Well, Intersection))
+            ]
         for i, e in enumerate(elements):
             e.plot(pl, line_width=line_width, color=color)
             logger.debug(f"Plotting elements: {i + 1} / {len(self.elements)}")

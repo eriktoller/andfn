@@ -78,13 +78,15 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
         element = element_struc_array[el]
         if el != exclude:
             if element["_type"] == 0:  # Intersection
-                omega += hpc_intersection.calc_omega(element, z, self_["_id"])
+                omega += hpc_intersection.calc_omega(
+                    element, z, self_["_id"], self_["radius"]
+                )
             elif element["_type"] == 1:  # Bounding circle
                 omega += hpc_bounding_circle.calc_omega(element, z)
             elif element["_type"] == 2:  # Well
                 omega += hpc_well.calc_omega(element, z)
             elif element["_type"] == 3:  # Constant head line
-                omega += hpc_const_head_line.calc_omega(element, z)
+                omega += hpc_const_head_line.calc_omega(element, z, self_["radius"])
             elif element["_type"] == 4:  # Impermeable circle
                 omega += hpc_imp_object.calc_omega_circle(element, z)
             elif element["_type"] == 5:  # Impermeable line
@@ -93,10 +95,12 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
             # If the element is the one to exclude, we still need to add  the contribution from the mirror image of the element if it is an intersection or constant head line
             if element["_type"] == 0:  # Intersection
                 omega += hpc_intersection.calc_omega(
-                    element, z, self_["_id"], mirror=True
+                    element, z, self_["_id"], self_["radius"], mirror=True
                 )
             elif element["_type"] == 3:  # Constant head line
-                omega += hpc_const_head_line.calc_omega(element, z, mirror=True)
+                omega += hpc_const_head_line.calc_omega(
+                    element, z, self_["radius"], mirror=True
+                )
     return omega
 
 
@@ -171,13 +175,13 @@ def calc_w(self_, z, element_struc_array, exclude=-1):
         if el != exclude:
             element = element_struc_array[el]
             if element["_type"] == 0:  # Intersection
-                w += hpc_intersection.calc_w(element, z, self_["_id"])
+                w += hpc_intersection.calc_w(element, z, self_["_id"], self_["radius"])
             elif element["_type"] == 1:  # Bounding circle
                 w += hpc_bounding_circle.calc_w(element, z)
             elif element["_type"] == 2:  # Well
                 w += hpc_well.calc_w(element, z)
             elif element["_type"] == 3:  # Constant head line
-                w += hpc_const_head_line.calc_w(element, z)
+                w += hpc_const_head_line.calc_w(element, z, self_["radius"])
 
     return w
 

@@ -20,7 +20,7 @@ def z_array(self_, n, frac_is):
 
 
 @nb.njit()
-def discharge_term(self_, z, frac_is):
+def discharge_term(self_, z, frac_is, radius):
     """
     Calculate the discharge term for the intersection.
 
@@ -45,13 +45,9 @@ def discharge_term(self_, z, frac_is):
         phi += np.real(mf.well_chi(chi, sign))
     center = (endpoints[0] + endpoints[1]) / 2.0
     if np.abs(center) > 1e-14:
-        half_vec = (endpoints[1] - endpoints[0]) / 2.0
-        mirror_center = (1.0 + 1.0 - np.abs(center)) * center / np.abs(center)
-        mirror_endpoints = np.array(
-            [mirror_center - half_vec, mirror_center + half_vec]
-        )
+        m_endpoints = gf.mirror_endpoints(endpoints, radius)
         for z0 in z:
-            chi_mirror = gf.map_z_line_to_chi(z0, mirror_endpoints)
+            chi_mirror = gf.map_z_line_to_chi(z0, m_endpoints)
             phi += np.real(mf.well_chi(chi_mirror, sign))
     return phi / len(z)
 
@@ -123,7 +119,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
 
 
 @nb.njit(inline="always")
-def calc_omega(self_, z, frac_is_id, mirror=False):
+def calc_omega(self_, z, frac_is_id, radius, mirror=False):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -135,6 +131,10 @@ def calc_omega(self_, z, frac_is_id, mirror=False):
         An array of points in the complex z-plane
     frac_is_id : np.int64
         The fracture that the point is in
+    radius : float
+        The radius of the fracture (used for the mirror term)
+    mirror : bool, optional
+        Whether to include the mirror term in the calculation (default is False)
 
     Return
     ------
@@ -151,26 +151,28 @@ def calc_omega(self_, z, frac_is_id, mirror=False):
     if mirror:
         center = (endpoints[0] + endpoints[1]) / 2.0
         if np.abs(center) > 1e-14:
-            half_vec = (endpoints[1] - endpoints[0]) / 2.0  # TODO: HERE ARE YOU
-            mirror_center = (1.0 + 1.0 - np.abs(center)) * center / np.abs(center)
-            mirror_endpoints = np.array(
-                [mirror_center - half_vec, mirror_center + half_vec]
-            )
-            chi_mirror = gf.map_z_line_to_chi(z, mirror_endpoints)
+            m_endpoints = gf.mirror_endpoints(endpoints, radius)
+            chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
             return sign * mf.well_chi(chi_mirror, self_["q"])
     chi = gf.map_z_line_to_chi(z, endpoints)
     omega = sign * mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
     omega += sign * mf.well_chi(chi, self_["q"])
     center = (endpoints[0] + endpoints[1]) / 2.0
     if np.abs(center) > 1e-14:
-        half_vec = (endpoints[1] - endpoints[0]) / 2.0  # TODO: HERE ARE YOU
-        mirror_center = (1.0 + 1.0 - np.abs(center)) * center / np.abs(center)
-        mirror_endpoints = np.array(
-            [mirror_center - half_vec, mirror_center + half_vec]
-        )
-        chi_mirror = gf.map_z_line_to_chi(z, mirror_endpoints)
+        m_endpoints = gf.mirror_endpoints(endpoints, radius)
+        chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
         omega += sign * mf.well_chi(chi_mirror, self_["q"])
-        # omega += sign*mf.asym_expansion(chi_mirror, self_["coef"][: self_["ncoef"]])
+        # omega += sign * mf.asym_expansion(chi_mirror, self_["coef"][: self_["ncoef"]])
+        # plot the endpoints and the z point in the chi plane for debugging
+        """
+        import matplotlib.pyplot as plt
+        plt.plot(endpoints.real, endpoints.imag, color="red", label="chi")
+        plt.plot(m_endpoints.real, m_endpoints.imag, color="blue", label="chi_mirror")
+        plt.gca().add_patch(plt.Circle((0, 0), radius, color="black", fill=False, label="chi point"))
+        plt.legend()
+        plt.axis("equal")
+        plt.show()
+        """
     return omega
 
 
@@ -198,14 +200,14 @@ def calc_omega_array(self_, omega, z, frac_is_id):
     if frac_is_id == self_["frac0"]:
         chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
         mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
-        mf.well_chi(omega, chi, self_["q"])
+        mf.well_chi_array(omega, chi, self_["q"])
     else:
         chi = gf.map_z_line_to_chi(z, self_["endpoints1"])
         mf.asym_expansion_array(omega, chi, -self_["coef"][: self_["ncoef"]])
-        mf.well_chi(omega, chi, -self_["q"])
+        mf.well_chi_array(omega, chi, -self_["q"])
 
 
-def calc_w(self_, z, frac_is_id):
+def calc_w(self_, z, frac_is_id, radius):
     """
     Calculate the complex discharge vector for the intersection.
 
@@ -217,35 +219,51 @@ def calc_w(self_, z, frac_is_id):
         An array of points in the complex z-plane
     frac_is_id : np.int64
         The fracture that the point is in
+    radius : float
+        The radius of the fracture (used for the mirror term)
 
     Returns
     -------
     w : np.ndarray
         The complex discharge vector
     """
-    # Se if function is in the first or second fracture that the intersection is associated with
+    # See if function is in the first or second fracture that the intersection is associated with
     if frac_is_id == self_["frac0"]:
-        chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
+        endpoints = self_["endpoints0"]
+        chi = gf.map_z_line_to_chi(z, endpoints)
         w = -mf.asym_expansion_d1(chi, self_["coef"][: self_["ncoef"]]) - self_["q"] / (
             2 * np.pi * chi
         )
-        w *= (
-            2
-            * chi**2
-            / (chi**2 - 1)
-            * 2
-            / (self_["endpoints0"][1] - self_["endpoints0"][0])
-        )
+        w *= 2 * chi**2 / (chi**2 - 1) * 2 / (endpoints[1] - endpoints[0])
+        # Mirror term: -d/dz[ well_chi(chi_mirror, q) ]
+        center = (endpoints[0] + endpoints[1]) / 2.0
+        if np.abs(center) > 1e-14:
+            m_endpoints = gf.mirror_endpoints(endpoints, radius)
+            chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+            w += (-self_["q"] / (2 * np.pi * chi_mirror)) * (
+                2
+                * chi_mirror**2
+                / (chi_mirror**2 - 1)
+                * 2
+                / (m_endpoints[1] - m_endpoints[0])
+            )
     else:
-        chi = gf.map_z_line_to_chi(z, self_["endpoints1"])
+        endpoints = self_["endpoints1"]
+        chi = gf.map_z_line_to_chi(z, endpoints)
         w = -mf.asym_expansion_d1(chi, -self_["coef"][: self_["ncoef"]]) + self_[
             "q"
         ] / (2 * np.pi * chi)
-        w *= (
-            2
-            * chi**2
-            / (chi**2 - 1)
-            * 2
-            / (self_["endpoints1"][1] - self_["endpoints1"][0])
-        )
+        w *= 2 * chi**2 / (chi**2 - 1) * 2 / (endpoints[1] - endpoints[0])
+        # Mirror term: -d/dz[ -well_chi(chi_mirror, q) ] = +contribution
+        center = (endpoints[0] + endpoints[1]) / 2.0
+        if np.abs(center) > 1e-14:
+            m_endpoints = gf.mirror_endpoints(endpoints, radius)
+            chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+            w += (self_["q"] / (2 * np.pi * chi_mirror)) * (
+                2
+                * chi_mirror**2
+                / (chi_mirror**2 - 1)
+                * 2
+                / (m_endpoints[1] - m_endpoints[0])
+            )
     return w

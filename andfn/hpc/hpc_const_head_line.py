@@ -12,7 +12,7 @@ from . import hpc_geometry_functions as gf
 
 
 @nb.njit()
-def discharge_term(self_, z):
+def discharge_term(self_, z, radius):
     """
     Calculate the discharge term for the constant head line.
 
@@ -29,14 +29,11 @@ def discharge_term(self_, z):
         The discharge term
     """
     phi = 0.0
-    center = (self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0
-    half_vec = (self_["endpoints0"][1] - self_["endpoints0"][0]) / 2.0
-    mirror_center = (1.0 + 1.0 - np.abs(center)) * center / np.abs(center)
-    mirror_endpoints = np.array([mirror_center - half_vec, mirror_center + half_vec])
+    m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
     for z0 in z:
         chi = gf.map_z_line_to_chi(z0, self_["endpoints0"])
         phi += np.real(mf.well_chi(chi, 1.0))
-        chi_mirror = gf.map_z_line_to_chi(z0, mirror_endpoints)
+        chi_mirror = gf.map_z_line_to_chi(z0, m_endpoints)
         phi += np.real(mf.well_chi(chi_mirror, 1.0))
     return phi / len(z)
 
@@ -92,7 +89,7 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
 
 
 @nb.njit(inline="always")
-def calc_omega(self_, z, mirror=False):
+def calc_omega(self_, z, radius, mirror=False):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -102,6 +99,10 @@ def calc_omega(self_, z, mirror=False):
         The intersection element
     z : complex
         An array of points in the complex z-plane
+    radius : float
+        The radius of the bounding circle for the fracture
+    mirror : bool, optional
+        Whether to include the mirror term in the omega calculation, by default False
 
     Return
     ------
@@ -109,31 +110,20 @@ def calc_omega(self_, z, mirror=False):
         The resulting value for the omega function
     """
     center = (self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0
-    half_vec = (self_["endpoints0"][1] - self_["endpoints0"][0]) / 2.0
-    mirror_center = (1.0 + 1.0 - np.abs(center)) * center / np.abs(center)
-    mirror_endpoints = np.array([mirror_center - half_vec, mirror_center + half_vec])
-    chi_mirror = gf.map_z_line_to_chi(z, mirror_endpoints)
     if mirror:
-        return mf.well_chi(chi_mirror, self_["q"])
+        if np.abs(center) > 1e-14:
+            m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
+            chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+            return mf.well_chi(chi_mirror, self_["q"])
+        return 0.0 + 0.0j
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
     omega = mf.well_chi(chi, self_["q"])
     omega += mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
-    # Add the mirror the endpoints by mirroring the center point over the unit circle  and then compute the new endpoints
-    center = (self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0
-    half_vec = (self_["endpoints0"][1] - self_["endpoints0"][0]) / 2.0
-    mirror_center = (1.0 + 1.0 - np.abs(center)) * center / np.abs(center)
-    mirror_endpoints = np.array([mirror_center - half_vec, mirror_center + half_vec])
-    chi_mirror = gf.map_z_line_to_chi(z, mirror_endpoints)
-    omega += mf.well_chi(chi_mirror, self_["q"])
-    # omega += mf.asym_expansion(chi_mirror, self_["coef"][: self_["ncoef"]])
-    # plot the endpoints and the z point in the chi plane for debugging
-    # import matplotlib.pyplot as plt
-    # plt.plot(self_["endpoints0"].real, self_["endpoints0"].imag, color="red", label="chi")
-    # plt.plot(mirror_endpoints.real, mirror_endpoints.imag, color="blue", label="chi_mirror")
-    # plt.gca().add_patch(plt.Circle((0, 0), 1, color="black", fill=False, label="chi point"))
-    # plt.legend()
-    # plt.axis("equal")
-    # plt.show()
+    if np.abs(center) > 1e-14:
+        m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
+        chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+        omega += mf.well_chi(chi_mirror, self_["q"])
+        # omega += mf.asym_expansion(chi_mirror, self_["coef"][: self_["ncoef"]])
     return omega
 
 
@@ -161,7 +151,7 @@ def calc_omega_array(self_, omega, z):
     mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
 
 
-def calc_w(self_, z):
+def calc_w(self_, z, radius):
     """
     Calculate the complex discharge vector for the constant head line.
 
@@ -171,6 +161,8 @@ def calc_w(self_, z):
         The constant head line element
     z : np.ndarray
         The points to calculate the complex discharge vector at
+    radius : float
+        The radius of the fracture (used for the mirror term)
 
     Returns
     -------
@@ -190,6 +182,18 @@ def calc_w(self_, z):
         * 2
         / (self_["endpoints0"][1] - self_["endpoints0"][0])
     )
+    # Mirror term: -d/dz[ well_chi(chi_mirror, q) ]
+    center = (self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0
+    if np.abs(center) > 1e-14:
+        m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
+        chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+        w += (-self_["q"] / (2 * np.pi * chi_mirror)) * (
+            2
+            * chi_mirror**2
+            / (chi_mirror**2 - 1)
+            * 2
+            / (m_endpoints[1] - m_endpoints[0])
+        )
     return w
 
 

@@ -932,7 +932,7 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f0, get_discharge_term(ee, z0, e["frac0"])
+                        f0, get_discharge_term(ee, z0, e["frac0"], f0["radius"])
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -940,7 +940,7 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f0, get_discharge_term(ee, z0, e["frac0"])
+                        f0, get_discharge_term(ee, z0, e["frac0"], f0["radius"])
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -960,7 +960,7 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f1, -get_discharge_term(ee, z1, e["frac1"])
+                        f1, -get_discharge_term(ee, z1, e["frac1"], f1["radius"])
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -968,7 +968,7 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f1, -get_discharge_term(ee, z1, e["frac1"])
+                        f1, -get_discharge_term(ee, z1, e["frac1"], f1["radius"])
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -1001,13 +1001,17 @@ def get_discharge_matrix_arrays(
                 if ee["_type"] == 0:  # Intersection
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
-                    data_np[cnt_par] = get_discharge_term(ee, z0, e["frac0"])
+                    data_np[cnt_par] = get_discharge_term(
+                        ee, z0, e["frac0"], f0["radius"]
+                    )
                     inds[cnt_par] = 1
                     cnt_par += 1
                 else:
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
-                    data_np[cnt_par] = get_discharge_term(ee, z0, e["frac0"])
+                    data_np[cnt_par] = get_discharge_term(
+                        ee, z0, e["frac0"], f0["radius"]
+                    )
                     inds[cnt_par] = 1
                     cnt_par += 1
             pos_f = e["frac0"]
@@ -1151,7 +1155,11 @@ def fill_discharge_matrix(
                     rows[ptr] = row
                     cols[ptr] = id_to_pos[ee["_id"]]
                     data[ptr] = hpc_fracture.head_from_phi(
-                        f, sign * get_discharge_term(ee, z0 if sign > 0 else z1, f_id)
+                        f,
+                        sign
+                        * get_discharge_term(
+                            ee, z0 if sign > 0 else z1, f_id, f["radius"]
+                        ),
                     )
                     ptr += 1
 
@@ -1176,7 +1184,7 @@ def fill_discharge_matrix(
 
                 rows[ptr] = row
                 cols[ptr] = id_to_pos[ee["_id"]]
-                data[ptr] = get_discharge_term(ee, z0, e["frac0"])
+                data[ptr] = get_discharge_term(ee, z0, e["frac0"], f["radius"])
                 ptr += 1
 
             rows[ptr] = row
@@ -1365,11 +1373,11 @@ def get_bnd_error(
                 ek = element_struc_array[el_ids[k]]
                 if ek["_type"] in (0, 2, 3):
                     sum_q += np.abs(ek["q"])
-            norm = max(sum_q, 1e-300)
+            norm = max(sum_q, 1e-21)
             if norm < frac0["t"] / e["radius"]:
                 norm = max(norm, t_floor)
 
-            bnd_error[j, 0] = np.max(np.abs(psi)) / norm if norm > 1e-299 else 0.0
+            bnd_error[j, 0] = np.max(np.abs(psi)) / norm if norm > 1e-20 else 0.0
             bnd_error[j, 1] = e["_type"]
             bnd_error[j, 2] = sum_q
             bnd_error[j, 3] = phi_range
@@ -1475,13 +1483,13 @@ def get_z_int_array(z_int, elements, discharge_int):
 
 
 @nb.njit(cache=CACHE)
-def get_discharge_term(element, z, frac):
+def get_discharge_term(element, z, frac, radius):
     if element["_type"] == 0:  # Intersection
-        return hpc_intersection.discharge_term(element, z, frac)
+        return hpc_intersection.discharge_term(element, z, frac, radius)
     elif element["_type"] == 2:  # Well
         return hpc_well.discharge_term(element, z)
     elif element["_type"] == 3:  # Constant head line
-        return hpc_const_head_line.discharge_term(element, z)
+        return hpc_const_head_line.discharge_term(element, z, radius)
     else:
         return 0.0
 
