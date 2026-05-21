@@ -19,6 +19,15 @@ if config:
     MAX_ELEMENTS = config.get("MAX_ELEMENTS", 500)
     MAX_DISCHARGE_INT = config.get("MAX_DISCHARGE_INT", 1000)
 
+element_types = {
+    0: "Intersection",
+    1: "Bounding Circle",
+    2: "Well",
+    3: "Constant Head Line",
+    4: "Impermeable Circle",
+    5: "Impermeable Line",
+}
+
 element_dtype = np.dtype(
     [
         ("_id", np.int_),

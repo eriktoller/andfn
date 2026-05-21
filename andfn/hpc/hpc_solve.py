@@ -1264,6 +1264,7 @@ def get_bnd_error(
                 omega_vec[i] = hpc_fracture.calc_omega(
                     frac0, z0[i], element_struc_array
                 )
+            head0 = np.real(omega_vec) / frac0["t"]
             # omega = np.sum(omega_vec) / discharge_int
             if e["_type"] == 0:  # Intersection
                 frac1 = fracture_struc_array[e["frac1"]]
@@ -1275,16 +1276,14 @@ def get_bnd_error(
                     )
                 # omega1 = np.sum(omega1_vec) / discharge_int
                 head1 = np.real(omega1_vec) / frac1["t"]
-                head0 = np.real(omega_vec) / frac0["t"]
                 bnd_error[j, 0] = np.max(
                     np.abs(head1 - head0) / np.mean(head0)
                 )  # np.abs((head1 - head0) / head1)
                 bnd_error[j, 1] = e["_type"]
                 bnd_error[j, 2] = e["q"]
             else:  # Well or Constant head line
-                bnd_error[j, 0] = np.max(
-                    np.abs((e["phi"] - np.real(omega_vec)) / e["phi"])
-                )
+                head = e["phi"] / frac0["t"]
+                bnd_error[j, 0] = np.max(np.abs(head - head0) / head)
                 bnd_error[j, 1] = e["_type"]
                 bnd_error[j, 2] = e["q"]
         elif e["_type"] == 1:  # Bounding circle
@@ -1304,11 +1303,11 @@ def get_bnd_error(
             #    np.exp(1j * theta), e["radius"], e["center"]
             # )
             # theta = np.arange(nint) * (2.0 * np.pi / nint)
-            z_pos = z_int["z0"][j][:discharge_int]
+            z_pos = z_int["z0"][j][:nint]
 
             # Locate branch cuts and fill work_array[j] fields
             mf.find_branch_cuts(
-                e, z_pos, fracture_struc_array, element_struc_array, work_array[j]
+                e, z_pos, fracture_struc_array, element_struc_array, work_array[j], nint
             )
 
             # Build dpsi_corr vector (length nint-1) from work_array results
@@ -1366,11 +1365,11 @@ def get_bnd_error(
                 ek = element_struc_array[el_ids[k]]
                 if ek["_type"] in (0, 2, 3):
                     sum_q += np.abs(ek["q"])
-            norm = max(sum_q, 1e-300)
+            norm = max(sum_q, 1e-21)
             if norm < frac0["t"] / e["radius"]:
                 norm = max(norm, t_floor)
 
-            bnd_error[j, 0] = np.max(np.abs(psi)) / norm if norm > 1e-299 else 0.0
+            bnd_error[j, 0] = np.max(np.abs(psi)) / norm if norm > 1e-20 else 0.0
             bnd_error[j, 1] = e["_type"]
             bnd_error[j, 2] = sum_q
             bnd_error[j, 3] = phi_range

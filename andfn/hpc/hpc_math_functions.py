@@ -299,7 +299,7 @@ def cauchy_integral_real(
 
 @nb.njit()
 def find_branch_cuts(
-    self_, z_pos, fracture_struc_array, element_struc_array, work_array
+    self_, z_pos, fracture_struc_array, element_struc_array, work_array, nint
 ):
     """
     Find the branch cuts for the fracture.
@@ -323,7 +323,6 @@ def find_branch_cuts(
         The correction to the potential due to the branch cuts
     """
     # Find the branch cuts
-    dpsi_corr = np.zeros(self_["nint"] - 1, dtype=float)
 
     nel = fracture_struc_array[self_["frac0"]]["nelements"]
     elements_list = fracture_struc_array[self_["frac0"]]["elements"][:nel]
@@ -331,7 +330,7 @@ def find_branch_cuts(
     work_array["len_discharge_element"] = 0
 
     cnt = 0
-    for ii in range(self_["nint"] - 1):
+    for ii in range(nint - 1):
         for e in elements:
             if e["_type"] == 0:  # Intersection
                 if e["frac0"] == self_["frac0"]:
@@ -343,7 +342,6 @@ def find_branch_cuts(
                         np.sign(ln0) != np.sign(ln1)
                         and np.abs(ln0) + np.abs(ln1) > np.pi
                     ):
-                        dpsi_corr[ii] -= e["q"]
                         work_array["element_pos"][cnt] = ii
                         work_array["discharge_element"][cnt] = e["_id"]
                         get_sign(self_, work_array, cnt, chi0, chi1, -1)
@@ -358,7 +356,6 @@ def find_branch_cuts(
                         np.sign(ln0) != np.sign(ln1)
                         and np.abs(ln0) + np.abs(ln1) > np.pi
                     ):
-                        dpsi_corr[ii] += e["q"]
                         work_array["element_pos"][cnt] = ii
                         work_array["discharge_element"][cnt] = e["_id"]
                         get_sign(self_, work_array, cnt, chi0, chi1, 1)
@@ -371,7 +368,6 @@ def find_branch_cuts(
                     np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
                     and np.real(chi0) < 0
                 ):
-                    dpsi_corr[ii] -= e["q"]
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
@@ -384,7 +380,6 @@ def find_branch_cuts(
                     np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
                     and np.real(chi0) < 0
                 ):
-                    dpsi_corr[ii] -= e["q"]
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
@@ -436,7 +431,12 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
                 work_array["exp_array_p"][: self_["nint"]], self_["endpoints0"]
             )
         find_branch_cuts(
-            self_, z_pos, fracture_struc_array, element_struc_array, work_array
+            self_,
+            z_pos,
+            fracture_struc_array,
+            element_struc_array,
+            work_array,
+            self_["nint"],
         )
     # set dpsi_corr to zero
     self_["dpsi_corr"][: self_["nint"] - 1] = 0.0

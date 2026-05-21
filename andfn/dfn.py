@@ -40,6 +40,7 @@ from .element import (
     ELEMENT_COLORS,
     MAX_ELEMENTS,
     MAX_NCOEF,
+    element_types,
 )
 
 # Custom colormaps
@@ -1858,7 +1859,7 @@ class DFN(Constants):
             logger.info("Unconsolidating DFN...")
             self.unconsolidate_dfn(hpc=True)
 
-    def check_boundary_conditions(self):
+    def check_boundary_conditions(self, n_points=100):
         """
         Checks if the boundary conditions are correctly applied to the DFN.
 
@@ -1882,7 +1883,7 @@ class DFN(Constants):
         bnd_error = hpc_compute_bnd_error(
             self.fractures_struc_array_hpc,
             self.elements_struc_array,
-            self.discharge_int,
+            n_points,
             self.constants,
         )
 
@@ -1891,10 +1892,12 @@ class DFN(Constants):
         error_99 = float(np.percentile(bnd_error[:, 0], 99))
         error_95 = float(np.percentile(bnd_error[:, 0], 95))
         error_90 = float(np.percentile(bnd_error[:, 0], 90))
+        max_type = int(bnd_error[np.argmax(bnd_error[:, 0]), 1])
+        max_index = np.argmax(bnd_error[:, 0])
         logger.info(
-            f"Boundary condition check: max error = {max_err:.3e}, mean error = {mean_err:.3e}, 99th percentile error = {error_99:.3e}, 95th percentile error = {error_95:.3e}, 90th percentile error = {error_90:.3e}"
+            f"Boundary condition check: max error = {max_err:.3e} (type: {element_types[int(max_type)]}, index: {max_index}), mean error = {mean_err:.3e}, 99th percentile error = {error_99:.3e}, 95th percentile error = {error_95:.3e}, 90th percentile error = {error_90:.3e}"
         )
-        return bnd_error
+        return bnd_error, max_index
 
     ####################################################################################################################
     #                    Plotting functions                                                                            #
