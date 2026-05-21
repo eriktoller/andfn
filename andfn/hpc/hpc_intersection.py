@@ -9,7 +9,7 @@ import numba as nb
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
 
-R_COND = 6 / 7 * 1000
+R_COND = 6 / 7
 
 
 @nb.njit()
@@ -167,6 +167,7 @@ def calc_omega(self_, z, frac_is_id, radius, mirror=False):
             m_endpoints = gf.mirror_endpoints(endpoints, radius)
             chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
             return sign * mf.well_chi(chi_mirror, self_["q"])
+        return 0.0 + 0.0j
     chi = gf.map_z_line_to_chi(z, endpoints)
     omega = sign * mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
     omega += sign * mf.well_chi(chi, self_["q"])
