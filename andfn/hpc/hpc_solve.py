@@ -933,7 +933,8 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f0, get_discharge_term(ee, z0, e["frac0"], f0["radius"])
+                        f0,
+                        get_discharge_term(ee, z0, e["frac0"], f0["radius"], e["_id"]),
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -941,7 +942,8 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f0, get_discharge_term(ee, z0, e["frac0"], f0["radius"])
+                        f0,
+                        get_discharge_term(ee, z0, e["frac0"], f0["radius"], e["_id"]),
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -961,7 +963,8 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f1, -get_discharge_term(ee, z1, e["frac1"], f1["radius"])
+                        f1,
+                        -get_discharge_term(ee, z1, e["frac1"], f1["radius"], e["_id"]),
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -969,7 +972,8 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f1, -get_discharge_term(ee, z1, e["frac1"], f1["radius"])
+                        f1,
+                        -get_discharge_term(ee, z1, e["frac1"], f1["radius"], e["_id"]),
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -1003,7 +1007,7 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = get_discharge_term(
-                        ee, z0, e["frac0"], f0["radius"]
+                        ee, z0, e["frac0"], f0["radius"], e["_id"]
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -1011,7 +1015,7 @@ def get_discharge_matrix_arrays(
                     rows_np[cnt_par] = row
                     cols_np[cnt_par] = pos
                     data_np[cnt_par] = get_discharge_term(
-                        ee, z0, e["frac0"], f0["radius"]
+                        ee, z0, e["frac0"], f0["radius"], e["_id"]
                     )
                     inds[cnt_par] = 1
                     cnt_par += 1
@@ -1165,7 +1169,7 @@ def fill_discharge_matrix(
                         f,
                         sign
                         * get_discharge_term(
-                            ee, z0 if sign > 0 else z1, f_id, f["radius"]
+                            ee, z0 if sign > 0 else z1, f_id, f["radius"], e["_id"]
                         ),
                     )
                     ptr += 1
@@ -1193,7 +1197,9 @@ def fill_discharge_matrix(
 
                 rows[ptr] = row
                 cols[ptr] = id_to_pos[ee["_id"]]
-                data[ptr] = get_discharge_term(ee, z0, e["frac0"], f["radius"])
+                data[ptr] = get_discharge_term(
+                    ee, z0, e["frac0"], f["radius"], e["_id"]
+                )
                 ptr += 1
 
             rows[ptr] = row
@@ -1492,13 +1498,17 @@ def get_z_int_array(z_int, elements, discharge_int):
 
 
 @nb.njit(cache=CACHE)
-def get_discharge_term(element, z, frac, radius):
+def get_discharge_term(element, z, frac, radius, e_is):
     if element["_type"] == 0:  # Intersection
-        return hpc_intersection.discharge_term(element, z, frac, radius)
+        return hpc_intersection.discharge_term(
+            element, z, frac, radius, True if element["_id"] == e_is else False
+        )
     elif element["_type"] == 2:  # Well
         return hpc_well.discharge_term(element, z)
     elif element["_type"] == 3:  # Constant head line
-        return hpc_const_head_line.discharge_term(element, z, radius)
+        return hpc_const_head_line.discharge_term(
+            element, z, radius, True if element["_id"] == e_is else False
+        )
     else:
         return 0.0
 

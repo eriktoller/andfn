@@ -13,7 +13,7 @@ from .hpc_intersection import R_COND
 
 
 @nb.njit()
-def discharge_term(self_, z, radius):
+def discharge_term(self_, z, radius, mirror=False):
     """
     Calculate the discharge term for the constant head line.
 
@@ -31,13 +31,20 @@ def discharge_term(self_, z, radius):
     """
     phi = 0.0
     m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
+    cond0 = (
+        np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+        > radius * R_COND
+    )
+    if mirror:
+        for z0 in z:
+            if cond0:
+                chi_mirror = gf.map_z_line_to_chi(z0, m_endpoints)
+                phi += np.real(mf.well_chi(chi_mirror, 1.0))
+        return phi / len(z)
     for z0 in z:
         chi = gf.map_z_line_to_chi(z0, self_["endpoints0"])
         phi += np.real(mf.well_chi(chi, 1.0))
-        cond0 = (
-            np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
-            > radius * R_COND
-        )
+
         if cond0:
             chi_mirror = gf.map_z_line_to_chi(z0, m_endpoints)
             phi += np.real(mf.well_chi(chi_mirror, 1.0))

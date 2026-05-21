@@ -22,7 +22,7 @@ def z_array(self_, n, frac_is):
 
 
 @nb.njit()
-def discharge_term(self_, z, frac_is, radius):
+def discharge_term(self_, z, frac_is, radius, mirror=False):
     """
     Calculate the discharge term for the intersection.
 
@@ -42,6 +42,15 @@ def discharge_term(self_, z, frac_is, radius):
     else:
         sign = -1.0
         endpoints = self_["endpoints1"]
+    if mirror:
+        cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
+        cond1 = cond0
+        if cond0 or cond1:
+            m_endpoints = gf.mirror_endpoints(endpoints, radius)
+            for z0 in z:
+                chi_mirror = gf.map_z_line_to_chi(z0, m_endpoints)
+                phi += np.real(mf.well_chi(chi_mirror, sign))
+        return phi / len(z)
     for z0 in z:
         chi = gf.map_z_line_to_chi(z0, endpoints)
         phi += np.real(mf.well_chi(chi, sign))
@@ -161,14 +170,6 @@ def calc_omega(self_, z, frac_is_id, radius, mirror=False):
     chi = gf.map_z_line_to_chi(z, endpoints)
     omega = sign * mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
     omega += sign * mf.well_chi(chi, self_["q"])
-    cond0 = (
-        np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
-        > radius * R_COND
-    )
-    cond1 = (
-        np.abs((self_["endpoints1"][0] + self_["endpoints1"][1]) / 2.0)
-        > radius * R_COND
-    )
     cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
     cond1 = cond0
     if cond0 or cond1:
