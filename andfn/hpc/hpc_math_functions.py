@@ -439,6 +439,7 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
             self_["nint"],
         )
     # set dpsi_corr to zero
+    self_["dpsi_corr"][:] = 0.0  # zeroes the whole array
     self_["dpsi_corr"][: self_["nint"] - 1] = 0.0
     for i in range(work_array["len_discharge_element"]):
         e = element_struc_array[work_array["discharge_element"][i]]
@@ -584,6 +585,7 @@ def cauchy_integral_domega(
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["psi"][ii] = np.imag(omega)
     delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
+    work_array["dpsi"][0] = 0.0
     work_array["dpsi"][1:n] = delta_psi - dpsi_corr
     # set integral to zero
     work_array["integral"][:] = 0.0
@@ -605,7 +607,7 @@ def cauchy_integral_domega(
 
     for ii in range(m):
         coef[ii] = 2j * work_array["integral"][ii] / n
-    coef[0] = work_array["coef"][0] / 2
+    coef[0] = coef[0] / 2
 
 
 @nb.njit(inline="always")
