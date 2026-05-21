@@ -254,7 +254,7 @@ def solve(
         f"Solve time: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds\n"
     )
 
-    return element_struc_array
+    return element_struc_array, work_array
 
 
 @nb.njit(cache=CACHE)
@@ -517,6 +517,7 @@ def element_solver2(
                     e["nint"], e["thetas"], work_array[i]["exp_array_p"], 1
                 )
                 mf.fill_z_integral(e, work_array[i])
+                # mf.get_dpsi_corr(e, fracture_struc_array, element_struc_array, work_array[i])
 
                 if e["_type"] == 0:  # Intersection
                     hpc_intersection.solve(
@@ -920,7 +921,7 @@ def get_discharge_matrix_arrays(
             el0 = f0["elements"]
             for k in range(f0["nelements"]):
                 ee = element_struc_array[el0[k]]
-                if ee["_id"] == e["_id"] + 99 or ee["_type"] not in {
+                if ee["_id"] == e["_id"] + 99 * 99 * 99 or ee["_type"] not in {
                     0,
                     2,
                     3,
@@ -948,7 +949,7 @@ def get_discharge_matrix_arrays(
             el1 = f1["elements"]
             for k in range(f1["nelements"]):
                 ee = element_struc_array[el1[k]]
-                if ee["_id"] == e["_id"] + 99 or ee["_type"] not in {
+                if ee["_id"] == e["_id"] + 99 * 99 * 99 or ee["_type"] not in {
                     0,
                     2,
                     3,
@@ -990,7 +991,7 @@ def get_discharge_matrix_arrays(
             el0 = f0["elements"]
             for k in range(f0["nelements"]):
                 ee = element_struc_array[el0[k]]
-                if ee["_id"] == e["_id"] + 99 or ee["_type"] not in {
+                if ee["_id"] == e["_id"] + 99 * 99 * 99 or ee["_type"] not in {
                     0,
                     2,
                     3,
@@ -1079,7 +1080,9 @@ def count_discharge_nnz(fractures, elements, discharge_elements):
                 for k in range(f["nelements"]):
                     ee = elements[f["elements"][k]]
                     t = ee["_type"]
-                    if ee["_id"] == e["_id"] + 99 or (t != 0 and t != 2 and t != 3):
+                    if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
+                        t != 0 and t != 2 and t != 3
+                    ):
                         continue
                     cnt += 1
             cnt += 2  # fracture continuity terms
@@ -1088,7 +1091,9 @@ def count_discharge_nnz(fractures, elements, discharge_elements):
             for k in range(f["nelements"]):
                 ee = elements[f["elements"][k]]
                 t = ee["_type"]
-                if ee["_id"] == e["_id"] + 99 or (t != 0 and t != 2 and t != 3):
+                if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
+                    t != 0 and t != 2 and t != 3
+                ):
                     continue
                 cnt += 1
             cnt += 1
@@ -1149,7 +1154,9 @@ def fill_discharge_matrix(
                 for k in range(f["nelements"]):
                     ee = elements[f["elements"][k]]
                     t = ee["_type"]
-                    if ee["_id"] == e["_id"] + 99 or (t != 0 and t != 2 and t != 3):
+                    if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
+                        t != 0 and t != 2 and t != 3
+                    ):
                         continue
 
                     rows[ptr] = row
@@ -1179,7 +1186,9 @@ def fill_discharge_matrix(
             for k in range(f["nelements"]):
                 ee = elements[f["elements"][k]]
                 t = ee["_type"]
-                if ee["_id"] == e["_id"] + 99 or (t != 0 and t != 2 and t != 3):
+                if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
+                    t != 0 and t != 2 and t != 3
+                ):
                     continue
 
                 rows[ptr] = row

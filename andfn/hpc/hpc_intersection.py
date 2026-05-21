@@ -9,6 +9,8 @@ import numba as nb
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
 
+R_COND = 6 / 7
+
 
 @nb.njit()
 def z_array(self_, n, frac_is):
@@ -43,8 +45,9 @@ def discharge_term(self_, z, frac_is, radius):
     for z0 in z:
         chi = gf.map_z_line_to_chi(z0, endpoints)
         phi += np.real(mf.well_chi(chi, sign))
-    center = (endpoints[0] + endpoints[1]) / 2.0
-    if np.abs(center) > 1e-14:
+    cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
+    cond1 = cond0
+    if cond0 or cond1:
         m_endpoints = gf.mirror_endpoints(endpoints, radius)
         for z0 in z:
             chi_mirror = gf.map_z_line_to_chi(z0, m_endpoints)
@@ -149,16 +152,26 @@ def calc_omega(self_, z, frac_is_id, radius, mirror=False):
         endpoints = self_["endpoints1"]
         sign = -1.0
     if mirror:
-        center = (endpoints[0] + endpoints[1]) / 2.0
-        if np.abs(center) > 1e-14:
+        cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
+        cond1 = cond0
+        if cond0 or cond1:
             m_endpoints = gf.mirror_endpoints(endpoints, radius)
             chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
             return sign * mf.well_chi(chi_mirror, self_["q"])
     chi = gf.map_z_line_to_chi(z, endpoints)
     omega = sign * mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
     omega += sign * mf.well_chi(chi, self_["q"])
-    center = (endpoints[0] + endpoints[1]) / 2.0
-    if np.abs(center) > 1e-14:
+    cond0 = (
+        np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+        > radius * R_COND
+    )
+    cond1 = (
+        np.abs((self_["endpoints1"][0] + self_["endpoints1"][1]) / 2.0)
+        > radius * R_COND
+    )
+    cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
+    cond1 = cond0
+    if cond0 or cond1:
         m_endpoints = gf.mirror_endpoints(endpoints, radius)
         chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
         omega += sign * mf.well_chi(chi_mirror, self_["q"])
@@ -236,8 +249,17 @@ def calc_w(self_, z, frac_is_id, radius):
         )
         w *= 2 * chi**2 / (chi**2 - 1) * 2 / (endpoints[1] - endpoints[0])
         # Mirror term: -d/dz[ well_chi(chi_mirror, q) ]
-        center = (endpoints[0] + endpoints[1]) / 2.0
-        if np.abs(center) > 1e-14:
+        cond0 = (
+            np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+            > radius * R_COND
+        )
+        cond1 = (
+            np.abs((self_["endpoints1"][0] + self_["endpoints1"][1]) / 2.0)
+            > radius * R_COND
+        )
+        cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
+        cond1 = cond0
+        if cond0 or cond1:
             m_endpoints = gf.mirror_endpoints(endpoints, radius)
             chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
             w += (-self_["q"] / (2 * np.pi * chi_mirror)) * (
@@ -255,8 +277,17 @@ def calc_w(self_, z, frac_is_id, radius):
         ] / (2 * np.pi * chi)
         w *= 2 * chi**2 / (chi**2 - 1) * 2 / (endpoints[1] - endpoints[0])
         # Mirror term: -d/dz[ -well_chi(chi_mirror, q) ] = +contribution
-        center = (endpoints[0] + endpoints[1]) / 2.0
-        if np.abs(center) > 1e-14:
+        cond0 = (
+            np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+            > radius * R_COND
+        )
+        cond1 = (
+            np.abs((self_["endpoints1"][0] + self_["endpoints1"][1]) / 2.0)
+            > radius * R_COND
+        )
+        cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
+        cond1 = cond0
+        if cond0 or cond1:
             m_endpoints = gf.mirror_endpoints(endpoints, radius)
             chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
             w += (self_["q"] / (2 * np.pi * chi_mirror)) * (

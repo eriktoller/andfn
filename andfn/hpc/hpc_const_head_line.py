@@ -9,6 +9,7 @@ import numba as nb
 
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
+from .hpc_intersection import R_COND
 
 
 @nb.njit()
@@ -33,8 +34,13 @@ def discharge_term(self_, z, radius):
     for z0 in z:
         chi = gf.map_z_line_to_chi(z0, self_["endpoints0"])
         phi += np.real(mf.well_chi(chi, 1.0))
-        chi_mirror = gf.map_z_line_to_chi(z0, m_endpoints)
-        phi += np.real(mf.well_chi(chi_mirror, 1.0))
+        cond0 = (
+            np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+            > radius * R_COND
+        )
+        if cond0:
+            chi_mirror = gf.map_z_line_to_chi(z0, m_endpoints)
+            phi += np.real(mf.well_chi(chi_mirror, 1.0))
     return phi / len(z)
 
 
@@ -109,9 +115,12 @@ def calc_omega(self_, z, radius, mirror=False):
     omega : complex
         The resulting value for the omega function
     """
-    center = (self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0
     if mirror:
-        if np.abs(center) > 1e-14:
+        cond0 = (
+            np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+            > radius * R_COND
+        )
+        if cond0:
             m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
             chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
             return mf.well_chi(chi_mirror, self_["q"])
@@ -119,7 +128,11 @@ def calc_omega(self_, z, radius, mirror=False):
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
     omega = mf.well_chi(chi, self_["q"])
     omega += mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
-    if np.abs(center) > 1e-14:
+    cond0 = (
+        np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+        > radius * R_COND
+    )
+    if cond0:
         m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
         chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
         omega += mf.well_chi(chi_mirror, self_["q"])
@@ -183,8 +196,10 @@ def calc_w(self_, z, radius):
         / (self_["endpoints0"][1] - self_["endpoints0"][0])
     )
     # Mirror term: -d/dz[ well_chi(chi_mirror, q) ]
-    center = (self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0
-    if np.abs(center) > 1e-14:
+    cond0 = (
+        np.abs(self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0 > radius * R_COND
+    )
+    if cond0:
         m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
         chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
         w += (-self_["q"] / (2 * np.pi * chi_mirror)) * (

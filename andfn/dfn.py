@@ -1848,7 +1848,7 @@ class DFN(Constants):
         logger.info(f"Number of fractures: {len(self.fractures)}")
         logger.info(f" Number of elements: {len(self.elements)}")
         self.print_solver_constants()
-        self.elements_struc_array = hpc_solve(
+        self.elements_struc_array, self.work_array = hpc_solve(
             self.fractures_struc_array_hpc,
             self.elements_struc_array_hpc,
             self.discharge_int,

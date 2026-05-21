@@ -11,6 +11,7 @@ import math
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
 from andfn.hpc import CACHE
+from .hpc_intersection import R_COND
 
 
 @nb.njit(inline="always")
@@ -297,36 +298,58 @@ def cauchy_integral_real(
     coef[0] = coef[0] / 2
 
 
+@nb.njit(inline="always")
+def _find_crossings(
+    self_, angles, nint, sign_val, element_id, work_array, cnt, is_mirror
+):
+    """Detect branch cut crossings via phase unwrapping.
+    Crossing at segment ii means the branch cut is between z_pos[ii] and z_pos[ii+1].
+    n_cross counts total crossings from start; a change in n_cross pinpoints the segment.
+    """
+    unwrapped = angles[0]
+    n_cross = 0
+
+    for ii in range(nint - 1):
+        raw_diff = angles[ii + 1] - angles[ii]
+
+        # Wrap step to (-π, π] to get the smooth (unwrapped) increment
+        if raw_diff > np.pi:
+            raw_diff -= 2.0 * np.pi
+        elif raw_diff <= -np.pi:
+            raw_diff += 2.0 * np.pi
+
+        unwrapped += raw_diff
+        # How many full 2π cycles separate the unwrapped phase from the raw angle?
+        new_n_cross = int(np.round((unwrapped - angles[ii + 1]) / (2.0 * np.pi)))
+
+        if new_n_cross != n_cross:
+            work_array["element_pos"][cnt] = ii
+            work_array["discharge_element"][cnt] = element_id
+
+            if is_mirror:
+                # Direction from raw (non-wrapped) diff
+                actual_diff = angles[ii + 1] - angles[ii]
+                if actual_diff > 0:
+                    work_array["sign_array"][cnt] = -sign_val
+                else:
+                    work_array["sign_array"][cnt] = sign_val
+            else:
+                # Reconstruct chi on unit circle from angles for get_sign compatibility
+                chi0 = np.cos(angles[ii]) + 1j * np.sin(angles[ii])
+                chi1 = np.cos(angles[ii + 1]) + 1j * np.sin(angles[ii + 1])
+                get_sign(self_, work_array, cnt, chi0, chi1, sign_val)
+
+            work_array["len_discharge_element"] += 1
+            cnt += 1
+            n_cross = new_n_cross
+
+    return cnt
+
+
 @nb.njit()
 def find_branch_cuts(
     self_, z_pos, fracture_struc_array, element_struc_array, work_array, nint
 ):
-    """
-    Find the branch cuts for the fracture.
-
-    Parameters
-    ----------
-    self_ : np.ndarray[element_dtype]
-        The bounding circle element
-    z_pos : np.ndarray[np.complex128]
-        The positions in the complex plane
-    fracture_struc_array : np.ndarray[fracture_dtype]
-        The array of fractures
-    element_struc_array : np.ndarray[element_dtype]
-        The array of elements
-    work_array : np.ndarray[dtype_work]
-        The work array
-    nint : int
-            The number of integration points
-
-    Returns
-    -------
-    dpsi_corr : np.ndarray[np.float64]
-        The correction to the potential due to the branch cuts
-    """
-    # Find the branch cuts
-    dpsi_corr = np.zeros(nint - 1, dtype=float)
-
     nel = fracture_struc_array[self_["frac0"]]["nelements"]
     elements_list = fracture_struc_array[self_["frac0"]]["elements"][:nel]
     elements = element_struc_array[elements_list]
@@ -346,9 +369,19 @@ def find_branch_cuts(
 
                 chi0 = gf.map_z_line_to_chi(z_pos[ii], endpoints)
                 chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], endpoints)
-                ln0, ln1 = np.imag(np.log(chi0)), np.imag(np.log(chi1))
-                if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
-                    dpsi_corr[ii] -= sign_val * e["q"]
+                chi_mid = gf.map_z_line_to_chi(
+                    (z_pos[ii] + z_pos[ii + 1]) / 2.0, endpoints
+                )
+                ln0 = np.imag(np.log(chi0))
+                ln1 = np.imag(np.log(chi1))
+                ln_mid = np.imag(np.log(chi_mid))
+                # Use midpoint to disambiguate when an endpoint lies on the branch cut
+                crossed = (
+                    (np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi)
+                    or (ln0 == 0.0 and np.abs(ln_mid) + np.abs(ln1) > np.pi)
+                    or (ln1 == 0.0 and np.abs(ln0) + np.abs(ln_mid) > np.pi)
+                )
+                if crossed:
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, sign_val)
@@ -356,16 +389,35 @@ def find_branch_cuts(
                     cnt += 1
 
                 # Mirror branch cut
-                center = (endpoints[0] + endpoints[1]) / 2.0
-                if np.abs(center) > 1e-14:
+                cond0 = (
+                    np.abs((e["endpoints0"][0] + e["endpoints0"][1]) / 2.0)
+                    > frac_radius * R_COND
+                )
+                cond1 = (
+                    np.abs((e["endpoints1"][0] + e["endpoints1"][1]) / 2.0)
+                    > frac_radius * R_COND
+                )
+                cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > frac_radius * R_COND
+                cond1 = cond0
+                if cond0 or cond1:
                     m_endpoints = gf.mirror_endpoints(endpoints, frac_radius)
+                    z_mid = (z_pos[ii] + z_pos[ii + 1]) / 2.0
                     chi0m = gf.map_z_line_to_chi(z_pos[ii], m_endpoints)
                     chi1m = gf.map_z_line_to_chi(z_pos[ii + 1], m_endpoints)
-                    ln0m, ln1m = np.imag(np.log(chi0m)), np.imag(np.log(chi1m))
-                    if (
-                        np.sign(ln0m) != np.sign(ln1m)
-                        and np.abs(ln0m) + np.abs(ln1m) > np.pi
-                    ):
+                    chi_mid = gf.map_z_line_to_chi(z_mid, m_endpoints)
+                    ln0m = np.imag(np.log(chi0m))
+                    ln1m = np.imag(np.log(chi1m))
+                    ln_mid = np.imag(np.log(chi_mid))
+                    # Use midpoint to disambiguate when an endpoint lies on the branch cut
+                    crossed = (
+                        (
+                            np.sign(ln0m) != np.sign(ln1m)
+                            and np.abs(ln0m) + np.abs(ln1m) > np.pi
+                        )
+                        or (ln0m == 0.0 and np.abs(ln_mid) + np.abs(ln1m) > np.pi)
+                        or (ln1m == 0.0 and np.abs(ln0m) + np.abs(ln_mid) > np.pi)
+                    )
+                    if crossed:
                         work_array["element_pos"][cnt] = ii
                         work_array["discharge_element"][cnt] = e["_id"]
                         # Mirror can be crossed twice with opposite signs — use direction-based sign
@@ -381,7 +433,6 @@ def find_branch_cuts(
                 ln0 = np.imag(np.log(chi0))
                 ln1 = np.imag(np.log(chi1))
                 if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
-                    dpsi_corr[ii] -= e["q"]
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
@@ -390,10 +441,19 @@ def find_branch_cuts(
             elif e["_type"] == 3:  # Constant head line
                 chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                 chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
+                chi_mid = gf.map_z_line_to_chi(
+                    (z_pos[ii] + z_pos[ii + 1]) / 2.0, endpoints
+                )
                 ln0 = np.imag(np.log(chi0))
                 ln1 = np.imag(np.log(chi1))
-                if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
-                    dpsi_corr[ii] -= e["q"]
+                ln_mid = np.imag(np.log(chi_mid))
+                # Use midpoint to disambiguate when an endpoint lies on the branch cut
+                crossed = (
+                    (np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi)
+                    or (ln0 == 0.0 and np.abs(ln_mid) + np.abs(ln1) > np.pi)
+                    or (ln1 == 0.0 and np.abs(ln0) + np.abs(ln_mid) > np.pi)
+                )
+                if crossed:
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
@@ -401,16 +461,29 @@ def find_branch_cuts(
                     cnt += 1
 
                 # Mirror branch cut
-                center = (e["endpoints0"][0] + e["endpoints0"][1]) / 2.0
-                if np.abs(center) > 1e-14:
+                cond0 = (
+                    np.abs((e["endpoints0"][0] + e["endpoints0"][1]) / 2.0)
+                    > frac_radius * R_COND
+                )
+                if cond0:
                     m_endpoints = gf.mirror_endpoints(e["endpoints0"], frac_radius)
                     chi0m = gf.map_z_line_to_chi(z_pos[ii], m_endpoints)
                     chi1m = gf.map_z_line_to_chi(z_pos[ii + 1], m_endpoints)
-                    ln0m, ln1m = np.imag(np.log(chi0m)), np.imag(np.log(chi1m))
-                    if (
-                        np.sign(ln0m) != np.sign(ln1m)
-                        and np.abs(ln0m) + np.abs(ln1m) > np.pi
-                    ):
+                    z_mid = (z_pos[ii] + z_pos[ii + 1]) / 2.0
+                    chi_mid = gf.map_z_line_to_chi(z_mid, m_endpoints)
+                    ln0m = np.imag(np.log(chi0m))
+                    ln1m = np.imag(np.log(chi1m))
+                    ln_mid = np.imag(np.log(chi_mid))
+                    # Use midpoint to disambiguate when an endpoint lies on the branch cut
+                    crossed = (
+                        (
+                            np.sign(ln0m) != np.sign(ln1m)
+                            and np.abs(ln0m) + np.abs(ln1m) > np.pi
+                        )
+                        or (ln0m == 0.0 and np.abs(ln_mid) + np.abs(ln1m) > np.pi)
+                        or (ln1m == 0.0 and np.abs(ln0m) + np.abs(ln_mid) > np.pi)
+                    )
+                    if crossed:
                         work_array["element_pos"][cnt] = ii
                         work_array["discharge_element"][cnt] = e["_id"]
                         # Mirror can be crossed twice with opposite signs — use direction-based sign
@@ -465,6 +538,8 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
             z_pos = gf.map_chi_to_z_line(
                 work_array["exp_array_p"][: self_["nint"]], self_["endpoints0"]
             )
+        else:
+            return
         find_branch_cuts(
             self_,
             z_pos,
@@ -475,6 +550,7 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
         )
     # set dpsi_corr to zero
     self_["dpsi_corr"][: self_["nint"] - 1] = 0.0
+    self_["dpsi_corr"][:] = 0.0
     for i in range(work_array["len_discharge_element"]):
         e = element_struc_array[work_array["discharge_element"][i]]
         self_["dpsi_corr"][work_array["element_pos"][i]] += (
@@ -630,6 +706,12 @@ def cauchy_integral_domega(
         psi1 = psi0 + work_array["dpsi"][ii]
         work_array["psi"][ii] = psi1
         psi0 = psi1
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(work_array["psi"][:n])
+    # plt.plot(dpsi_corr[:n])
+    # plt.title(f"Frac0: {frac0['_id']}, Element ID: {element_id_}")
+    # plt.show()
 
     for jj in range(m):
         res_tmp = 0.0 + 0.0j
