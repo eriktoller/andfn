@@ -75,8 +75,8 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
     # Loop through the elements of the fracture
     for e in range(self_["nelements"]):
         el = self_["elements"][e]
-        element = element_struc_array[el]
         if el != exclude:
+            element = element_struc_array[el]
             if element["_type"] == 0:  # Intersection
                 omega += hpc_intersection.calc_omega(
                     element, z, self_["_id"], self_["radius"]
@@ -92,6 +92,7 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
             elif element["_type"] == 5:  # Impermeable line
                 omega += hpc_imp_object.calc_omega_line(element, z)
         else:
+            element = element_struc_array[el]
             # If the element is the one to exclude, we still need to add  the contribution from the mirror image of the element if it is an intersection or constant head line
             if element["_type"] == 0:  # Intersection
                 omega += hpc_intersection.calc_omega(
