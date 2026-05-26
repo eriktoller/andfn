@@ -164,6 +164,7 @@ fracture_dtype_hpc = np.dtype(
         ("elements", np.int_, MAX_ELEMENTS),
         ("nelements", np.int_),
         ("constant", np.float64),
+        ("error_constant", np.complex128),
     ]
 )
 

@@ -30,6 +30,8 @@ dtype_work = np.dtype(
         ("coef", np.complex128, MAX_NCOEF),
         ("coef0", np.complex128, MAX_NCOEF),
         ("coef1", np.complex128, MAX_NCOEF),
+        ("coef_error", np.complex128, MAX_NCOEF),
+        ("a0_error", np.complex128),
         ("old_coef", np.complex128, MAX_NCOEF),
         ("dpsi", np.float64, MAX_NCOEF * 2),
         ("error", np.float64),
@@ -1592,7 +1594,7 @@ def compute_bnd_error(
     get_z_int_array(z_int, element_struc_array, discharge_int)
 
     max_error = float(constants["MAX_ERROR"])
-    bnd_error = np.zeros([num_elements, 6], dtype=np.float64)
+    bnd_error = np.zeros([num_elements, 7], dtype=np.float64)
 
     get_bnd_error(
         num_elements,

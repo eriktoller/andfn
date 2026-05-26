@@ -101,6 +101,57 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     )
 
 
+@nb.njit()
+def solve_error(
+    self_, fracture_struc_array, element_struc_array, error_struc_array, work_array
+):
+    """
+    Solves the constant head line element.
+
+    Parameters
+    ----------
+    self_ : np.ndarray element_dtype
+        The constant head line element.
+    fracture_struc_array : np.ndarray
+        The array of fractures.
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements.
+    work_array : np.ndarray[work_dtype]
+        The work array.
+
+    Returns
+    -------
+    Edits the self_ array and works_array in place.
+    """
+    frac0 = fracture_struc_array[self_["frac0"]]
+    work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    mf.cauchy_integral_real_error(
+        self_["nint"],
+        self_["ncoef"],
+        self_["thetas"][: self_["nint"]],
+        frac0,
+        self_["_id"],
+        element_struc_array,
+        error_struc_array,
+        self_["endpoints0"],
+        work_array,
+        work_array["coef"][: self_["ncoef"]],
+        self_["phi"],
+    )
+
+    for i in range(self_["ncoef"]):
+        work_array["coef"][i] = -np.real(work_array["coef"][i])
+    work_array["coef"][0] = (
+        0.0  # Set the first coefficient to zero (constant embedded in discharge matrix)
+    )
+    self_["error"] = mf.calc_error(
+        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+    )
+    self_["error_coef"] = mf.calc_coef_error(
+        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+    )
+
+
 @nb.njit(inline="always")
 def calc_omega(self_, z, radius, mirror=False):
     """
@@ -147,6 +198,27 @@ def calc_omega(self_, z, radius, mirror=False):
     return omega
 
 
+def calc_omega_error(self_, z):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    z : complex
+        An array of points in the complex z-plane
+
+    Return
+    ------
+    omega : complex
+        The resulting value for the omega function
+    """
+    chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
+    omega = mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    return omega
+
+
 @nb.njit()
 def calc_omega_array(self_, omega, z):
     """
@@ -171,6 +243,7 @@ def calc_omega_array(self_, omega, z):
     mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
 
 
+@nb.njit()
 def calc_w(self_, z, radius):
     """
     Calculate the complex discharge vector for the constant head line.
@@ -192,9 +265,8 @@ def calc_w(self_, z, radius):
     # Map the z point to the chi plane
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
     # Calculate w
-    w = -mf.asym_expansion_d1(chi, self_["coef"][: self_["ncoef"]]) - self_["q"] / (
-        2 * np.pi * chi
-    )
+    w = -mf.asym_expansion_d1(chi, self_["coef"][: self_["ncoef"]])
+    w -= self_["q"] / (2 * np.pi * chi)
     w *= (
         2
         * chi**2
@@ -209,12 +281,14 @@ def calc_w(self_, z, radius):
     if cond0:
         m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
         chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
-        w += (-self_["q"] / (2 * np.pi * chi_mirror)) * (
-            2
+        w -= (
+            self_["q"]
+            / (2 * np.pi * chi_mirror)
+            * 2
             * chi_mirror**2
             / (chi_mirror**2 - 1)
             * 2
-            / (m_endpoints[1] - m_endpoints[0])
+            / (self_["endpoints0"][1] - self_["endpoints0"][0])
         )
     return w
 

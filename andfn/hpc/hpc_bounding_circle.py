@@ -71,6 +71,28 @@ def calc_omega(self_, z):
     return omega
 
 
+@nb.njit(inline="always")
+def calc_omega_error(self_, z):
+    """
+    Calculates the omega for the bounding circle.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    z : complex
+        A point in the complex z plane.
+
+    Returns
+    -------
+    omega : complex
+        The complex potential for the bounding circle.
+    """
+    chi = get_chi(self_, z)
+    omega = mf.taylor_series(chi, self_["coef"][: self_["ncoef"]])
+    return omega
+
+
 @nb.njit()
 def calc_omega_array(self_, omega, z):
     """
@@ -93,7 +115,7 @@ def calc_omega_array(self_, omega, z):
     mf.taylor_series_array(omega, chi, self_["coef"][: self_["ncoef"]])
 
 
-# @nb.njit(, inline='always')
+@nb.njit()
 def calc_w(self_, z):
     """
     Calculates the omega for the bounding circle.
@@ -111,7 +133,8 @@ def calc_w(self_, z):
         The complex potential for the bounding circle.
     """
     chi = get_chi(self_, z)
-    w = mf.taylor_series_d1(chi, self_["coef"][: self_["ncoef"]])
+    w = -mf.taylor_series_d1(chi, self_["coef"][: self_["ncoef"]])
+    w /= self_["radius"]
     return w
 
 
@@ -155,6 +178,54 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     # self_['error'] = np.max(np.abs(work_array['coef'][:self_['ncoef']] - work_array['old_coef'][:self_['ncoef']]))
     self_["error_old2"] = self_["error_old"]
     self_["error_old"] = self_["error"]
+    self_["error"] = mf.calc_error(
+        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+    )
+    self_["error_coef"] = mf.calc_coef_error(
+        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+    )
+
+
+@nb.njit()
+def solve_error(
+    self_, fracture_struc_array, element_struc_array, error_struc_array, work_array
+):
+    """
+    Solves the bounding circle element.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    fracture_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+    work_array : np.ndarray[dtype_work]
+        The work array
+
+    Returns
+    -------
+    Edits the self_ array and works_array in place.
+    """
+
+    mf.get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array)
+    frac0 = fracture_struc_array[self_["frac0"]]
+    work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    mf.cauchy_integral_domega_error(
+        self_["nint"],
+        self_["ncoef"],
+        self_["dpsi_corr"][: self_["nint"] - 1],
+        frac0,
+        self_["_id"],
+        element_struc_array,
+        error_struc_array,
+        self_["radius"],
+        self_["center"],
+        work_array,
+        work_array["coef"][: self_["ncoef"]],
+    )
+    work_array["coef"][: self_["ncoef"]] = -work_array["coef"][: self_["ncoef"]]
     self_["error"] = mf.calc_error(
         work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )

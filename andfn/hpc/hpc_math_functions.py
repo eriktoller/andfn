@@ -298,6 +298,181 @@ def cauchy_integral_real(
     coef[0] = coef[0] / 2
 
 
+@nb.njit()
+def cauchy_integral_real_error(
+    n,
+    m,
+    thetas,
+    frac0,
+    element_id_,
+    element_struc_array,
+    error_struc_array,
+    endpoints0,
+    work_array,
+    coef,
+    bc_phi,
+):
+    """
+    FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
+
+    Parameters
+    ----------
+    n : int
+        Number of integration points
+    m : int
+        Number of coefficients
+    thetas : np.ndarray
+        Array with thetas along the unit circle
+    frac0 : np.ndarray
+        The fracture
+    element_id_ : int
+        The element id
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    endpoints0 : np.ndarray[np.complex128]
+        The endpoints of the constant head line
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
+
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        Array of coefficients
+    """
+    # set integral to zero
+    integral = np.zeros(m, dtype=np.complex128)
+    dphi = np.zeros(n, dtype=np.float64)
+    dphi_only = np.zeros(n, dtype=np.float64)
+
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        z = gf.map_chi_to_z_line(chi, endpoints0)
+        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array)
+        omega_error = hpc_fracture.calc_omega_error(
+            frac0, z, error_struc_array, element_id_
+        )
+        dphi[ii] = bc_phi - np.real(omega) + np.real(omega_error)
+        dphi_only[ii] = bc_phi - np.real(omega)
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array["exp_array_m"][ii]
+            res_tmp += dphi[ii] * exp_val
+        integral[jj] = res_tmp
+
+    for ii in range(m):
+        coef[ii] = 2 * integral[ii] / n
+    coef[0] = coef[0] / 2
+
+
+@nb.njit()
+def cauchy_integral_intersection_error(
+    n,
+    m,
+    thetas,
+    frac0,
+    frac1,
+    element_id_,
+    element_struc_array,
+    error_struc_array,
+    endpoints0,
+    endpoints1,
+    work_array,
+    coef,
+):
+    """
+    FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
+
+    Parameters
+    ----------
+    n : int
+        Number of integration points
+    m : int
+        Number of coefficients
+    thetas : np.ndarray
+        Array with thetas along the unit circle
+    frac0 : np.ndarray
+        The fracture
+    element_id_ : int
+        The element id
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    error_struc_array : np.ndarray[error_dtype]
+        Array of errors
+    endpoints0 : np.ndarray[np.complex128]
+        The endpoints of the constant head line
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
+
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        Array of coefficients
+    """
+    # set integral to zero
+    integral = np.zeros(m, dtype=np.complex128)
+    dphi = np.zeros(n, dtype=np.float64)
+    dphi_only = np.zeros(n, dtype=np.float64)
+
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        z0 = gf.map_chi_to_z_line(chi, endpoints0)
+        omega0 = hpc_fracture.calc_omega(frac0, z0, element_struc_array)
+        omega_error0 = hpc_fracture.calc_omega_error(
+            frac0, z0, error_struc_array, element_id_
+        )
+        z1 = gf.map_chi_to_z_line(chi, endpoints1)
+        omega1 = hpc_fracture.calc_omega(frac1, z1, element_struc_array)
+        omega_error1 = hpc_fracture.calc_omega_error(
+            frac1, z1, error_struc_array, element_id_
+        )
+        dphi[ii] = (np.real(omega1) - np.real(omega0)) - (
+            np.real(omega_error1) - np.real(omega_error0)
+        )
+        dphi_only[ii] = np.real(omega1) - np.real(omega0)
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array["exp_array_m"][ii]
+            res_tmp += dphi[ii] * exp_val
+        integral[jj] = res_tmp
+
+    for ii in range(m):
+        coef[ii] = 2 * integral[ii] / n
+    coef[0] = coef[0] / 2
+
+    """
+    coef = -np.real(coef)
+    E_recon = np.zeros(n, dtype=np.complex128)
+    E_full = np.zeros(n, dtype=np.complex128)
+
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        E_recon[ii] = asym_expansion(chi, coef)
+        z = gf.map_chi_to_z_line(chi, endpoints0)
+        z1 = gf.map_chi_to_z_line(chi, endpoints1)
+        E_full[ii] = (hpc_fracture.calc_omega_error(frac0, z, error_struc_array,element_id_) + hpc_fracture.calc_omega_error(frac1, z1, error_struc_array, element_id_) + asym_expansion(chi, coef))
+
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.plot(dphi, label="BC + error")
+    plt.plot(dphi_only, label="BC only")
+    plt.plot(np.real(E_recon), label="Re(E)")
+    plt.plot(-np.real(E_full), label="Re(E) full")
+    plt.legend()
+    plt.show()
+
+    """
+
+
 @nb.njit(inline="always")
 def _find_crossings(
     self_, angles, nint, sign_val, element_id, work_array, cnt, is_mirror
@@ -693,6 +868,163 @@ def cauchy_integral_domega(
     for ii in range(m):
         coef[ii] = 2j * work_array["integral"][ii] / n
     coef[0] = coef[0] / 2
+
+
+@nb.njit()
+def cauchy_integral_domega_error(
+    n,
+    m,
+    dpsi_corr,
+    frac0,
+    element_id_,
+    element_struc_array,
+    error_struc_array,
+    radius,
+    center,
+    work_array,
+    coef,
+):
+    """
+    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
+
+    Parameters
+    ----------
+    n : np.int64
+        Number of integration points
+    m : np.int64
+        Number of coefficients
+    dpsi_corr : np.ndarray[np.complex128]
+        Correction for the stream function
+    frac0 : np.ndarray[fracture_dtype]
+        The fracture
+    element_id_ : np.int64
+        The element id
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    radius : np.float64
+        The radius of the bounding circle
+    center : np.complex128
+        The center of the bounding circle
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
+
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        Array of coefficients
+    """
+    dpsi = np.zeros(n, dtype=np.float64)
+    dpsi_only = np.zeros(n, dtype=np.float64)
+    om_error = np.zeros(n, dtype=np.complex128)
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        z = gf.map_chi_to_z_circle(chi, radius, center)
+        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array)
+        omega_error = hpc_fracture.calc_omega_error(
+            frac0, z, error_struc_array, element_id_
+        )
+        om_error[ii] = omega_error
+        work_array["psi"][ii] = np.imag(omega) + np.imag(omega_error)
+    delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
+    work_array["dpsi"][0] = 0.0  # Add this line to set the first value of dpsi to zero
+    work_array["dpsi"][1:n] = delta_psi - dpsi_corr
+    # set integral to zero
+    work_array["integral"][:] = 0.0
+
+    psi0 = work_array["psi"][0]
+    for ii in range(n):
+        psi1 = psi0 + work_array["dpsi"][ii]
+        work_array["psi"][ii] = psi1
+        psi0 = psi1
+        dpsi[ii] = work_array["psi"][ii]
+        dpsi_only[ii] = dpsi[ii] - np.imag(om_error[ii])
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(work_array["psi"][:n])
+    # plt.plot(dpsi_corr[:n])
+    # plt.title(f"Frac0: {frac0['_id']}, Element ID: {element_id_}")
+    # plt.show()
+
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array["exp_array_m"][ii]
+            res_tmp += work_array["psi"][ii] * exp_val
+        work_array["integral"][jj] = res_tmp
+
+    for ii in range(m):
+        coef[ii] = 2j * work_array["integral"][ii] / n
+    coef[0] = coef[0] / 2
+
+    """
+    coef = -coef
+    E_recon = np.zeros(n, dtype=np.complex128)
+    E_full = np.zeros(n, dtype=np.complex128)
+
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        E_recon[ii] = taylor_series(chi, coef)
+        z = gf.map_chi_to_z_circle(chi, radius, center)
+        E_full[ii] = hpc_fracture.calc_omega_error(frac0, z, error_struc_array,
+                                                   element_id_) + taylor_series(chi,
+                                                                                 coef)
+
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.plot(dpsi, label="BC + error")
+    plt.plot(dpsi_only, label="BC only")
+    plt.plot(np.imag(E_recon), label="Re(E)")
+    plt.plot(-np.imag(E_full), label="Re(E) full")
+    plt.legend()
+    plt.show()
+    """
+
+
+def fourier_coefficients(omega, thetas, ncoef, taylor=False):
+    """
+    Function that calculates the Fourier coefficients for a given array of omega values and thetas.
+
+    Parameters
+    ----------
+    omega : np.ndarray[np.complex128]
+        An array of omega values
+    thetas : np.ndarray[np.float64]
+        An array of thetas
+    ncoef : int
+        The number of coefficients to calculate
+    taylor : bool, optional
+        Whether to calculate the Taylor coefficients (default is False, which calculates the Laurent coefficients)
+
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        An array of Fourier coefficients
+    """
+    n = omega.size
+    coef = np.zeros(ncoef, dtype=np.complex128)
+    integral = np.zeros(ncoef, dtype=np.complex128)
+
+    const = -2j if taylor else 2  # Taylor: - , Laurent: +
+    omega = np.convolve(omega, np.ones(5) / 5, mode="same")
+
+    for jj in range(ncoef):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= np.exp(-1j * jj * thetas[ii])
+            res_tmp += omega[ii] * exp_val
+        integral[jj] = res_tmp
+
+    for ii in range(ncoef):
+        coef[ii] = const * integral[ii] / n
+    coef[0] = coef[0] / 2 * 0  # The first coefficient is computed outside of the loop
+
+    return coef
 
 
 @nb.njit(inline="always")

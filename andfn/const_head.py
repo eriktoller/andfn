@@ -148,10 +148,10 @@ class ConstantHeadLine(Element):
             chi_test = np.exp(1j * np.pi / 2) * (1 + offset)
             z_test = gf.map_chi_to_z_line(chi_test, self.endpoints0)
             center_line = (self.endpoints0[0] + self.endpoints0[1]) / 2
-            if np.abs(z_test - self.frac0.center) < np.abs(z_test - center_line):
-                stop = np.pi
-            else:
+            if np.abs(z_test) < np.abs(z_test - center_line):
                 start = np.pi
+            else:
+                stop = np.pi
         chi = np.exp(1j * np.linspace(start, stop, n, endpoint=False)) * (1 + offset)
         return gf.map_chi_to_z_line(chi, self.endpoints0)
 

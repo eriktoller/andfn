@@ -86,6 +86,7 @@ def calc_omega_array(self_, omega, z):
             omega[i] = np.nan + np.nan * 1j
 
 
+@nb.njit()
 def calc_w(self_, z):
     """
     Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
