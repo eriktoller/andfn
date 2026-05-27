@@ -585,7 +585,7 @@ def get_bnd_error(
                     )
                     dphi_only[ii] = np.real(omega1) - np.real(omega0)
 
-                phi_const = np.mean(dphi_only) - np.mean(omega_er.real)
+                phi_const = np.mean(dphi_only - omega_er.real)
                 omega_er -= phi_const
 
                 import matplotlib.pyplot as plt
@@ -611,7 +611,7 @@ def get_bnd_error(
                     dphi[ii] = e["phi"] - np.real(omega) + np.real(omega_error)
                     dphi_only[ii] = e["phi"] - np.real(omega)
 
-                phi_const = np.mean(dphi_only) - np.mean(omega_er.real)
+                phi_const = np.mean(dphi_only - omega_er.real)
                 omega_er -= phi_const
                 import matplotlib.pyplot as plt
 
@@ -655,5 +655,6 @@ def get_bnd_error(
             plt.title(f"Boundary condition error for element {j} (type {e['_type']})")
             plt.plot(dpsi_only, label="BC")
             plt.plot(-om_error.imag, label="E(z)")
+            plt.plot(-om_error.real, label="Re E(z)")
             plt.legend()
             plt.show()
