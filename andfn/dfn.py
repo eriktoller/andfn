@@ -2478,6 +2478,7 @@ class DFN(Constants):
         colorbar=True,
         debug=False,
         fractures=None,
+        unit="m",
     ):
 
         start = time.time()
@@ -2563,7 +2564,7 @@ class DFN(Constants):
             opacity=opacity,
             show_edges=False,
             line_width=line_width,
-            scalar_bar_args=dict(title="Hydraulic Head", shadow=True),
+            scalar_bar_args=dict(title=f"Hydraulic head [{unit}]", shadow=True),
             clim=limits,
             name="head",
         )
