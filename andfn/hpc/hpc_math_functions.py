@@ -604,9 +604,11 @@ def find_branch_cuts(
             elif e["_type"] == 3:  # Constant head line
                 chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                 chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
+                ln0m = np.imag(np.log(chi0))
+                ln1m = np.imag(np.log(chi1))
                 if (
-                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
-                    and np.real(chi0) < 0
+                    np.sign(ln0m) != np.sign(ln1m)
+                    and np.abs(ln0m) + np.abs(ln1m) > np.pi
                 ):
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
@@ -623,17 +625,21 @@ def find_branch_cuts(
                     m_endpoints = gf.mirror_endpoints(e["endpoints0"], frac_radius)
                     chi0m = gf.map_z_line_to_chi(z_pos[ii], m_endpoints)
                     chi1m = gf.map_z_line_to_chi(z_pos[ii + 1], m_endpoints)
+                    ln0m = np.imag(np.log(chi0m))
+                    ln1m = np.imag(np.log(chi1m))
                     if (
-                        np.sign(np.imag(chi0m)) != np.sign(np.imag(chi1m))
-                        and np.real(chi0m) < 0
+                        np.sign(ln0m) != np.sign(ln1m)
+                        and np.abs(ln0m) + np.abs(ln1m) > np.pi
                     ):
                         work_array["element_pos"][cnt] = ii
                         work_array["discharge_element"][cnt] = e["_id"]
-                        # Mirror can be crossed twice with opposite signs — use direction-based sign
+                        # Mirror contributes +well_chi(chi_mirror, q) — same sign as direct term.
+                        # neg→pos Im(chi_m): Im(log) jumps +2π → psi jumps +q → need dpsi_corr=+q → sign=+1
+                        # pos→neg Im(chi_m): Im(log) jumps -2π → psi jumps -q → need dpsi_corr=-q → sign=-1
                         if np.imag(chi0m) < np.imag(chi1m):
-                            work_array["sign_array"][cnt] = -1
-                        else:
                             work_array["sign_array"][cnt] = 1
+                        else:
+                            work_array["sign_array"][cnt] = -1
                         work_array["len_discharge_element"] += 1
                         cnt += 1
 

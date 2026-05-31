@@ -2622,7 +2622,7 @@ class DFN(Constants):
             ]
         for i, e in enumerate(elements):
             e.plot(pl, line_width=line_width, color=color)
-            logger.debug(f"Plotting elements: {i + 1} / {len(self.elements)}")
+            logger.debug(f"Plotting elements: {i + 1} / {len(elements)}")
         logger.debug("")
 
     def plot_sparse_matrix(

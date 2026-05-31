@@ -9,7 +9,7 @@ import numba as nb
 from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
 
-R_COND = 6 / 7
+R_COND = 90 / 100
 
 
 @nb.njit()
