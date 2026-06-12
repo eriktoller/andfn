@@ -9,6 +9,7 @@ import time
 
 import numpy as np
 import numba as nb
+import scipy as sp
 from andfn.hpc import hpc_math_functions as mf
 from andfn.hpc import hpc_geometry_functions as gf
 from andfn.hpc import (
@@ -82,35 +83,59 @@ def solve_error(
 
     Returns
     -------
-    element_struc_array : np.ndarray[element_dtype]
+    error_struc_array : np.ndarray[element_dtype]
         The array of elements
 
     """
     # Get the constants, this is necessary for Numba parallelization to work
     max_error = constants["MAX_ERROR"]
-    max_iterations = constants["MAX_ITERATIONS"]
+    max_iterations = constants["MAX_ITERATIONS"] * 0 + 20
     damping = float(constants["DAMPING"])
 
     # get the discharge elements
     logger.info("Compiling HPC code...")
 
     # Allocate memory for the work array
-    num_elements = len(element_struc_array)
+    discharge_elements = get_discharge_elements(error_struc_array)
+    num_elements = len(error_struc_array)
     work_array = np.zeros(num_elements, dtype=dtype_work)
-
+    # head matrix
+    size = discharge_elements.size + fracture_struc_array.size
+    head_matrix = np.zeros(size)
+    discharges = get_old_discharges(
+        error_struc_array, fracture_struc_array, discharge_elements
+    )
+    discharges_old = np.zeros(size)
     z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
-    get_z_int_array(z_int, element_struc_array, discharge_int)
+    get_z_int_array(z_int, discharge_elements, discharge_int)
     z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
-    get_z_int_array(z_int_error, element_struc_array, discharge_int)
+    get_z_int_array(z_int_error, error_struc_array, discharge_int)
+
+    # Discharge matrix
+    logger.info("Building discharge matrix...")
+    startdm = time.time()
+    discharge_matrix = build_discharge_matrix(
+        fracture_struc_array,
+        error_struc_array,
+        discharge_elements,
+        discharge_int,
+        z_int,
+    )
+    logger.debug(f"Discharge matrix build time: {time.time() - startdm}")
+
+    # LU-factorization
+    startlu = time.time()
+    lu_matrix = sp.sparse.linalg.splu(discharge_matrix)
+    logger.debug(f"LU factorization time: {time.time() - startlu}")
 
     # Set old error
     for i in nb.prange(num_elements):
-        e = element_struc_array[i]
+        e = error_struc_array[i]
         e["error_old"] = 1e30
         e["error"] = 1e30
 
     # fill work array ex_array
-    for i, e in enumerate(element_struc_array):
+    for i, e in enumerate(error_struc_array):
         n = e["nint"]
         mf.calc_thetas(n, e["_type"], e["thetas"][:n])
         thetas = e["thetas"]
@@ -118,7 +143,7 @@ def solve_error(
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_p"], 1)
         mf.fill_z_integral(e, work_array[i])
 
-    logger.info(f"Number of elements: {len(element_struc_array)}")
+    logger.info(f"Number of elements: {len(error_struc_array)}")
     logger.info(f"Number of fractures: {len(fracture_struc_array)}")
 
     error = np.float64(1.0)
@@ -130,6 +155,27 @@ def solve_error(
     sum_timeq = 0.0
     while cnt_error < 2 and nit < max_iterations:
         nit += 1
+        # Solve the discharge matrix
+        # startq = time.time()
+        if error_q > max_error / 1e30:
+            discharges_old[:] = discharges[:]
+            solve_discharge_matrix_error(
+                fracture_struc_array,
+                element_struc_array,
+                error_struc_array,
+                discharge_elements,
+                discharge_int,
+                head_matrix,
+                discharges,
+                discharges_old,
+                z_int,
+                lu_matrix,
+            )
+            error_q = np.max(
+                np.abs(discharges - discharges_old)
+                / (np.max(np.abs(discharges_old)) + 1e-16)
+            )
+        # timeq = time.time() - startq
 
         # Solve the elements
         starte = time.time()
@@ -147,27 +193,17 @@ def solve_error(
         timee = time.time() - starte
         sum_timee += timee
 
-        # After the while loop, before get_bnd_error:
-        calc_fracture_constant(
-            fracture_struc_array,
-            element_struc_array,
-            error_struc_array,
-            work_array,
-            discharge_int,
-            z_int,
-        )
-
         error, _id = get_error(error_struc_array)
         error_coef = np.max(error_struc_array["error_coef"])
 
         # print info
         if nit < 10:
             logger.info(
-                f"Iteration: 0{nit}, Error E: {error:.3e}, Coef: {error_coef:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
+                f"Iteration: 0{nit}, Error E: {error:.3e}, Coef: {error_coef:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {error_struc_array[_id]['ncoef']}, Type: {error_struc_array[_id]['_type']}"
             )
         else:
             logger.info(
-                f"Iteration: {nit}, Error E: {error:.3e}, Coef: {error_coef:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {element_struc_array[_id]['ncoef']}, Type: {element_struc_array[_id]['_type']}"
+                f"Iteration: {nit}, Error E: {error:.3e}, Coef: {error_coef:.3e}, Q: {error_q:.3e}, Element: {_id}, N of Coef: {error_struc_array[_id]['ncoef']}, Type: {error_struc_array[_id]['_type']}"
             )
 
         if error_coef < max_error and error_q < max_error:
@@ -190,6 +226,17 @@ def solve_error(
         f"Solve time: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds\n"
     )
 
+    num_elements = len(element_struc_array)
+
+    # Scratch arrays – work_array is zero-initialised;
+    # find_branch_cuts resets len_discharge_element itself.
+    work_array = np.zeros(num_elements, dtype=dtype_work)
+    z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
+
+    # z_int is only used for intersection / well / const-head rows
+    get_z_int_array(z_int, element_struc_array, discharge_int * 10)
+
+    max_error = float(constants["MAX_ERROR"])
     bnd_error = np.zeros((num_elements, 7), dtype=np.float64)
 
     get_bnd_error(
@@ -198,7 +245,7 @@ def solve_error(
         element_struc_array,
         error_struc_array,
         work_array,
-        discharge_int,
+        discharge_int * 10,
         bnd_error,
         z_int,
     )
@@ -206,135 +253,497 @@ def solve_error(
     return error_struc_array, work_array
 
 
-def calc_fracture_constant(
-    fracture_struc_array,
+def solve_discharge_matrix_error(
+    fractures_struc_array,
     element_struc_array,
     error_struc_array,
-    work_array,
+    discharge_elements,
     discharge_int,
+    head_matrix,
+    discharges,
+    discharges_old,
     z_int,
+    lu_matrix,
 ):
     """
-    Calculate the constant for the fractures.
+    Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
 
     Parameters
     ----------
-    fracture_struc_array : np.ndarray[fracture_dtype]
+    fractures_struc_array : np.ndarray[fracture_dtype]
+        Array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    discharge_elements : np.ndarray[element_dtype]
+        The discharge elements
+    discharge_int : int
+        The number of integration points
+    head_matrix : np.ndarray[dtype_head_matrix]
+        The head matrix
+    discharges : np.ndarray
+        The discharges to be solved
+    discharges_old : np.ndarray
+        The old discharges
+    z_int : np.ndarray[dtype_z_arrays]
+        The z arrays for the discharge elements
+    lu_matrix : scipy.sparse.linalg.splu
+        The LU factorization of the discharge matrix
+
+    Returns
+    -------
+    fractures_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+    """
+
+    # pre solver
+    start0 = time.time()
+    pre_matrix_solve(
+        fractures_struc_array,
+        element_struc_array,
+        error_struc_array,
+        discharge_elements,
+        discharge_int,
+        head_matrix,
+        z_int,
+    )
+    logger.debug(f"Pre solve time: {time.time() - start0}")
+
+    # Solve the discharge matrix
+    start0 = time.time()
+    discharges[:] = lu_matrix.solve(head_matrix)
+    print(discharges)
+    logger.debug(f"Solve matrix time: {time.time() - start0}")
+
+    # post solver
+    start0 = time.time()
+    post_matrix_solve(
+        fractures_struc_array,
+        error_struc_array,
+        discharge_elements,
+        discharges,
+        discharges_old,
+    )
+    logger.debug(f"Post solve time: {time.time() - start0}")
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
+def pre_matrix_solve(
+    fractures_struc_array,
+    element_struc_array,
+    error_struc_array,
+    discharge_elements,
+    discharge_int,
+    head_matrix,
+    z_int,
+):
+    """
+    Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
+
+    Parameters
+    ----------
+    fractures_struc_array : np.ndarray[fracture_dtype]
+        Array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    discharge_elements : np.ndarray[element_dtype]
+        The discharge elements
+    discharge_int : int
+        The number of integration points
+    head_matrix : np.ndarray[dtype_head_matrix]
+        The head matrix
+    z_int : np.ndarray[dtype_z_arrays]
+        The z arrays for the discharge elements
+
+    Returns
+    -------
+    fractures_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+    """
+
+    # Set the discharges equal to zero
+    for i in nb.prange(len(error_struc_array)):
+        error_struc_array[i]["q"] = 0.0
+
+    # Set the constants equal to zero
+    for i in nb.prange(len(fractures_struc_array)):
+        fractures_struc_array[i]["error_constant"] = 0.0
+
+    # Get the head matrix
+    build_head_matrix(
+        fractures_struc_array,
+        element_struc_array,
+        error_struc_array,
+        discharge_elements,
+        discharge_int,
+        head_matrix,
+        z_int,
+    )
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
+def post_matrix_solve(
+    fractures_struc_array,
+    error_struc_array,
+    discharge_elements,
+    discharges,
+    discharges_old,
+):
+    """
+    Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
+
+    Parameters
+    ----------
+    fractures_struc_array : np.ndarray[fracture_dtype]
+        Array of fractures
+    error_struc_array : np.ndarray[element_dtype]
+        Array of elements error
+    discharge_elements : np.ndarray[element_dtype]
+        The discharge elements
+    discharges : np.ndarray
+        The discharges
+    discharges_old : np.ndarray
+        The old discharges
+
+    Returns
+    -------
+    fractures_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+    """
+    # TODO: Should I use damping here too?
+    # Set the discharges for each element
+    for i in nb.prange(len(discharge_elements)):
+        e = discharge_elements[i]
+        error_struc_array[e["_id"]]["q"] = discharges[i]
+
+    # Set the constants for each fracture
+    for i in nb.prange(len(fractures_struc_array)):
+        fractures_struc_array[i]["error_constant"] = discharges[
+            len(discharge_elements) + i
+        ]
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
+def get_old_discharges(error_struc_array, fractures_struc_array, discharge_elements):
+    discharges_old = np.zeros(
+        len(discharge_elements) + np.max(error_struc_array["frac0"]) + 1
+    )
+    for i in nb.prange(len(discharge_elements)):
+        e = discharge_elements[i]
+        discharges_old[i] = error_struc_array[e["_id"]]["q"]
+    for i in nb.prange(len(fractures_struc_array)):
+        pos = len(discharge_elements) + i
+        discharges_old[pos] = fractures_struc_array[i]["error_constant"]
+    return discharges_old
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
+def build_head_matrix(
+    fractures_struc_array,
+    element_struc_array,
+    error_struc_array,
+    discharge_elements,
+    discharge_int,
+    head_matrix,
+    z_int,
+):
+    """
+    Builds the head matrix for the DFN and stores it.
+
+    Parameters
+    ----------
+    fractures_struc_array : np.ndarray[fracture_dtype]
         Array of fractures
     element_struc_array : np.ndarray[element_dtype]
         Array of elements
     error_struc_array : np.ndarray[element_dtype]
         Array of elements to compute the error for
-    work_array : np.ndarray[dtype_work]
-        The work array
+    discharge_elements : np.ndarray[element_dtype]
+        The discharge elements
     discharge_int : int
         The number of integration points
+    head_matrix : np.ndarray[dtype_head_matrix]
+        The head matrix
+    z_int : np.ndarray[dtype_z_arrays]
+        The z arrays for the discharge elements
 
     Returns
     -------
-    fracture_struc_array : np.ndarray[fracture_dtype]
-        The array of fractures with the constant calculated
+    matrix : np.ndarray
+        The head matrix
+    """
+
+    # Add the head for each discharge element
+    for j in nb.prange(discharge_elements.size):
+        e = discharge_elements[j]
+        frac0 = fractures_struc_array[e["frac0"]]
+        z0 = z_int["z0"][j][:discharge_int]
+        omega = 0.0 + 0.0j
+        er = 0.0 + 0.0j
+        diff = 0.0
+        for i in range(discharge_int):
+            fi_tmp = np.real(hpc_fracture.calc_omega(frac0, z0[i], element_struc_array))
+            er_tmp = np.real(
+                hpc_fracture.calc_omega_error(frac0, z0[i], error_struc_array)
+            )
+            omega += fi_tmp
+            er += er_tmp
+            diff += e["phi"] - fi_tmp
+        omega = omega / discharge_int
+        er = er / discharge_int
+        diff = diff / discharge_int + er
+        if e["_type"] == 0:  # Intersection
+            frac1 = fractures_struc_array[e["frac1"]]
+            z1 = z_int["z1"][j][:discharge_int]
+            omega1 = 0.0 + 0.0j
+            er1 = 0.0 + 0.0j
+            diff1 = 0.0
+            diff_er = 0.0
+            for i in range(discharge_int):
+                omega1 += hpc_fracture.calc_omega_error(
+                    frac1, z1[i], element_struc_array
+                )
+                er0 = (
+                    np.real(
+                        hpc_fracture.calc_omega_error(frac0, z0[i], error_struc_array)
+                    )
+                    / frac0["t"]
+                )
+                er1 = (
+                    np.real(
+                        hpc_fracture.calc_omega_error(frac1, z1[i], error_struc_array)
+                    )
+                    / frac1["t"]
+                )
+                fi_tmp = (
+                    np.real(hpc_fracture.calc_omega(frac0, z0[i], element_struc_array))
+                    / frac0["t"]
+                )
+                fi_tmp1 = (
+                    np.real(hpc_fracture.calc_omega(frac1, z1[i], element_struc_array))
+                    / frac1["t"]
+                )
+                diff1 += fi_tmp1 - fi_tmp
+                diff_er -= er1 - er0
+            er1 = er1 / discharge_int
+            omega1 = omega1 / discharge_int
+            diff1 = diff1 / discharge_int + diff_er / discharge_int
+            head_matrix[j] = -diff1
+        elif e["_type"] in [2, 3]:  # Well or Constant head line
+            head_matrix[j] = (e["phi"] - np.real(omega)) - np.real(er)
+            head_matrix[j] = -diff
+
+
+def build_discharge_matrix(
+    fractures_struc_array,
+    error_struc_array,
+    discharge_elements,
+    discharge_int,
+    z_int,
+):
+    """
+    Builds the discharge matrix for the DFN and adds it to the DFN.
 
     """
-    for i in range(len(fracture_struc_array)):
-        frac = fracture_struc_array[i]
-        nel = frac["nelements"]
-        nint = discharge_int
-        imag_const = 0.0
-        real_const = 0.0
-        return
+    # Estimate the maximum number of non-zero entries in the discharge matrix
+    max_id = int(np.max(error_struc_array["_id"]))
+    id_to_pos = np.full(max_id + 1, -1, dtype=np.int32)
+    for i, e in enumerate(discharge_elements):
+        id_to_pos[e["_id"]] = i
 
-        for e in element_struc_array[frac["elements"][:nel]]:
-            el_id = e["_id"]
-            if e["_type"] == 1:  # Bounding circle
-                z_pos = z_int["z0"][el_id][:nint]
+    nnz_per_row = count_discharge_nnz(
+        fractures_struc_array, error_struc_array, discharge_elements
+    )
+    row_offsets, total_nnz = exclusive_prefix_sum(nnz_per_row)
 
-                mf.find_branch_cuts(
-                    e,
-                    z_pos,
-                    fracture_struc_array,
-                    element_struc_array,
-                    work_array[el_id],
-                    nint,
-                )
+    rows = np.empty(total_nnz, np.int64)
+    cols = np.empty(total_nnz, np.int64)
+    data = np.empty(total_nnz, np.float64)
+    size = len(nnz_per_row)
 
-                dpsi_corr = np.zeros(nint)
-                for k in range(work_array[el_id]["len_discharge_element"]):
-                    ek = element_struc_array[work_array[el_id]["discharge_element"][k]]
-                    pos = int(work_array[el_id]["element_pos"][k])
-                    dpsi_corr[pos] += ek["q"] * work_array[el_id]["sign_array"][k]
+    fill_discharge_matrix(
+        fractures_struc_array,
+        error_struc_array,
+        discharge_elements,
+        id_to_pos,
+        z_int,
+        discharge_int,
+        row_offsets,
+        rows,
+        cols,
+        data,
+    )
 
-                omega_pts = np.zeros(nint, dtype=np.complex128)
-                for ii in range(nint):
-                    omega_pts[ii] = hpc_fracture.calc_omega(
-                        frac, z_pos[ii], element_struc_array
-                    )
+    logger.info(f"Dicharge matrix arrays size: {size}")
 
-                omega_er = np.zeros(nint, dtype=np.complex128)
-                for ii in range(nint):
-                    omega_er[ii] = hpc_fracture.calc_omega_error(
-                        frac, z_pos[ii], error_struc_array
-                    )
+    # create the csr sparse matrix
+    matrix = sp.sparse.csc_matrix((data, (rows, cols)), shape=(size, size))
 
-                psi = np.zeros(nint)
-                psi[0] = np.imag(omega_pts[0])
-                for ii in range(nint - 1):
-                    raw_dpsi = np.imag(omega_pts[ii + 1]) - np.imag(omega_pts[ii])
-                    psi[ii + 1] = psi[ii] + (raw_dpsi - dpsi_corr[ii])
+    return matrix
 
-                imag_const = np.mean(psi + np.imag(omega_er) * 0)
 
-            elif e["_type"] in [0, 3]:  # Intersection, Constant head line
-                z0 = z_int["z0"][el_id][:discharge_int]
-                omega_vec = np.zeros(discharge_int, dtype=np.complex128)
-                for ii in range(discharge_int):
-                    omega_vec[ii] = hpc_fracture.calc_omega(
-                        frac, z0[ii], element_struc_array
-                    )
+@nb.njit(parallel=True, cache=CACHE)
+def count_discharge_nnz(fractures, elements, discharge_elements):
+    n_de = discharge_elements.size
+    n_fr = fractures.size
+    nnz_per_row = np.zeros(n_de + n_fr, np.int64)
 
-                omega_er = np.zeros(discharge_int, dtype=np.complex128)
-                for ii in range(discharge_int):
-                    omega_er[ii] = hpc_fracture.calc_omega_error(
-                        frac, z0[ii], error_struc_array
-                    )
+    # Discharge element equations
+    for j in nb.prange(n_de):
+        e = discharge_elements[j]
+        cnt = 0
 
-                if e["_type"] == 0:  # Intersection
-                    frac1 = fracture_struc_array[e["frac1"]]
-                    z1 = z_int["z1"][el_id][:discharge_int]
-                    omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
-                    for ii in range(discharge_int):
-                        omega1_vec[ii] = hpc_fracture.calc_omega(
-                            frac1, z1[ii], element_struc_array
-                        )
+        if e["_type"] == 0:
+            for f_id in (e["frac0"], e["frac1"]):
+                f = fractures[f_id]
+                for k in range(f["nelements"]):
+                    ee = elements[f["elements"][k]]
+                    t = ee["_type"]
+                    if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                        continue
+                    cnt += 1
+            cnt += 2  # fracture continuity terms
+        else:
+            f = fractures[e["frac0"]]
+            for k in range(f["nelements"]):
+                ee = elements[f["elements"][k]]
+                t = ee["_type"]
+                if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                    continue
+                cnt += 1
+            cnt += 1
 
-                    omega_er1 = np.zeros(discharge_int, dtype=np.complex128)
-                    for ii in range(discharge_int):
-                        omega_er1[ii] = hpc_fracture.calc_omega_error(
-                            frac1, z1[ii], error_struc_array
-                        )
+        nnz_per_row[j] = cnt
 
-                    real_const = np.mean(
-                        np.real(omega_vec)
-                        - np.real(omega1_vec)
-                        + np.real(omega_er) * 0
-                        - np.real(omega_er1) * 0
-                    )
-                else:  # Constant head line
-                    real_const = np.mean(
-                        np.real(omega_vec) - e["phi"] + np.real(omega_er) * 0
-                    )
+    # Fracture continuity equations
+    for j in nb.prange(n_fr):
+        f = fractures[j]
+        cnt = 0
+        for k in range(f["nelements"]):
+            e = elements[f["elements"][k]]
+            if e["_type"] in (0, 2, 3):
+                cnt += 1
+        nnz_per_row[n_de + j] = cnt
 
-        frac["error_constant"] = real_const + 1j * imag_const
+    return nnz_per_row
 
 
 @nb.njit(cache=CACHE)
-def get_error(element_struc_array):
+def exclusive_prefix_sum(arr):
+    out = np.empty_like(arr)
+    s = 0
+    for i in range(arr.size):
+        out[i] = s
+        s += arr[i]
+    return out, s  # offsets, total nnz
+
+
+@nb.njit(parallel=True, cache=CACHE)
+def fill_discharge_matrix(
+    fractures,
+    elements,
+    discharge_elements,
+    id_to_pos,
+    z_int,
+    discharge_int,
+    row_offsets,
+    rows,
+    cols,
+    data,
+):
+    n_de = discharge_elements.size
+    n_fr = fractures.size
+
+    # ---- discharge element equations ----
+    for j in nb.prange(n_de):
+        e = discharge_elements[j]
+        row = j
+        ptr = row_offsets[j]
+
+        if e["_type"] == 0:
+            z0 = z_int["z0"][j][:discharge_int]
+            z1 = z_int["z1"][j][:discharge_int]
+
+            for f_id, sign in ((e["frac0"], 1.0), (e["frac1"], -1.0)):
+                f = fractures[f_id]
+                for k in range(f["nelements"]):
+                    ee = elements[f["elements"][k]]
+                    t = ee["_type"]
+                    if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                        continue
+
+                    rows[ptr] = row
+                    cols[ptr] = id_to_pos[ee["_id"]]
+                    data[ptr] = hpc_fracture.head_from_phi(
+                        f,
+                        sign
+                        * get_discharge_term(
+                            ee, z0 if sign > 0 else z1, f_id, f["radius"], e["_id"]
+                        ),
+                    )
+                    ptr += 1
+
+            rows[ptr] = row
+            cols[ptr] = n_de + e["frac0"]
+            data[ptr] = hpc_fracture.head_from_phi(fractures[e["frac0"]], 1.0)
+            ptr += 1
+
+            rows[ptr] = row
+            cols[ptr] = n_de + e["frac1"]
+            data[ptr] = hpc_fracture.head_from_phi(fractures[e["frac1"]], -1.0)
+
+        else:
+            f = fractures[e["frac0"]]
+            z0 = z_int["z0"][j][:discharge_int]
+
+            for k in range(f["nelements"]):
+                ee = elements[f["elements"][k]]
+                t = ee["_type"]
+                if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                    continue
+
+                rows[ptr] = row
+                cols[ptr] = id_to_pos[ee["_id"]]
+                data[ptr] = get_discharge_term(
+                    ee, z0, e["frac0"], f["radius"], e["_id"]
+                )
+                ptr += 1
+
+            rows[ptr] = row
+            cols[ptr] = n_de + e["frac0"]
+            data[ptr] = 1.0
+
+    # ---- fracture continuity equations ----
+    for j in nb.prange(n_fr):
+        f = fractures[j]
+        row = n_de + j
+        ptr = row_offsets[row]
+
+        for k in range(f["nelements"]):
+            e = elements[f["elements"][k]]
+            t = e["_type"]
+            if t not in (0, 2, 3):
+                continue
+
+            rows[ptr] = row
+            cols[ptr] = id_to_pos[e["_id"]]
+            data[ptr] = 1.0 if t != 0 or e["frac0"] == f["_id"] else -1.0
+            ptr += 1
+
+
+@nb.njit(cache=CACHE)
+def get_error(error_struc_array):
     """
     Get the maximum error from the elements and the element that it is associated with.
 
     Parameters
     ----------
-    element_struc_array : np.ndarray[element_dtype]
+    error_struc_array : np.ndarray[element_dtype]
         The array of elements
 
     Returns
@@ -344,19 +753,19 @@ def get_error(element_struc_array):
     _id : int
         The id of the element with the maximum error
     """
-    error = np.max(element_struc_array["error"])
-    _id = np.argmax(element_struc_array["error"])
+    error = np.max(error_struc_array["error"])
+    _id = np.argmax(error_struc_array["error"])
     return error, _id
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
-def get_discharge_elements(element_struc_array):
+def get_discharge_elements(error_struc_array):
     """
     Get the discharge elements from the element array.
 
     Parameters
     ----------
-    element_struc_array : np.ndarray[element_dtype]
+    error_struc_array : np.ndarray[element_dtype]
         The array of elements
 
     Returns
@@ -365,15 +774,15 @@ def get_discharge_elements(element_struc_array):
         The array of discharge elements
     """
     # get the discharge elements
-    el = np.zeros(len(element_struc_array), dtype=np.bool_)
-    for i in nb.prange(len(element_struc_array)):
-        if element_struc_array[i]["_type"] in {
+    el = np.zeros(len(error_struc_array), dtype=np.bool_)
+    for i in nb.prange(len(error_struc_array)):
+        if error_struc_array[i]["_type"] in {
             0,
             2,
             3,
         }:  # Intersection, Well, Constant head line
             el[i] = 1
-    discharge_elements = element_struc_array[el]
+    discharge_elements = error_struc_array[el]
     return discharge_elements
 
 
@@ -507,6 +916,27 @@ def get_z_int_array(z_int, elements, discharge_int):
             )
 
 
+@nb.njit(cache=CACHE)
+def get_discharge_term(element, z, frac, radius, e_is):
+    if element["_type"] == 0:  # Intersection
+        return hpc_intersection.discharge_term_error(
+            element,
+            z,
+            frac,
+            radius,
+        )
+    elif element["_type"] == 2:  # Well
+        return hpc_well.discharge_term(element, z)
+    elif element["_type"] == 3:  # Constant head line
+        return hpc_const_head_line.discharge_term_error(
+            element,
+            z,
+            radius,
+        )
+    else:
+        return 0.0
+
+
 @nb.njit(parallel=PARALLEL, cache=CACHE)
 def get_bnd_error(
     num_elements,
@@ -549,11 +979,15 @@ def get_bnd_error(
     matrix : np.ndarray
         The head matrix
     """
-
+    for e in error_struc_array:
+        e["q"] += 0.0
+    # fracture_struc_array['error_constant'] = 0.0
+    cnt_discharge = -1
     # Add the head for each discharge element
     for j in range(num_elements):
         e = element_struc_array[j]
         nint = int(e["nint"])
+        nint = discharge_int
         frac0 = fracture_struc_array[e["frac0"]]
         if e["_type"] == 2:  # Well
             bnd_error[j, 0] = 0.0
@@ -567,26 +1001,27 @@ def get_bnd_error(
             if e["_type"] == 0:  # Intersection
                 frac1 = fracture_struc_array[e["frac1"]]
                 omega_er = np.zeros(nint, dtype=np.complex128)
+                z0 = z_int["z0"][j][:discharge_int]
+                z1 = z_int["z1"][j][:discharge_int]
                 for ii in range(nint):
                     chi = work_array["exp_array_p"][j][ii]
-                    z0 = gf.map_chi_to_z_line(chi, e["endpoints0"])
-                    omega0 = hpc_fracture.calc_omega(frac0, z0, element_struc_array)
+
+                    omega0 = hpc_fracture.calc_omega(frac0, z0[ii], element_struc_array)
                     omega_error0 = hpc_fracture.calc_omega_error(
-                        frac0, z0, error_struc_array, e["_id"]
+                        frac0, z0[ii], error_struc_array, e["_id"]
                     )
-                    z1 = gf.map_chi_to_z_line(chi, e["endpoints1"])
-                    omega1 = hpc_fracture.calc_omega(frac1, z1, element_struc_array)
+                    omega1 = hpc_fracture.calc_omega(frac1, z1[ii], element_struc_array)
                     omega_error1 = hpc_fracture.calc_omega_error(
-                        frac1, z1, error_struc_array
+                        frac1, z1[ii], error_struc_array
                     )
                     omega_er[ii] = omega_error0 - omega_error1
+                    print(
+                        f"omega0={omega0.real}, omega1={omega1.real}, omega_error0={omega_error0.real}, omega_error1={omega_error1.real}"
+                    )
                     dphi[ii] = (np.real(omega0) - np.real(omega1)) + (
                         np.real(omega_error0) - np.real(omega_error1)
                     )
                     dphi_only[ii] = np.real(omega1) - np.real(omega0)
-
-                phi_const = np.mean(dphi_only - omega_er.real)
-                omega_er -= phi_const
 
                 import matplotlib.pyplot as plt
 
@@ -595,14 +1030,26 @@ def get_bnd_error(
                     f"Boundary condition error for element {j} (type {e['_type']})"
                 )
                 plt.plot(dphi_only, label="BC")
-                plt.plot(-omega_er.real, label="E(z)")
+                plt.plot(omega_er.real, label="Re E(z)")
+                plt.plot(dphi_only + omega_er.real, label="Diff")
+                plt.plot(
+                    np.mean(dphi_only) - np.mean(omega_er.real),
+                    label="Diff mean",
+                    marker="o",
+                )
+                plt.plot(np.mean(dphi_only), label="BC mean", marker="o")
+                plt.plot(
+                    np.mean(omega_er.real), label="E(z) mean", marker="s", zorder=0
+                )
                 plt.legend()
-                plt.show()
             else:  # Well or Constant head line
                 omega_er = np.zeros(nint, dtype=np.complex128)
+                cnt_discharge += 1
+                z0 = z_int["z0"][j][:discharge_int]
                 for ii in range(nint):
                     chi = work_array["exp_array_p"][j][ii]
                     z = gf.map_chi_to_z_line(chi, e["endpoints0"])
+                    z = z0[ii]
                     omega = hpc_fracture.calc_omega(frac0, z, element_struc_array)
                     omega_error = hpc_fracture.calc_omega_error(
                         frac0, z, error_struc_array
@@ -611,50 +1058,71 @@ def get_bnd_error(
                     dphi[ii] = e["phi"] - np.real(omega) + np.real(omega_error)
                     dphi_only[ii] = e["phi"] - np.real(omega)
 
-                phi_const = np.mean(dphi_only - omega_er.real)
-                omega_er -= phi_const
                 import matplotlib.pyplot as plt
+
+                print(f"mean={np.mean(dphi_only)}")
+                print(f"mean error={np.mean(omega_er.real)}")
+                print(f"diff mean ={np.mean(dphi_only) - np.mean(omega_er.real)}")
 
                 plt.figure()
                 plt.title(
                     f"Boundary condition error for element {j} (type {e['_type']})"
                 )
                 plt.plot(dphi_only, label="BC")
-                plt.plot(-omega_er.real, label="E(z)")
+                plt.plot(omega_er.real, label="Re E(z)")
+                plt.plot(dphi_only + omega_er.real, label="Diff")
+                plt.plot(
+                    np.mean(dphi_only) - np.mean(omega_er.real),
+                    label="Diff mean",
+                    marker="o",
+                )
+                plt.plot(np.mean(dphi_only), label="BC mean", marker="o")
+                plt.plot(
+                    np.mean(omega_er.real), label="E(z) mean", marker="s", zorder=0
+                )
                 plt.legend()
-                plt.show()
         elif e["_type"] == 1:  # Bounding circle
-            dpsi_corr = e["dpsi_corr"][: nint - 1]
-            dpsi = np.zeros(nint, dtype=np.float64)
-            dpsi_only = np.zeros(nint, dtype=np.float64)
+            # dpsi_corr = e["dpsi_corr"][: nint - 1]
+            # dpsi = np.zeros(nint, dtype=np.float64)
+            # dpsi_only = np.zeros(nint, dtype=np.float64)
             om_error = np.zeros(nint, dtype=np.complex128)
-            for ii in range(nint):
-                chi = work_array["exp_array_p"][j][ii]
-                z = gf.map_chi_to_z_circle(chi, e["radius"], e["center"])
-                omega = hpc_fracture.calc_omega(frac0, z, element_struc_array)
-                omega_error = hpc_fracture.calc_omega_error(frac0, z, error_struc_array)
-                om_error[ii] = omega_error
-                work_array["psi"][j][ii] = np.imag(omega)
-            delta_psi = work_array["psi"][j][1:nint] - work_array["psi"][j][: nint - 1]
-            work_array["dpsi"][j][0] = (
-                0.0  # Add this line to set the first value of dpsi to zero
+            z0 = z_int["z0"][j][:discharge_int]
+            # Locate branch cuts and fill work_array[j] fields
+            mf.find_branch_cuts(
+                e, z0, fracture_struc_array, element_struc_array, work_array[j], nint
             )
-            work_array["dpsi"][j][1:nint] = delta_psi - dpsi_corr
 
-            psi0 = work_array["psi"][j][0]
-            for ii in range(nint):
-                psi1 = psi0 + work_array["dpsi"][j][ii]
-                work_array["psi"][j][ii] = psi1
-                psi0 = psi1
-                dpsi[ii] = work_array["psi"][j][ii]
-                dpsi_only[ii] = dpsi[ii]
+            # Build dpsi_corr vector (length nint-1) from work_array results
+            dpsi_corr = np.zeros(nint)
+            for k in range(work_array[j]["len_discharge_element"]):
+                ek = element_struc_array[work_array[j]["discharge_element"][k]]
+                pos = int(work_array[j]["element_pos"][k])
+                dpsi_corr[pos] += ek["q"] * work_array[j]["sign_array"][k]
+
+            # Evaluate ω at each of the nint points
+            omega_pts = np.zeros(nint, dtype=np.complex128)
+            for i in range(nint):
+                omega_pts[i] = hpc_fracture.calc_omega(
+                    frac0, z0[i], element_struc_array
+                )
+                om_error[i] = hpc_fracture.calc_omega_error(
+                    frac0, z0[i], error_struc_array
+                )
+
+            # Reconstruct corrected ψ by integrating branch-cut-corrected increments
+            psi = np.zeros(nint)
+            psi[0] = np.imag(omega_pts[0])
+            for ii in range(nint - 1):
+                raw_dpsi = np.imag(omega_pts[ii + 1]) - np.imag(omega_pts[ii])
+                psi[ii + 1] = psi[ii] + (raw_dpsi - dpsi_corr[ii])
 
             import matplotlib.pyplot as plt
 
             plt.figure()
             plt.title(f"Boundary condition error for element {j} (type {e['_type']})")
-            plt.plot(dpsi_only, label="BC")
-            plt.plot(-om_error.imag, label="E(z)")
+            plt.plot(psi, label="BC")
+            plt.plot(-om_error.imag, label="Im E(z)")
             plt.plot(-om_error.real, label="Re E(z)")
             plt.legend()
-            plt.show()
+
+    plt.show()

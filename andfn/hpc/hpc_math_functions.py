@@ -423,19 +423,30 @@ def cauchy_integral_intersection_error(
     for ii in range(n):
         chi = work_array["exp_array_p"][ii]
         z0 = gf.map_chi_to_z_line(chi, endpoints0)
-        omega0 = hpc_fracture.calc_omega(frac0, z0, element_struc_array)
-        omega_error0 = hpc_fracture.calc_omega_error(
-            frac0, z0, error_struc_array, element_id_
-        )
         z1 = gf.map_chi_to_z_line(chi, endpoints1)
-        omega1 = hpc_fracture.calc_omega(frac1, z1, element_struc_array)
-        omega_error1 = hpc_fracture.calc_omega_error(
-            frac1, z1, error_struc_array, element_id_
+        omega0 = (
+            np.real(hpc_fracture.calc_omega(frac0, z0, element_struc_array))
+            / frac0["t"]
         )
-        dphi[ii] = (np.real(omega1) - np.real(omega0)) - (
-            np.real(omega_error1) - np.real(omega_error0)
+        omega1 = (
+            np.real(hpc_fracture.calc_omega(frac1, z1, element_struc_array))
+            / frac1["t"]
         )
-        dphi_only[ii] = np.real(omega1) - np.real(omega0)
+        omega_error0 = (
+            np.real(
+                hpc_fracture.calc_omega_error(frac0, z0, error_struc_array, element_id_)
+            )
+            / frac0["t"]
+        )
+        omega_error1 = (
+            np.real(
+                hpc_fracture.calc_omega_error(frac1, z1, error_struc_array, element_id_)
+            )
+            / frac1["t"]
+        )
+        dphi[ii] = -np.real(omega0) + np.real(omega_error0)
+        dphi[ii] = (omega1 - omega0) + (omega_error1 - omega_error0)
+        dphi_only[ii] = omega1 - omega0
     for jj in range(m):
         res_tmp = 0.0 + 0.0j
         for ii in range(n):
@@ -449,7 +460,7 @@ def cauchy_integral_intersection_error(
         coef[ii] = 2 * integral[ii] / n
     coef[0] = coef[0] / 2
 
-    """
+    # """
     coef = -np.real(coef)
     E_recon = np.zeros(n, dtype=np.complex128)
     E_full = np.zeros(n, dtype=np.complex128)
@@ -459,18 +470,25 @@ def cauchy_integral_intersection_error(
         E_recon[ii] = asym_expansion(chi, coef)
         z = gf.map_chi_to_z_line(chi, endpoints0)
         z1 = gf.map_chi_to_z_line(chi, endpoints1)
-        E_full[ii] = (hpc_fracture.calc_omega_error(frac0, z, error_struc_array,element_id_) + hpc_fracture.calc_omega_error(frac1, z1, error_struc_array, element_id_) + asym_expansion(chi, coef))
+        E_full[ii] = (
+            hpc_fracture.calc_omega_error(frac0, z, error_struc_array, element_id_)
+            + 0
+            * hpc_fracture.calc_omega_error(frac1, z1, error_struc_array, element_id_)
+            + asym_expansion(chi, coef)
+        )
 
     import matplotlib.pyplot as plt
+
     plt.figure()
     plt.plot(dphi, label="BC + error")
     plt.plot(dphi_only, label="BC only")
     plt.plot(np.real(E_recon), label="Re(E)")
-    plt.plot(-np.real(E_full), label="Re(E) full")
+    plt.plot(np.real(E_full), label="Re(E) full")
+    plt.plot(np.real(E_full) + dphi, label="Re(E_full) + BC + error")
     plt.legend()
     plt.show()
 
-    """
+    # """
 
 
 @nb.njit(inline="always")

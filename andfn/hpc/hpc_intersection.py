@@ -63,6 +63,33 @@ def discharge_term(self_, z, frac_is, radius, mirror=False):
 
 
 @nb.njit()
+def discharge_term_error(self_, z, frac_is, radius):
+    """
+    Calculate the discharge term for the intersection.
+
+    Parameters
+    ----------
+
+
+    Returns
+    -------
+    float
+        The discharge term
+    """
+    phi = 0.0
+    sign = 1.0
+    if frac_is == self_["frac0"]:
+        endpoints = self_["endpoints0"]
+    else:
+        sign = -1.0
+        endpoints = self_["endpoints1"]
+    for z0 in z:
+        chi = gf.map_z_line_to_chi(z0, endpoints)
+        phi += np.real(mf.well_chi(chi, sign))
+    return phi / len(z)
+
+
+@nb.njit()
 def solve(self_, fracture_struc_array, element_struc_array, work_array):
     """
     Solves the intersection element.
@@ -167,9 +194,40 @@ def solve_error(
         work_array,
         work_array["coef"][: self_["ncoef"]],
     )
+    """
+    mf.cauchy_integral_real_error(
+        self_["nint"],
+        self_["ncoef"],
+        self_["thetas"][: self_["nint"]],
+        frac0,
+        self_["_id"],
+        element_struc_array,
+        error_struc_array,
+        self_["endpoints0"],
+        work_array,
+        work_array["coef0"][: self_["ncoef"]],
+        0.0
+    )
+    mf.cauchy_integral_real_error(
+        self_["nint"],
+        self_["ncoef"],
+        self_["thetas"][: self_["nint"]],
+        frac1,
+        self_["_id"],
+        element_struc_array,
+        error_struc_array,
+        self_["endpoints1"],
+        work_array,
+        work_array["coef1"][: self_["ncoef"]],
+        0.0
+    )
 
     for i in range(self_["ncoef"]):
-        work_array["coef"][i] = -np.real(work_array["coef"][i])
+        work_array["coef"][i] = np.real(
+            (frac0["t"] * work_array["coef1"][i] - frac1["t"] * work_array["coef0"][i])
+            / (frac0["t"] + frac1["t"])
+        )
+        """
     work_array["coef"][0] = (
         0.0  # Set the first coefficient to zero (constant embedded in discharge matrix)
     )
@@ -268,6 +326,7 @@ def calc_omega_error(self_, z, frac_is_id):
         sign = -1.0
     chi = gf.map_z_line_to_chi(z, endpoints)
     omega = sign * mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    omega += sign * mf.well_chi(chi, self_["q"])
     return omega
 
 
