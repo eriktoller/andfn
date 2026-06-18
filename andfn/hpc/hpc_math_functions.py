@@ -383,6 +383,7 @@ def cauchy_integral_intersection_error(
     endpoints1,
     work_array,
     coef,
+    frac_is,
 ):
     """
     FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
@@ -445,8 +446,12 @@ def cauchy_integral_intersection_error(
             / frac1["t"]
         )
         dphi[ii] = -np.real(omega0) + np.real(omega_error0)
-        dphi[ii] = (omega1 - omega0) + (omega_error1 - omega_error0)
-        dphi_only[ii] = omega1 - omega0
+        if frac_is == 1:
+            dphi[ii] = ((omega1 - omega0) + omega_error1) * frac1["t"]
+        else:
+            dphi[ii] = ((omega1 - omega0) + omega_error0) * frac0["t"]
+
+        dphi_only[ii] = (omega1 - omega0) * frac0["t"]
     for jj in range(m):
         res_tmp = 0.0 + 0.0j
         for ii in range(n):
@@ -460,20 +465,23 @@ def cauchy_integral_intersection_error(
         coef[ii] = 2 * integral[ii] / n
     coef[0] = coef[0] / 2
 
-    # """
+    """
     coef = -np.real(coef)
+    #coef[0] = 0.0
     E_recon = np.zeros(n, dtype=np.complex128)
     E_full = np.zeros(n, dtype=np.complex128)
+    E_other = np.zeros(n, dtype=np.complex128)
 
     for ii in range(n):
+        frac = frac0 if frac_is == 0 else frac1
         chi = work_array["exp_array_p"][ii]
         E_recon[ii] = asym_expansion(chi, coef)
-        z = gf.map_chi_to_z_line(chi, endpoints0)
-        z1 = gf.map_chi_to_z_line(chi, endpoints1)
+        z = gf.map_chi_to_z_line(chi, endpoints0 if frac_is == 0 else endpoints1)
+        E_other[ii] = (
+            hpc_fracture.calc_omega_error(frac, z, error_struc_array, element_id_)
+        )
         E_full[ii] = (
-            hpc_fracture.calc_omega_error(frac0, z, error_struc_array, element_id_)
-            + 0
-            * hpc_fracture.calc_omega_error(frac1, z1, error_struc_array, element_id_)
+            hpc_fracture.calc_omega_error(frac, z, error_struc_array, element_id_)
             + asym_expansion(chi, coef)
         )
 
@@ -483,12 +491,13 @@ def cauchy_integral_intersection_error(
     plt.plot(dphi, label="BC + error")
     plt.plot(dphi_only, label="BC only")
     plt.plot(np.real(E_recon), label="Re(E)")
+    plt.plot(np.real(E_other), label="Re(E) other")
     plt.plot(np.real(E_full), label="Re(E) full")
-    plt.plot(np.real(E_full) + dphi, label="Re(E_full) + BC + error")
+    plt.plot(np.real(E_full) + dphi_only, label="Re(E_full) + BC")
     plt.legend()
     plt.show()
 
-    # """
+    """
 
 
 @nb.njit(inline="always")

@@ -180,6 +180,7 @@ def solve_error(
     frac0 = fracture_struc_array[self_["frac0"]]
     frac1 = fracture_struc_array[self_["frac1"]]
     work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    # """
     mf.cauchy_integral_intersection_error(
         self_["nint"],
         self_["ncoef"],
@@ -192,7 +193,23 @@ def solve_error(
         self_["endpoints0"],
         self_["endpoints1"],
         work_array,
-        work_array["coef"][: self_["ncoef"]],
+        work_array["coef0"][: self_["ncoef"]],
+        0,
+    )
+    mf.cauchy_integral_intersection_error(
+        self_["nint"],
+        self_["ncoef"],
+        self_["thetas"][: self_["nint"]],
+        frac0,
+        frac1,
+        self_["_id"],
+        element_struc_array,
+        error_struc_array,
+        self_["endpoints0"],
+        self_["endpoints1"],
+        work_array,
+        work_array["coef1"][: self_["ncoef"]],
+        1,
     )
     """
     mf.cauchy_integral_real_error(
@@ -221,13 +238,14 @@ def solve_error(
         work_array["coef1"][: self_["ncoef"]],
         0.0
     )
+    """
 
     for i in range(self_["ncoef"]):
         work_array["coef"][i] = np.real(
             (frac0["t"] * work_array["coef1"][i] - frac1["t"] * work_array["coef0"][i])
             / (frac0["t"] + frac1["t"])
         )
-        """
+
     work_array["coef"][0] = (
         0.0  # Set the first coefficient to zero (constant embedded in discharge matrix)
     )

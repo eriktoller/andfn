@@ -234,7 +234,7 @@ def solve_error(
     z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
 
     # z_int is only used for intersection / well / const-head rows
-    get_z_int_array(z_int, element_struc_array, discharge_int * 10)
+    get_z_int_array(z_int, error_struc_array, discharge_int * 20)
 
     max_error = float(constants["MAX_ERROR"])
     bnd_error = np.zeros((num_elements, 7), dtype=np.float64)
@@ -245,7 +245,7 @@ def solve_error(
         element_struc_array,
         error_struc_array,
         work_array,
-        discharge_int * 10,
+        discharge_int * 20,
         bnd_error,
         z_int,
     )
@@ -486,6 +486,7 @@ def build_head_matrix(
         omega = 0.0 + 0.0j
         er = 0.0 + 0.0j
         diff = 0.0
+        fi0 = 0.0
         for i in range(discharge_int):
             fi_tmp = np.real(hpc_fracture.calc_omega(frac0, z0[i], element_struc_array))
             er_tmp = np.real(
@@ -494,9 +495,10 @@ def build_head_matrix(
             omega += fi_tmp
             er += er_tmp
             diff += e["phi"] - fi_tmp
+            fi0 += fi_tmp
         omega = omega / discharge_int
         er = er / discharge_int
-        diff = diff / discharge_int + er
+        diff = (e["phi"] - omega) + er
         if e["_type"] == 0:  # Intersection
             frac1 = fractures_struc_array[e["frac1"]]
             z1 = z_int["z1"][j][:discharge_int]
@@ -504,6 +506,10 @@ def build_head_matrix(
             er1 = 0.0 + 0.0j
             diff1 = 0.0
             diff_er = 0.0
+            er00 = 0.0
+            er11 = 0.0
+            fi00 = 0.0
+            fi11 = 0.0
             for i in range(discharge_int):
                 omega1 += hpc_fracture.calc_omega_error(
                     frac1, z1[i], element_struc_array
@@ -529,13 +535,21 @@ def build_head_matrix(
                     / frac1["t"]
                 )
                 diff1 += fi_tmp1 - fi_tmp
-                diff_er -= er1 - er0
+                diff_er += er1 - er0
+                er00 += er0
+                er11 += er1
+                fi00 += fi_tmp
+                fi11 += fi_tmp1
             er1 = er1 / discharge_int
+            er11 = er11 / discharge_int
+            er00 = er00 / discharge_int
+            fi00 = fi00 / discharge_int
+            fi11 = fi11 / discharge_int
             omega1 = omega1 / discharge_int
-            diff1 = diff1 / discharge_int + diff_er / discharge_int
-            head_matrix[j] = -diff1
+            diff1 = fi11 - fi00 + er11 - (fi11 - fi00 + er00)
+            head_matrix[j] = diff1
         elif e["_type"] in [2, 3]:  # Well or Constant head line
-            head_matrix[j] = (e["phi"] - np.real(omega)) - np.real(er)
+            head_matrix[j] = (e["phi"] - np.real(omega)) + np.real(er)
             head_matrix[j] = -diff
 
 
@@ -981,7 +995,7 @@ def get_bnd_error(
     """
     for e in error_struc_array:
         e["q"] += 0.0
-    # fracture_struc_array['error_constant'] = 0.0
+    # fracture_struc_array['error_constant'][1] = 0.0
     cnt_discharge = -1
     # Add the head for each discharge element
     for j in range(num_elements):
@@ -1001,22 +1015,32 @@ def get_bnd_error(
             if e["_type"] == 0:  # Intersection
                 frac1 = fracture_struc_array[e["frac1"]]
                 omega_er = np.zeros(nint, dtype=np.complex128)
+                omega_er1 = np.zeros(nint, dtype=np.complex128)
                 z0 = z_int["z0"][j][:discharge_int]
                 z1 = z_int["z1"][j][:discharge_int]
                 for ii in range(nint):
                     chi = work_array["exp_array_p"][j][ii]
 
-                    omega0 = hpc_fracture.calc_omega(frac0, z0[ii], element_struc_array)
-                    omega_error0 = hpc_fracture.calc_omega_error(
-                        frac0, z0[ii], error_struc_array, e["_id"]
+                    omega0 = (
+                        hpc_fracture.calc_omega(frac0, z0[ii], element_struc_array)
+                        / frac0["t"]
                     )
-                    omega1 = hpc_fracture.calc_omega(frac1, z1[ii], element_struc_array)
-                    omega_error1 = hpc_fracture.calc_omega_error(
-                        frac1, z1[ii], error_struc_array
+                    omega_error0 = (
+                        hpc_fracture.calc_omega_error(frac0, z0[ii], error_struc_array)
+                        / frac0["t"]
                     )
-                    omega_er[ii] = omega_error0 - omega_error1
+                    omega1 = (
+                        hpc_fracture.calc_omega(frac1, z1[ii], element_struc_array)
+                        / frac1["t"]
+                    )
+                    omega_error1 = (
+                        hpc_fracture.calc_omega_error(frac1, z1[ii], error_struc_array)
+                        / frac1["t"]
+                    )
+                    omega_er[ii] = omega_error0
+                    omega_er1[ii] = omega_error1
                     print(
-                        f"omega0={omega0.real}, omega1={omega1.real}, omega_error0={omega_error0.real}, omega_error1={omega_error1.real}"
+                        f"omega0={omega0.real}, omega1={omega1.real}, phi_error={omega1.real - omega0.real}, omega_error0={omega_error0.real}, omega_error1={omega_error1.real}"
                     )
                     dphi[ii] = (np.real(omega0) - np.real(omega1)) + (
                         np.real(omega_error0) - np.real(omega_error1)
@@ -1031,16 +1055,8 @@ def get_bnd_error(
                 )
                 plt.plot(dphi_only, label="BC")
                 plt.plot(omega_er.real, label="Re E(z)")
+                plt.plot(omega_er1.real, label="Re E(z) frac1", linestyle="dashed")
                 plt.plot(dphi_only + omega_er.real, label="Diff")
-                plt.plot(
-                    np.mean(dphi_only) - np.mean(omega_er.real),
-                    label="Diff mean",
-                    marker="o",
-                )
-                plt.plot(np.mean(dphi_only), label="BC mean", marker="o")
-                plt.plot(
-                    np.mean(omega_er.real), label="E(z) mean", marker="s", zorder=0
-                )
                 plt.legend()
             else:  # Well or Constant head line
                 omega_er = np.zeros(nint, dtype=np.complex128)
