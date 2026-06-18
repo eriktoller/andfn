@@ -547,7 +547,14 @@ def build_head_matrix(
             fi11 = fi11 / discharge_int
             omega1 = omega1 / discharge_int
             diff1 = fi11 - fi00 + er11 - (fi11 - fi00 + er00)
+            diff1 = (fi11 + er11) - (fi00 + er00)
             head_matrix[j] = diff1
+
+            print("fi11-fi00 =", fi11 - fi00)
+            print("er11-er00 =", er11 - er00)
+            print("diff_er =", diff_er / discharge_int)
+            print("head row  =", diff1)
+
         elif e["_type"] in [2, 3]:  # Well or Constant head line
             head_matrix[j] = (e["phi"] - np.real(omega)) + np.real(er)
             head_matrix[j] = -diff
@@ -1013,6 +1020,7 @@ def get_bnd_error(
             dphi_only = np.zeros(nint, dtype=np.float64)
 
             if e["_type"] == 0:  # Intersection
+                # j=2
                 frac1 = fracture_struc_array[e["frac1"]]
                 omega_er = np.zeros(nint, dtype=np.complex128)
                 omega_er1 = np.zeros(nint, dtype=np.complex128)
@@ -1042,8 +1050,8 @@ def get_bnd_error(
                     print(
                         f"omega0={omega0.real}, omega1={omega1.real}, phi_error={omega1.real - omega0.real}, omega_error0={omega_error0.real}, omega_error1={omega_error1.real}"
                     )
-                    dphi[ii] = (np.real(omega0) - np.real(omega1)) + (
-                        np.real(omega_error0) - np.real(omega_error1)
+                    dphi[ii] = (np.real(omega0) + np.real(omega_error0)) - (
+                        np.real(omega1) + np.real(omega_error1)
                     )
                     dphi_only[ii] = np.real(omega1) - np.real(omega0)
 
@@ -1053,10 +1061,11 @@ def get_bnd_error(
                 plt.title(
                     f"Boundary condition error for element {j} (type {e['_type']})"
                 )
-                plt.plot(dphi_only, label="BC")
-                plt.plot(omega_er.real, label="Re E(z)")
-                plt.plot(omega_er1.real, label="Re E(z) frac1", linestyle="dashed")
-                plt.plot(dphi_only + omega_er.real, label="Diff")
+                # plt.plot(dphi_only, label="BC")
+                plt.plot(dphi, label="BC + E(z)")
+                # plt.plot(omega_er.real, label="Re E(z)")
+                # plt.plot(omega_er1.real, label="Re E(z) frac1", linestyle="dashed")
+                # plt.plot(dphi_only + omega_er.real, label="Diff")
                 plt.legend()
             else:  # Well or Constant head line
                 omega_er = np.zeros(nint, dtype=np.complex128)
@@ -1087,15 +1096,6 @@ def get_bnd_error(
                 plt.plot(dphi_only, label="BC")
                 plt.plot(omega_er.real, label="Re E(z)")
                 plt.plot(dphi_only + omega_er.real, label="Diff")
-                plt.plot(
-                    np.mean(dphi_only) - np.mean(omega_er.real),
-                    label="Diff mean",
-                    marker="o",
-                )
-                plt.plot(np.mean(dphi_only), label="BC mean", marker="o")
-                plt.plot(
-                    np.mean(omega_er.real), label="E(z) mean", marker="s", zorder=0
-                )
                 plt.legend()
         elif e["_type"] == 1:  # Bounding circle
             # dpsi_corr = e["dpsi_corr"][: nint - 1]
@@ -1137,8 +1137,8 @@ def get_bnd_error(
             plt.figure()
             plt.title(f"Boundary condition error for element {j} (type {e['_type']})")
             plt.plot(psi, label="BC")
-            plt.plot(-om_error.imag, label="Im E(z)")
-            plt.plot(-om_error.real, label="Re E(z)")
+            plt.plot(om_error.imag, label="Im E(z)")
+            plt.plot(om_error.real, label="Re E(z)")
             plt.legend()
 
     plt.show()

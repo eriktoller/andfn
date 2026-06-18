@@ -447,9 +447,9 @@ def cauchy_integral_intersection_error(
         )
         dphi[ii] = -np.real(omega0) + np.real(omega_error0)
         if frac_is == 1:
-            dphi[ii] = ((omega1 - omega0) + omega_error1) * frac1["t"]
+            dphi[ii] = ((omega1 - omega0 * 0) + omega_error1) * frac1["t"]
         else:
-            dphi[ii] = ((omega1 - omega0) + omega_error0) * frac0["t"]
+            dphi[ii] = ((omega1 * 0 + omega0) + omega_error0) * frac0["t"]
 
         dphi_only[ii] = (omega1 - omega0) * frac0["t"]
     for jj in range(m):
