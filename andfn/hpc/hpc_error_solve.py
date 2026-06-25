@@ -1018,6 +1018,7 @@ def get_bnd_error(
         if e["_type"] in [0, 3]:  # Intersection, Constant head line
             dphi = np.zeros(nint, dtype=np.float64)
             dphi_only = np.zeros(nint, dtype=np.float64)
+            derror = np.zeros(nint, dtype=np.float64)
 
             if e["_type"] == 0:  # Intersection
                 # j=2
@@ -1053,7 +1054,8 @@ def get_bnd_error(
                     dphi[ii] = (np.real(omega0) + np.real(omega_error0)) - (
                         np.real(omega1) + np.real(omega_error1)
                     )
-                    dphi_only[ii] = np.real(omega1) - np.real(omega0)
+                    dphi_only[ii] = np.real(omega0) - np.real(omega1)
+                    derror[ii] = np.real(omega_error0) - np.real(omega_error1)
 
                 import matplotlib.pyplot as plt
 
@@ -1061,9 +1063,10 @@ def get_bnd_error(
                 plt.title(
                     f"Boundary condition error for element {j} (type {e['_type']})"
                 )
-                # plt.plot(dphi_only, label="BC")
+                plt.plot(dphi_only, label="BC")
                 plt.plot(dphi, label="BC + E(z)")
-                # plt.plot(omega_er.real, label="Re E(z)")
+                plt.plot(omega_er.real, label="E(z)")
+                plt.plot(dphi_only + derror, label="Diff")
                 # plt.plot(omega_er1.real, label="Re E(z) frac1", linestyle="dashed")
                 # plt.plot(dphi_only + omega_er.real, label="Diff")
                 plt.legend()
