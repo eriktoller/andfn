@@ -26,6 +26,7 @@ from .hpc.hpc_fracture import (
     get_heads as hpc_get_heads,
     calc_omega as hpc_calc_omega,
     calc_w as hpc_calc_w,
+    get_errors as hpc_get_errors,
 )
 from .structures import STRUCTURES_COLOR
 from .well import Well
@@ -1773,10 +1774,10 @@ class DFN(Constants):
         logger.info("---------------------------------------")
         error_structured_array = self.elements_struc_array_hpc.copy()
         error_structured_array["coef"][:] = 0
-        # error_structured_array["ncoef"][:] = 100
-        # error_structured_array["nint"][:] = 200
+        error_structured_array["ncoef"][:] = 100
+        error_structured_array["nint"][:] = 200
         self.print_solver_constants()
-        self.elements_struc_array, self.work_array = hpc_solve_error(
+        self.error_structured_array, self.work_array = hpc_solve_error(
             self.fractures_struc_array_hpc,
             self.elements_struc_array_hpc,
             error_structured_array,
@@ -2459,6 +2460,141 @@ class DFN(Constants):
             show_edges=False,
             line_width=line_width,
             scalar_bar_args=dict(title=f"Hydraulic head [{unit}]", shadow=True),
+            clim=limits,
+            name="head",
+        )
+
+        # --- Contours ---
+        if contour:
+            contours = mesh.contour(isosurfaces=lvs, scalars="head")
+            if contours.n_points > 0:
+                pl.add_mesh(
+                    contours,
+                    color="black",
+                    line_width=line_width,
+                    opacity=opacity,
+                    clim=limits,
+                )
+
+        if not colorbar:
+            pl.remove_scalar_bar()
+
+        logger.info(f"Plotting hydraulic head took {time.time() - start:.2f} seconds.")
+
+    def plot_fractures_error(
+        self,
+        pl,
+        component="abs",
+        lvs=20,
+        n_layers=10,
+        line_width=2,
+        opacity=1.0,
+        color_map="viridis",
+        limits=None,
+        contour=True,
+        colorbar=True,
+        debug=False,
+        fractures=None,
+        unit="m",
+    ):
+
+        start = time.time()
+
+        # --- Debug handling ---
+        if debug:
+            assert limits is not None, "For debug mode, limits must be provided."
+            min_lim, max_lim = limits
+            limits = None
+
+        # --- Ensure consolidation ---
+        if self.fractures_struc_array_hpc is None:
+            self.consolidate_dfn(hpc=True)
+
+        # --- Select fractures efficiently ---
+        fracs_arr = self.fractures_struc_array_hpc
+        if fractures is not None:
+            fracture_index = {f: i for i, f in enumerate(self.fractures)}
+            idx = np.fromiter(
+                (fracture_index[f] for f in fractures),
+                dtype=np.int64,
+                count=len(fractures),
+            )
+            fracs_arr = fracs_arr[idx]
+
+        # --- Compute heads & points ---
+        time_heads = time.time()
+        h = 1 / (n_layers + 1)
+        partitions = int(2 * np.pi / h / n_layers)
+        z_array, base_faces = generate_disk(partitions, n_layers)
+        heads, pnts_3d = hpc_get_errors(fracs_arr, self.error_structured_array, z_array)
+        logger.info(
+            f"Calculating heads and points took {time.time() - time_heads:.2f} seconds."
+        )
+
+        # --- Get the component of the error to plot ---
+        if component == "abs":
+            heads = np.abs(heads)
+        elif component == "real":
+            heads = np.real(heads)
+        elif component == "imag":
+            heads = np.imag(heads)
+        elif component == "real abs":
+            heads = np.abs(np.real(heads))
+        elif component == "imag abs":
+            heads = np.abs(np.imag(heads))
+        else:
+            raise ValueError("Component must be 'abs', 'real' or 'imag'.")
+
+        # --- Debug filtering BEFORE mesh creation ---
+        if debug:
+            mask = np.array(
+                [(np.nanmin(h) < min_lim) or (np.nanmax(h) > max_lim) for h in heads],
+                dtype=bool,
+            )
+            heads = heads[mask]
+            pnts_3d = pnts_3d[mask]
+
+        if heads.size == 0:
+            return
+
+        # --- Color limits ---
+        if limits is None:
+            limits = [np.nanmin(heads), np.nanmax(heads)]
+
+        # --- Contour levels ---
+        if lvs is not False:
+            lvs = np.linspace(limits[0], limits[1], lvs)
+
+        # --- Build ONE mesh (major speedup) ---
+
+        nf, npts, _ = pnts_3d.shape
+
+        points = pnts_3d.reshape(nf * npts, 3)
+        head_vals = heads.reshape(nf * npts)
+
+        # base_faces = get_faces(pnts_3d[0])  # already VTK-style
+
+        faces = np.tile(base_faces, nf)
+
+        # indices are at positions 1,2,3, 5,6,7, 9,10,11, ...
+        idx = np.arange(len(faces)) % 4 != 0
+
+        repeat_offsets = np.repeat(np.arange(nf) * npts, len(base_faces))
+        faces[idx] += repeat_offsets[idx]
+
+        mesh = pv.PolyData(points, faces)
+        mesh.point_data["head"] = head_vals
+
+        # --- Plot mesh ---
+        title = f"Error ({component})"
+        pl.add_mesh(
+            mesh,
+            scalars="head",
+            cmap=color_map,
+            opacity=opacity,
+            show_edges=False,
+            line_width=line_width,
+            scalar_bar_args=dict(title=title, shadow=True),
             clim=limits,
             name="head",
         )

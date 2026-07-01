@@ -353,8 +353,12 @@ def cauchy_integral_real_error(
         omega_error = hpc_fracture.calc_omega_error(
             frac0, z, error_struc_array, element_id_
         )
-        dphi[ii] = bc_phi - np.real(omega) + np.real(omega_error)
+
         dphi_only[ii] = bc_phi - np.real(omega)
+
+        # This is the actual function E_recon must match
+        dphi[ii] = dphi_only[ii] + np.real(omega_error)
+
     for jj in range(m):
         res_tmp = 0.0 + 0.0j
         for ii in range(n):
@@ -367,6 +371,45 @@ def cauchy_integral_real_error(
     for ii in range(m):
         coef[ii] = 2 * integral[ii] / n
     coef[0] = coef[0] / 2
+
+    """coef = -np.real(coef)
+    coef[0] = 0.0
+    E_recon = np.zeros(n, dtype=np.complex128)
+    E_full = np.zeros(n, dtype=np.complex128)
+    E_other = np.zeros(n, dtype=np.complex128)
+
+
+    for ii in range(n):
+        frac = frac0
+        chi = work_array["exp_array_p"][ii]
+        E_recon[ii] = asym_expansion(chi, coef)
+        z = gf.map_chi_to_z_line(chi, endpoints0)
+        E_other[ii] = (
+            hpc_fracture.calc_omega_error(frac, z, error_struc_array, element_id_)
+        )
+        E_full[ii] = (
+                hpc_fracture.calc_omega_error(frac, z, error_struc_array, element_id_)
+                + asym_expansion(chi, coef)
+        )
+
+    print("n, m:", n, m)
+    print("max |dphi|:", np.max(np.abs(dphi)))
+    print("max |coef|:", np.max(np.abs(coef)))
+    print("max |E_recon|:", np.max(np.abs(np.real(E_recon))))
+    print("max |E_other|:", np.max(np.abs(np.real(E_other))))
+    print("max |E_full|:", np.max(np.abs(np.real(E_full))))
+
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    plt.plot(dphi, label="BC + error, dphi")
+    plt.plot(dphi_only, label="BC only, dphi_oly")
+    plt.plot(np.real(E_recon), label="Re(E)")
+    plt.plot(np.real(E_other), label="Re(E) other")
+    plt.plot(-np.real(E_full), label="Re(E) full")
+    plt.plot(np.real(E_full) + dphi_only, label="Re(E_full) + BC")
+    plt.legend()
+    plt.show()"""
 
 
 @nb.njit()

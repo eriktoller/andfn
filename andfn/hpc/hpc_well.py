@@ -35,8 +35,57 @@ def discharge_term(self_, z):
     return phi / len(z)
 
 
+@nb.njit()
+def discharge_term_error(self_, z):
+    """
+    Calculate the discharge term for the constant head line.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The constant head line element
+    z : np.ndarray
+        The points to calculate the discharge term at
+
+    Returns
+    -------
+    float
+        The discharge term
+    """
+    phi = 0.0
+    for z0 in z:
+        chi = gf.map_z_circle_to_chi(z0, self_["radius"], self_["center"])
+        phi += np.real(mf.well_chi(chi, 1.0))
+    return phi / len(z)
+
+
 @nb.njit(inline="always")
 def calc_omega(self_, z):
+    """
+    Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The well element.
+    z : complex
+        A point in the complex z plane.
+
+
+    Returns
+    -------
+    omega : complex
+        The complex potential for the well.
+    """
+    chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
+    omega = mf.well_chi(chi, self_["q"])
+    if np.abs(chi) < 1 - 1e-12:
+        omega = np.nan + np.nan * 1j
+    return omega
+
+
+@nb.njit(inline="always")
+def calc_omega_error(self_, z):
     """
     Calculates the omega for the well. If z is inside the well, the omega is set to nan + nan*1j.
 

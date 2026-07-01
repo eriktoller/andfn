@@ -234,7 +234,7 @@ def solve_error(
     z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
 
     # z_int is only used for intersection / well / const-head rows
-    get_z_int_array(z_int, error_struc_array, discharge_int * 20)
+    get_z_int_array(z_int, error_struc_array, discharge_int)
 
     max_error = float(constants["MAX_ERROR"])
     bnd_error = np.zeros((num_elements, 7), dtype=np.float64)
@@ -245,7 +245,7 @@ def solve_error(
         element_struc_array,
         error_struc_array,
         work_array,
-        discharge_int * 20,
+        discharge_int,
         bnd_error,
         z_int,
     )
@@ -556,8 +556,8 @@ def build_head_matrix(
             print("head row  =", diff1)
 
         elif e["_type"] in [2, 3]:  # Well or Constant head line
-            head_matrix[j] = (e["phi"] - np.real(omega)) + np.real(er)
-            head_matrix[j] = -diff
+            head_matrix[j] = -(e["phi"] - np.real(omega)) - np.real(er)
+            # head_matrix[j] = -diff
 
 
 def build_discharge_matrix(
@@ -947,7 +947,7 @@ def get_discharge_term(element, z, frac, radius, e_is):
             radius,
         )
     elif element["_type"] == 2:  # Well
-        return hpc_well.discharge_term(element, z)
+        return hpc_well.discharge_term_error(element, z)
     elif element["_type"] == 3:  # Constant head line
         return hpc_const_head_line.discharge_term_error(
             element,

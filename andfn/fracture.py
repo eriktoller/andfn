@@ -46,7 +46,7 @@ class Fracture:
             The number of coefficients for the bounding circle that bounds the fracture.
         nint : int
             The number of integration points for the bounding circle that bounds the fracture.
-        elements : list
+        elements : list | None | False
             A list of elements that the fracture is associated with. If elements is None the bounding circle will be
             created.
         kwargs : dict
