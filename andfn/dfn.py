@@ -27,6 +27,7 @@ from .hpc.hpc_fracture import (
     calc_omega as hpc_calc_omega,
     calc_w as hpc_calc_w,
     get_errors as hpc_get_errors,
+    calc_omega_error as hpc_calc_omega_error,
 )
 from .structures import STRUCTURES_COLOR
 from .well import Well
@@ -1923,6 +1924,39 @@ class DFN(Constants):
         velocity = np.abs(w) / fracture.aperture
 
         return velocity
+
+    def calc_error(self, z, fracture):
+        """
+        Calculates the velocity at a given point in a fracture.
+
+        Parameters
+        ----------
+        z : complex
+            The point to calculate the velocity at.
+        fracture : Fracture
+            The fracture to calculate the velocity in.
+
+        Returns
+        -------
+        velocity : np.ndarray
+            The velocity at the given point in the fracture.
+        """
+        if (
+            self.error_structured_array is None
+            or self.fractures_struc_array_hpc is None
+        ):
+            logger.warning(
+                "DFN error has not been solved yet.  Call dfn.solve_error() first."
+            )
+            return None
+
+        error = hpc_calc_omega_error(
+            self.fractures_struc_array_hpc[fracture._id],
+            z,
+            self.error_structured_array,
+        )
+
+        return error
 
     ####################################################################################################################
     #                    Plotting functions                                                                            #
