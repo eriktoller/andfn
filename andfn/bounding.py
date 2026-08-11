@@ -47,6 +47,28 @@ class BoundingCircle(Element):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def to_dict(self):
+        """
+        Convert the bounding circle to a dictionary.
+
+        Returns
+        -------
+        dict
+            The bounding circle as a dictionary.
+        """
+        return {
+            "_id": self._id,
+            "_type": self._type,
+            "label": self.label,
+            "radius": self.radius,
+            "center": self.center,
+            "ncoef": self.ncoef,
+            "nint": self.nint,
+            "frac0": self.frac0._id,
+            "coef_real": self.coef.real.tolist(),
+            "coef_imag": self.coef.imag.tolist(),
+        }
+
     def get_chi(self, z):
         """
         Get the chi for the bounding circle.

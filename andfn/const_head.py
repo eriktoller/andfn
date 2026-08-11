@@ -48,6 +48,30 @@ class ConstantHeadLine(Element):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def to_dict(self):
+        """
+        Convert the constant head line to a dictionary.
+
+        Returns
+        -------
+        dict
+            The constant head line as a dictionary
+        """
+        return {
+            "_id": self._id,
+            "_type": self._type,
+            "label": self.label,
+            "endpoints0": self.endpoints0.tolist(),
+            "head": self.head,
+            "frac0": self.frac0._id,
+            "ncoef": self.ncoef,
+            "nint": self.nint,
+            "q": self.q,
+            "coef_real": self.coef.real.tolist(),
+            "coef_imag": self.coef.imag.tolist(),
+            "phi": self.phi,
+        }
+
     def discharge_term(self, z):
         """
         Calculate the discharge term for the constant head line.

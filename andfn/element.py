@@ -262,9 +262,6 @@ class Element:
         self.nint = 10
         self.q = 0.0
         self.coef = np.zeros(self.ncoef, dtype=complex)
-        # self.thetas = np.linspace(
-        #    start=0, stop=2 * np.pi, num=self.nint, endpoint=False
-        # )
 
         # Assign the fractures if provided
         self.frac0 = frac0

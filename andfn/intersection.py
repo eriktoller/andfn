@@ -55,6 +55,30 @@ class Intersection(Element):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def to_dict(self):
+        """
+        Convert the intersection to a dictionary.
+
+        Returns
+        -------
+        dict
+            The intersection as a dictionary
+        """
+        return {
+            "_id": self._id,
+            "_type": self._type,
+            "label": self.label,
+            "endpoints0": self.endpoints0.tolist(),
+            "endpoints1": self.endpoints1.tolist(),
+            "frac0": self.frac0.label,
+            "frac1": self.frac1.label,
+            "ncoef": self.ncoef,
+            "nint": self.nint,
+            "q": self.q,
+            "coef_real": self.coef.real.tolist(),
+            "coef_imag": self.coef.imag.tolist(),
+        }
+
     def length(self):
         """
         Calculate the length of the intersection

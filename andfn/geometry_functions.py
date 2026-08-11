@@ -329,31 +329,48 @@ def fracture_intersection(frac0, frac1):
     if a0 is None or a1 is None:
         return None, None
 
-    # Lift valid endpoints into 3D
-    candidates = [
-        map_2d_to_3d(a0, frac0),
-        map_2d_to_3d(b0, frac0),
-        map_2d_to_3d(a1, frac1),
-        map_2d_to_3d(b1, frac1),
-    ]
+    i0 = line_disc_interval(x0, d, frac0.center, frac0.radius)
+    i1 = line_disc_interval(x0, d, frac1.center, frac1.radius)
 
-    # Keep points inside both fractures
-    valid = [
-        x
-        for x in candidates
-        if np.linalg.norm(x - frac0.center) <= frac0.radius + 1e-8
-        and np.linalg.norm(x - frac1.center) <= frac1.radius + 1e-8
-    ]
-
-    if len(valid) != 2:
+    if i0 is None or i1 is None:
         return None, None
 
-    p0, p1 = valid
+    t0 = max(i0[0], i1[0])
+    t1 = min(i0[1], i1[1])
+
+    if t0 > t1 + 1e-10:
+        return None, None
+
+    p0 = x0 + t0 * d
+    p1 = x0 + t1 * d
 
     endpoints0 = np.array([map_3d_to_2d(p0, frac0), map_3d_to_2d(p1, frac0)])
     endpoints1 = np.array([map_3d_to_2d(p0, frac1), map_3d_to_2d(p1, frac1)])
 
-    return endpoints0, endpoints1  # endpoints0, endpoints1
+    return endpoints0, endpoints1
+
+
+def line_disc_interval(x0, d, center, radius):
+    """
+    Returns interval [t0, t1] where x0+t*d lies inside disc.
+    """
+    m = x0 - center
+
+    a = np.dot(d, d)
+    b = 2 * np.dot(d, m)
+    c = np.dot(m, m) - radius**2
+
+    disc = b * b - 4 * a * c
+
+    if disc < 0:
+        return None
+
+    s = np.sqrt(max(disc, 0.0))
+
+    t0 = (-b - s) / (2 * a)
+    t1 = (-b + s) / (2 * a)
+
+    return min(t0, t1), max(t0, t1)
 
 
 def line_circle_intersection(z0, z1, radius):
