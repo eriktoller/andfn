@@ -345,15 +345,120 @@ def fracture_intersection(frac0, frac1):
         and np.linalg.norm(x - frac1.center) <= frac1.radius + 1e-8
     ]
 
-    if len(valid) != 2:
+    # if len(valid) != 2:
+    #    return None, None
+
+    if len(valid) < 2:
+        return None, None
+    p00, p10 = valid[0], valid[1]
+
+    I0 = line_disc_interval(x0, d, frac0.center, frac0.radius)
+    I1 = line_disc_interval(x0, d, frac1.center, frac1.radius)
+
+    if I0 is None or I1 is None:
         return None, None
 
-    p0, p1 = valid
+    t0 = max(I0[0], I1[0])
+    t1 = min(I0[1], I1[1])
+
+    if t0 > t1 + 1e-10:
+        return None, None
+
+    p0 = x0 + t0 * d
+    p1 = x0 + t1 * d
+
+    # check if p0 and p00 differ and raise error if they do
+    if (
+        np.linalg.norm(p0 - p00) / max(np.linalg.norm(p0), np.linalg.norm(p10)) > 4e-12
+        or np.linalg.norm(p1 - p10) / max(np.linalg.norm(p1), np.linalg.norm(p00))
+        > 4e-12
+    ):
+        if (
+            np.linalg.norm(p0 - p10) / max(np.linalg.norm(p0), np.linalg.norm(p10))
+            > 4e-12
+            or np.linalg.norm(p1 - p00) / max(np.linalg.norm(p1), np.linalg.norm(p00))
+            > 4e-12
+        ):
+            # --- Third-level check: same line, small endpoint parameter difference ---
+            u = d / np.linalg.norm(d)
+
+            err_same = np.linalg.norm(p0 - p00) + np.linalg.norm(p1 - p10)
+
+            err_swap = np.linalg.norm(p0 - p10) + np.linalg.norm(p1 - p00)
+
+            if err_same <= err_swap:
+                q0, q1 = p00, p10
+            else:
+                q0, q1 = p10, p00
+
+            along0 = abs(np.dot(p0 - q0, u))
+            along1 = abs(np.dot(p1 - q1, u))
+
+            perp0 = np.linalg.norm(np.cross(p0 - q0, u))
+            perp1 = np.linalg.norm(np.cross(p1 - q1, u))
+
+            max_along = max(along0, along1)
+            max_perp = max(perp0, perp1)
+
+            segment_length = np.linalg.norm(q1 - q0)
+
+            if (
+                max_perp < 1e-10 + 1e-10 * segment_length
+                and max_along < 1e-8 + 1e-8 * segment_length
+            ):
+                print(f"max_along = {max_along}")
+                print(f"max_perp = {max_perp}")
+                print(f"p0: {p0}, p00: {p00}, p10: {p10}")
+                print(f"p1: {p1}, p00: {p00}, p10: {p10}")
+                print(f"np.linalg.norm(p0 - p00) = {np.linalg.norm(p0 - p00)}")
+                print(f"np.linalg.norm(p1 - p10) = {np.linalg.norm(p1 - p10)}")
+                print(f"np.linalg.norm(p0 - p10) = {np.linalg.norm(p0 - p10)}")
+                print(f"np.linalg.norm(p1 - p00) = {np.linalg.norm(p1 - p00)}")
+                print(f"max_along = {max_along}")
+                print(f"max_perp = {max_perp}")
+            else:
+                print(f"p0: {p0}, p00: {p00}, p10: {p10}")
+                print(f"p1: {p1}, p00: {p00}, p10: {p10}")
+                print(f"np.linalg.norm(p0 - p00) = {np.linalg.norm(p0 - p00)}")
+                print(f"np.linalg.norm(p1 - p10) = {np.linalg.norm(p1 - p10)}")
+                print(f"np.linalg.norm(p0 - p10) = {np.linalg.norm(p0 - p10)}")
+                print(f"np.linalg.norm(p1 - p00) = {np.linalg.norm(p1 - p00)}")
+                print(f"max_along = {max_along}")
+                print(f"max_perp = {max_perp}")
+                raise ValueError("Intersection points do not match")
+
+        else:
+            print("-------------------------> Exact match")
+    else:
+        print("-------------------------> Exact match")
 
     endpoints0 = np.array([map_3d_to_2d(p0, frac0), map_3d_to_2d(p1, frac0)])
     endpoints1 = np.array([map_3d_to_2d(p0, frac1), map_3d_to_2d(p1, frac1)])
 
     return endpoints0, endpoints1  # endpoints0, endpoints1
+
+
+def line_disc_interval(x0, d, center, radius):
+    """
+    Returns interval [t0, t1] where x0+t*d lies inside disc.
+    """
+    m = x0 - center
+
+    a = np.dot(d, d)
+    b = 2 * np.dot(d, m)
+    c = np.dot(m, m) - radius**2
+
+    disc = b * b - 4 * a * c
+
+    if disc < 0:
+        return None
+
+    s = np.sqrt(max(disc, 0.0))
+
+    t0 = (-b - s) / (2 * a)
+    t1 = (-b + s) / (2 * a)
+
+    return min(t0, t1), max(t0, t1)
 
 
 def line_circle_intersection(z0, z1, radius):
