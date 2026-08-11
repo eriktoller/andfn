@@ -26,6 +26,7 @@ from andfn.geometry_functions import (
     fracture_intersection,
     copy_dfn,
 )
+from andfn.io import export_fractures
 
 __all__ = [
     "BoundingCircle",
@@ -43,4 +44,5 @@ __all__ = [
     "map_3d_to_2d",
     "fracture_intersection",
     "copy_dfn",
+    "export_fractures",
 ]
