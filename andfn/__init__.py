@@ -8,7 +8,7 @@ Method (AEM).
 # version number
 __name__ = "andfn"
 __author__ = "Erik A.L. Toller"
-__version__ = "0.1.16"
+__version__ = "0.1.17"
 
 # Import all classes and functions
 from andfn.bounding import BoundingCircle
@@ -26,6 +26,7 @@ from andfn.geometry_functions import (
     fracture_intersection,
     copy_dfn,
 )
+from andfn.io import export_fractures
 
 __all__ = [
     "BoundingCircle",
@@ -43,4 +44,5 @@ __all__ = [
     "map_3d_to_2d",
     "fracture_intersection",
     "copy_dfn",
+    "export_fractures",
 ]

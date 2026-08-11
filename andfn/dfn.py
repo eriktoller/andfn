@@ -19,10 +19,12 @@ from andfn import geometry_functions as gf
 from .constants import Constants, dtype_constants
 from .fracture import Fracture
 from .hpc.hpc_solve import solve as hpc_solve
+from .hpc.hpc_solve import compute_bnd_error as hpc_compute_bnd_error
 from .hpc.hpc_fracture import (
     get_flow_nets as hpc_get_flow_nets,
     get_heads as hpc_get_heads,
 )
+from .io import import_fractures_from_json
 from .structures import STRUCTURES_COLOR
 from .well import Well
 from .impermeable_object import ImpermeableCircle, ImpermeableLine
@@ -39,6 +41,7 @@ from .element import (
     ELEMENT_COLORS,
     MAX_ELEMENTS,
     MAX_NCOEF,
+    element_types,
 )
 
 # Custom colormaps
@@ -677,19 +680,19 @@ class DFN(Constants):
 
         for name in elements_struc_array.dtype.names:
             if np.issubdtype(element_dtype_hpc[name], np.int_):
-                elements_struc_array[name][0] = -1
+                elements_struc_array[name][:] = -1
             elif np.issubdtype(element_dtype_hpc[name], np.float64):
-                elements_struc_array[name][0] = np.nan
+                elements_struc_array[name][:] = np.nan
             elif np.issubdtype(element_dtype_hpc[name], np.complex128):
-                elements_struc_array[name][0] = np.nan + 1j * np.nan
+                elements_struc_array[name][:] = np.nan + 1j * np.nan
             elif name == "thetas" or name == "dpsi_corr":
-                elements_struc_array[name][0] = np.zeros(
+                elements_struc_array[name][:] = np.zeros(
                     MAX_NCOEF * 2, dtype=np.float64
                 )
             elif name == "coef" or name == "old_coef":
-                elements_struc_array[name][0] = np.zeros(MAX_NCOEF, dtype=np.complex128)
+                elements_struc_array[name][:] = np.zeros(MAX_NCOEF, dtype=np.complex128)
             elif name == "endpoints0" or name == "endpoints1":
-                elements_struc_array[name][0] = np.full(
+                elements_struc_array[name][:] = np.full(
                     2, np.nan + 1j * np.nan, dtype=np.complex128
                 )
 
@@ -860,6 +863,7 @@ class DFN(Constants):
                     )
                 cnt += 1
                 e.unconsolidate_hpc(e_struc, e_idx, fractures)
+            print()  # new line after unconsolidating elements
 
         else:
             for i, f in enumerate(self.fractures):
@@ -1202,11 +1206,11 @@ class DFN(Constants):
     def import_fractures_from_file(
         self,
         path,
-        radius_str,
-        x_str,
-        y_str,
-        z_str,
-        t_str,
+        radius_str=None,
+        x_str=None,
+        y_str=None,
+        z_str=None,
+        t_str=None,
         e_str=None,
         strike_str=None,
         dip_str=None,
@@ -1255,58 +1259,68 @@ class DFN(Constants):
         None
             The fractures are added to the DFN.
         """
-
-        # Check if pandas is installed
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "Pandas is required to import fractures from a file. Please install pandas."
-            )
-
         # Check if the file exists
         if not os.path.exists(path):
             raise FileNotFoundError(f"The file {path} does not exist.")
 
-        data_file = pd.read_csv(path)
-        if strike_str is not None and dip_str is not None:
-            orientation_method = gf.convert_strike_dip_to_normal
-            st_str = strike_str
-            dp_str = dip_str
-        elif trend_str is not None and plunge_str is not None:
-            orientation_method = gf.convert_trend_plunge_to_normal
-            st_str = trend_str
-            dp_str = plunge_str
-        else:
-            raise ValueError("Either strike/dip or trend/plunge must be provided.")
-        if e_str is not None and e_str not in data_file.columns:
-            raise ValueError(f"Aperture column '{e_str}' not found in the data file.")
-
-        # Extract the data from the file
-        radius_arr = data_file[radius_str].to_numpy()
-        st_arr = data_file[st_str].to_numpy()
-        dp_arr = data_file[dp_str].to_numpy()
-        center_arr = data_file[[x_str, y_str, z_str]].to_numpy()
-        transmissivity_arr = data_file[t_str].to_numpy()
-        aperture_arr = data_file[e_str].to_numpy()
-
-        normals = np.array(
-            [orientation_method(st, dp) for st, dp in zip(st_arr, dp_arr)]
-        )
-
-        frac = [
-            Fracture(
-                f"{i}",
-                transmissivity_arr[i],
-                radius_arr[i],
-                center_arr[i],
-                normals[i],
-                aperture_arr[i],
-                ncoef=self.constants["NCOEF"],
-                nint=self.constants["NINT"],
+        ext = os.path.splitext(path)[1].lower()
+        if ext not in [".csv", ".fracs"]:
+            raise ValueError(
+                f"The file {path} is not a valid fracture file. Only .csv and .fracs files are supported."
             )
-            for i in range(len(data_file))
-        ]
+
+        if ext == ".fracs":
+            frac = import_fractures_from_json(path)
+        elif ext == ".csv":
+            # Check if pandas is installed
+            try:
+                import pandas as pd
+            except ImportError:
+                raise ImportError(
+                    "Pandas is required to import fractures from a file. Please install pandas."
+                )
+
+            data_file = pd.read_csv(path)
+            if strike_str is not None and dip_str is not None:
+                orientation_method = gf.convert_strike_dip_to_normal
+                st_str = strike_str
+                dp_str = dip_str
+            elif trend_str is not None and plunge_str is not None:
+                orientation_method = gf.convert_trend_plunge_to_normal
+                st_str = trend_str
+                dp_str = plunge_str
+            else:
+                raise ValueError("Either strike/dip or trend/plunge must be provided.")
+            for col in [radius_str, x_str, y_str, z_str, t_str, e_str]:
+                if col not in data_file.columns:
+                    raise ValueError(f"Column '{col}' not found in the data file.")
+
+            # Extract the data from the file
+            radius_arr = data_file[radius_str].to_numpy()
+            st_arr = data_file[st_str].to_numpy()
+            dp_arr = data_file[dp_str].to_numpy()
+            center_arr = data_file[[x_str, y_str, z_str]].to_numpy()
+            transmissivity_arr = data_file[t_str].to_numpy()
+            aperture_arr = data_file[e_str].to_numpy()
+
+            normals = np.array(
+                [orientation_method(st, dp) for st, dp in zip(st_arr, dp_arr)]
+            )
+
+            frac = [
+                Fracture(
+                    f"{i}",
+                    transmissivity_arr[i],
+                    radius_arr[i],
+                    center_arr[i],
+                    normals[i],
+                    aperture_arr[i],
+                    ncoef=self.constants["NCOEF"],
+                    nint=self.constants["NINT"],
+                )
+                for i in range(len(data_file))
+            ]
+
         # sort the fracture by radius, starting with the largest
         frac.sort(key=lambda f: f.radius, reverse=True)
         centers = np.array([f.center for f in frac])
@@ -1629,7 +1643,7 @@ class DFN(Constants):
                 e.endpoints0 = new_endpoints0
                 e.endpoints1 = new_endpoints1
 
-    def remove_small_elements(self, min_length):
+    def remove_small_elements(self, min_length, radius_fraction=False):
         """
         Removes elements from the DFN that are smaller than the specified minimum length.
 
@@ -1637,6 +1651,8 @@ class DFN(Constants):
         ----------
         min_length : float
             The minimum length of the elements to keep.
+        radius_fraction: bool
+            Weather of not the min_length should be scaled to the fracture radius
         """
         if self.elements is None:
             self.get_elements()
@@ -1644,20 +1660,26 @@ class DFN(Constants):
         cnt = 0
         for f in self.fractures:
             elements_to_remove = []
+            tol_len = min_length * f.radius if radius_fraction else min_length
             for e in f.elements:
                 if isinstance(e, Intersection):
                     length = np.linalg.norm(e.endpoints0[1] - e.endpoints0[0])
-                    if length < min_length:
+                    if length < tol_len:
                         elements_to_remove.append(e)
                 elif isinstance(e, (ConstantHeadLine, ImpermeableLine)):
                     length = np.linalg.norm(e.endpoints0[1] - e.endpoints0[0])
-                    if length < min_length:
+                    if length < tol_len:
                         elements_to_remove.append(e)
             for e in elements_to_remove:
                 f.delete_element(e)
                 del e
                 cnt += 1
-        logger.info(f"Removed {cnt} elements smaller than {min_length} units.")
+        if radius_fraction:
+            logger.info(
+                f"Removed {cnt} elements smaller than {min_length}*radius units."
+            )
+        else:
+            logger.info(f"Removed {cnt} elements smaller than {min_length} units.")
 
         # Check if fractures have no elements and remove them
         flen = len(self.fractures)
@@ -1847,6 +1869,46 @@ class DFN(Constants):
         if unconsolidate:
             logger.info("Unconsolidating DFN...")
             self.unconsolidate_dfn(hpc=True)
+
+    def check_boundary_conditions(self, n_points=100):
+        """
+        Checks if the boundary conditions are correctly applied to the DFN.
+
+        Calls the HPC ``compute_bnd_error`` wrapper which reconstructs the
+        work-array fields (``element_pos``, ``len_discharge_element``,
+        ``dpsi_corr``) from the solved element array and then evaluates the
+        per-element boundary-condition error.
+
+        Returns
+        -------
+        bnd_error : np.ndarray[float64]
+            Per-element boundary condition error (same length as the element
+            structured array).  Returns ``None`` if the DFN has not been
+            solved yet.
+        """
+        logger.info("Checking boundary conditions...")
+        if self.elements_struc_array is None or self.fractures_struc_array_hpc is None:
+            logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
+            return None
+
+        bnd_error = hpc_compute_bnd_error(
+            self.fractures_struc_array_hpc,
+            self.elements_struc_array,
+            n_points,
+            self.constants,
+        )
+
+        max_err = float(np.max(bnd_error[:, 0]))
+        mean_err = float(np.mean(bnd_error[:, 0]))
+        error_99 = float(np.percentile(bnd_error[:, 0], 99))
+        error_95 = float(np.percentile(bnd_error[:, 0], 95))
+        error_90 = float(np.percentile(bnd_error[:, 0], 90))
+        max_type = int(bnd_error[np.argmax(bnd_error[:, 0]), 1])
+        max_index = np.argmax(bnd_error[:, 0])
+        logger.info(
+            f"Boundary condition check: max error = {max_err:.3e} (type: {element_types[int(max_type)]}, index: {max_index}), mean error = {mean_err:.3e}, 99th percentile error = {error_99:.3e}, 95th percentile error = {error_95:.3e}, 90th percentile error = {error_90:.3e}"
+        )
+        return bnd_error, max_index
 
     ####################################################################################################################
     #                    Plotting functions                                                                            #

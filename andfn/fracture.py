@@ -100,6 +100,38 @@ class Fracture:
         """
         return self.__str__()
 
+    def to_dict(self, fracs_file=False):
+        """
+        Converts the fracture to a dictionary.
+
+        Returns
+        -------
+        dict
+            The dictionary representation of the fracture.
+        """
+        if fracs_file:
+            return {
+                "label": self.label,
+                "t": self.t,
+                "radius": self.radius,
+                "center": self.center.tolist(),
+                "normal": self.normal.tolist(),
+                "aperture": self.aperture,
+            }
+        return {
+            "label": self.label,
+            "_id": self._id,
+            "t": self.t,
+            "radius": self.radius,
+            "center": self.center.tolist(),
+            "normal": self.normal.tolist(),
+            "x_vector": self.x_vector.tolist(),
+            "y_vector": self.y_vector.tolist(),
+            "elements": [e._id for e in self.elements],
+            "constant": self.constant,
+            "aperture": self.aperture,
+        }
+
     def set_id(self, _id):
         """
         Sets the id for the fracture.
@@ -277,7 +309,7 @@ class Fracture:
         ]
         self.constant = fracture_struc_array["constant"]
 
-        self.label = fracture_index_array["label"]
+        # self.label = fracture_index_array["label"]
 
     def add_element(self, new_element):
         """
@@ -568,3 +600,27 @@ class Fracture:
             omega_fn[:, i] = self.calc_omega(z)
 
         return omega_fn, x_array, y_array
+
+
+def fracture_from_dict(d):
+    """
+    Converts a dictionary to a fracture.
+
+    Parameters
+    ----------
+    d : dict
+        The dictionary representation of the fracture.
+    """
+    return Fracture(
+        label=d["label"],
+        t=d["t"],
+        radius=d["radius"],
+        center=np.array(d["center"]),
+        normal=np.array(d["normal"]),
+        aperture=d.get("aperture", None),
+        **{
+            k: v
+            for k, v in d.items()
+            if k not in ["label", "t", "radius", "center", "normal", "aperture"]
+        },
+    )

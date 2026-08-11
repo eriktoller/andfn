@@ -329,11 +329,13 @@ class RectangularRegion(Region):
         kwargs : dict
             Additional keyword arguments for the plot.
         """
-        if isinstance(face, int):
+        if isinstance(face, str):
             try:
                 face = self.faces_dict[face]
             except KeyError:
-                raise ValueError("Face must be an integer between 0 and 5.")
+                raise ValueError(
+                    "Face must be an integer between 0 and 5 or a string in ['top', 'bottom', 'front', 'back', 'left', 'right']."
+                )
 
         mesh = pv.PolyData(self.vertices[face], np.array([[4, 0, 1, 2, 3]]))
         pl.add_mesh(
