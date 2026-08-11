@@ -42,6 +42,27 @@ class Well(Element):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def to_dict(self):
+        """
+        Converts the well to a dictionary.
+
+        Returns
+        -------
+        dict
+            The well as a dictionary.
+        """
+        return {
+            "_id": self._id,
+            "_type": self._type,
+            "label": self.label,
+            "radius": self.radius,
+            "center": self.center,
+            "head": self.head,
+            "phi": self.phi,
+            "q": self.q,
+            "frac0": self.frac0.label,
+        }
+
     def discharge_term(self, z):
         """
         Returns the discharge term for the well.

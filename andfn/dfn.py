@@ -24,6 +24,7 @@ from .hpc.hpc_fracture import (
     get_flow_nets as hpc_get_flow_nets,
     get_heads as hpc_get_heads,
 )
+from .io import import_fractures_from_json
 from .structures import STRUCTURES_COLOR
 from .well import Well
 from .impermeable_object import ImpermeableCircle, ImpermeableLine
@@ -1205,11 +1206,11 @@ class DFN(Constants):
     def import_fractures_from_file(
         self,
         path,
-        radius_str,
-        x_str,
-        y_str,
-        z_str,
-        t_str,
+        radius_str=None,
+        x_str=None,
+        y_str=None,
+        z_str=None,
+        t_str=None,
         e_str=None,
         strike_str=None,
         dip_str=None,
@@ -1258,58 +1259,68 @@ class DFN(Constants):
         None
             The fractures are added to the DFN.
         """
-
-        # Check if pandas is installed
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError(
-                "Pandas is required to import fractures from a file. Please install pandas."
-            )
-
         # Check if the file exists
         if not os.path.exists(path):
             raise FileNotFoundError(f"The file {path} does not exist.")
 
-        data_file = pd.read_csv(path)
-        if strike_str is not None and dip_str is not None:
-            orientation_method = gf.convert_strike_dip_to_normal
-            st_str = strike_str
-            dp_str = dip_str
-        elif trend_str is not None and plunge_str is not None:
-            orientation_method = gf.convert_trend_plunge_to_normal
-            st_str = trend_str
-            dp_str = plunge_str
-        else:
-            raise ValueError("Either strike/dip or trend/plunge must be provided.")
-        if e_str is not None and e_str not in data_file.columns:
-            raise ValueError(f"Aperture column '{e_str}' not found in the data file.")
-
-        # Extract the data from the file
-        radius_arr = data_file[radius_str].to_numpy()
-        st_arr = data_file[st_str].to_numpy()
-        dp_arr = data_file[dp_str].to_numpy()
-        center_arr = data_file[[x_str, y_str, z_str]].to_numpy()
-        transmissivity_arr = data_file[t_str].to_numpy()
-        aperture_arr = data_file[e_str].to_numpy()
-
-        normals = np.array(
-            [orientation_method(st, dp) for st, dp in zip(st_arr, dp_arr)]
-        )
-
-        frac = [
-            Fracture(
-                f"{i}",
-                transmissivity_arr[i],
-                radius_arr[i],
-                center_arr[i],
-                normals[i],
-                aperture_arr[i],
-                ncoef=self.constants["NCOEF"],
-                nint=self.constants["NINT"],
+        ext = os.path.splitext(path)[1].lower()
+        if ext not in [".csv", ".fracs"]:
+            raise ValueError(
+                f"The file {path} is not a valid fracture file. Only .csv and .fracs files are supported."
             )
-            for i in range(len(data_file))
-        ]
+
+        if ext == ".fracs":
+            frac = import_fractures_from_json(path)
+        elif ext == ".csv":
+            # Check if pandas is installed
+            try:
+                import pandas as pd
+            except ImportError:
+                raise ImportError(
+                    "Pandas is required to import fractures from a file. Please install pandas."
+                )
+
+            data_file = pd.read_csv(path)
+            if strike_str is not None and dip_str is not None:
+                orientation_method = gf.convert_strike_dip_to_normal
+                st_str = strike_str
+                dp_str = dip_str
+            elif trend_str is not None and plunge_str is not None:
+                orientation_method = gf.convert_trend_plunge_to_normal
+                st_str = trend_str
+                dp_str = plunge_str
+            else:
+                raise ValueError("Either strike/dip or trend/plunge must be provided.")
+            for col in [radius_str, x_str, y_str, z_str, t_str, e_str]:
+                if col not in data_file.columns:
+                    raise ValueError(f"Column '{col}' not found in the data file.")
+
+            # Extract the data from the file
+            radius_arr = data_file[radius_str].to_numpy()
+            st_arr = data_file[st_str].to_numpy()
+            dp_arr = data_file[dp_str].to_numpy()
+            center_arr = data_file[[x_str, y_str, z_str]].to_numpy()
+            transmissivity_arr = data_file[t_str].to_numpy()
+            aperture_arr = data_file[e_str].to_numpy()
+
+            normals = np.array(
+                [orientation_method(st, dp) for st, dp in zip(st_arr, dp_arr)]
+            )
+
+            frac = [
+                Fracture(
+                    f"{i}",
+                    transmissivity_arr[i],
+                    radius_arr[i],
+                    center_arr[i],
+                    normals[i],
+                    aperture_arr[i],
+                    ncoef=self.constants["NCOEF"],
+                    nint=self.constants["NINT"],
+                )
+                for i in range(len(data_file))
+            ]
+
         # sort the fracture by radius, starting with the largest
         frac.sort(key=lambda f: f.radius, reverse=True)
         centers = np.array([f.center for f in frac])

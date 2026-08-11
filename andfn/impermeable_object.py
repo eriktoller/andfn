@@ -78,8 +78,27 @@ class ImpermeableCircle(Element):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def __str__(self):
-        return f"Impermeable circle: {self.label}"
+    def to_dict(self):
+        """
+        Convert the impermeable circle to a dictionary.
+
+        Returns
+        -------
+        dict
+            The impermeable circle as a dictionary
+        """
+        return {
+            "_id": self._id,
+            "_type": self._type,
+            "label": self.label,
+            "radius": self.radius,
+            "center": self.center.tolist(),
+            "frac0": self.frac0._id,
+            "ncoef": self.ncoef,
+            "nint": self.nint,
+            "coef_real": self.coef.real.tolist(),
+            "coef_imag": self.coef.imag.tolist(),
+        }
 
     def z_array_tracking(self, n, offset=1e-3):
         """
@@ -179,8 +198,26 @@ class ImpermeableLine(Element):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def __str__(self):
-        return f"Impermeable line: {self.label}"
+    def to_dict(self):
+        """
+        Convert the impermeable line to a dictionary.
+
+        Returns
+        -------
+        dict
+            The impermeable line as a dictionary
+        """
+        return {
+            "_id": self._id,
+            "_type": self._type,
+            "label": self.label,
+            "endpoints0": self.endpoints0.tolist(),
+            "frac0": self.frac0._id,
+            "ncoef": self.ncoef,
+            "nint": self.nint,
+            "coef_real": self.coef.real.tolist(),
+            "coef_imag": self.coef.imag.tolist(),
+        }
 
     def calc_omega(self, z):
         """
