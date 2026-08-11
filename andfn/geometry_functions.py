@@ -329,37 +329,14 @@ def fracture_intersection(frac0, frac1):
     if a0 is None or a1 is None:
         return None, None
 
-    # Lift valid endpoints into 3D
-    candidates = [
-        map_2d_to_3d(a0, frac0),
-        map_2d_to_3d(b0, frac0),
-        map_2d_to_3d(a1, frac1),
-        map_2d_to_3d(b1, frac1),
-    ]
+    i0 = line_disc_interval(x0, d, frac0.center, frac0.radius)
+    i1 = line_disc_interval(x0, d, frac1.center, frac1.radius)
 
-    # Keep points inside both fractures
-    valid = [
-        x
-        for x in candidates
-        if np.linalg.norm(x - frac0.center) <= frac0.radius + 1e-8
-        and np.linalg.norm(x - frac1.center) <= frac1.radius + 1e-8
-    ]
-
-    # if len(valid) != 2:
-    #    return None, None
-
-    if len(valid) < 2:
-        return None, None
-    p00, p10 = valid[0], valid[1]
-
-    I0 = line_disc_interval(x0, d, frac0.center, frac0.radius)
-    I1 = line_disc_interval(x0, d, frac1.center, frac1.radius)
-
-    if I0 is None or I1 is None:
+    if i0 is None or i1 is None:
         return None, None
 
-    t0 = max(I0[0], I1[0])
-    t1 = min(I0[1], I1[1])
+    t0 = max(i0[0], i1[0])
+    t1 = min(i0[1], i1[1])
 
     if t0 > t1 + 1e-10:
         return None, None
@@ -367,75 +344,10 @@ def fracture_intersection(frac0, frac1):
     p0 = x0 + t0 * d
     p1 = x0 + t1 * d
 
-    # check if p0 and p00 differ and raise error if they do
-    if (
-        np.linalg.norm(p0 - p00) / max(np.linalg.norm(p0), np.linalg.norm(p10)) > 4e-12
-        or np.linalg.norm(p1 - p10) / max(np.linalg.norm(p1), np.linalg.norm(p00))
-        > 4e-12
-    ):
-        if (
-            np.linalg.norm(p0 - p10) / max(np.linalg.norm(p0), np.linalg.norm(p10))
-            > 4e-12
-            or np.linalg.norm(p1 - p00) / max(np.linalg.norm(p1), np.linalg.norm(p00))
-            > 4e-12
-        ):
-            # --- Third-level check: same line, small endpoint parameter difference ---
-            u = d / np.linalg.norm(d)
-
-            err_same = np.linalg.norm(p0 - p00) + np.linalg.norm(p1 - p10)
-
-            err_swap = np.linalg.norm(p0 - p10) + np.linalg.norm(p1 - p00)
-
-            if err_same <= err_swap:
-                q0, q1 = p00, p10
-            else:
-                q0, q1 = p10, p00
-
-            along0 = abs(np.dot(p0 - q0, u))
-            along1 = abs(np.dot(p1 - q1, u))
-
-            perp0 = np.linalg.norm(np.cross(p0 - q0, u))
-            perp1 = np.linalg.norm(np.cross(p1 - q1, u))
-
-            max_along = max(along0, along1)
-            max_perp = max(perp0, perp1)
-
-            segment_length = np.linalg.norm(q1 - q0)
-
-            if (
-                max_perp < 1e-10 + 1e-10 * segment_length
-                and max_along < 1e-8 + 1e-8 * segment_length
-            ):
-                print(f"max_along = {max_along}")
-                print(f"max_perp = {max_perp}")
-                print(f"p0: {p0}, p00: {p00}, p10: {p10}")
-                print(f"p1: {p1}, p00: {p00}, p10: {p10}")
-                print(f"np.linalg.norm(p0 - p00) = {np.linalg.norm(p0 - p00)}")
-                print(f"np.linalg.norm(p1 - p10) = {np.linalg.norm(p1 - p10)}")
-                print(f"np.linalg.norm(p0 - p10) = {np.linalg.norm(p0 - p10)}")
-                print(f"np.linalg.norm(p1 - p00) = {np.linalg.norm(p1 - p00)}")
-                print(f"max_along = {max_along}")
-                print(f"max_perp = {max_perp}")
-            else:
-                print(f"p0: {p0}, p00: {p00}, p10: {p10}")
-                print(f"p1: {p1}, p00: {p00}, p10: {p10}")
-                print(f"np.linalg.norm(p0 - p00) = {np.linalg.norm(p0 - p00)}")
-                print(f"np.linalg.norm(p1 - p10) = {np.linalg.norm(p1 - p10)}")
-                print(f"np.linalg.norm(p0 - p10) = {np.linalg.norm(p0 - p10)}")
-                print(f"np.linalg.norm(p1 - p00) = {np.linalg.norm(p1 - p00)}")
-                print(f"max_along = {max_along}")
-                print(f"max_perp = {max_perp}")
-                raise ValueError("Intersection points do not match")
-
-        else:
-            print("-------------------------> Exact match")
-    else:
-        print("-------------------------> Exact match")
-
     endpoints0 = np.array([map_3d_to_2d(p0, frac0), map_3d_to_2d(p1, frac0)])
     endpoints1 = np.array([map_3d_to_2d(p0, frac1), map_3d_to_2d(p1, frac1)])
 
-    return endpoints0, endpoints1  # endpoints0, endpoints1
+    return endpoints0, endpoints1
 
 
 def line_disc_interval(x0, d, center, radius):
