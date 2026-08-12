@@ -4,11 +4,11 @@ Notes
 This module contains the HPC Constant head functions.
 """
 
-import numpy as np
 import numba as nb
+import numpy as np
 
-from . import hpc_math_functions as mf
 from . import hpc_geometry_functions as gf
+from . import hpc_math_functions as mf
 
 
 @nb.njit()

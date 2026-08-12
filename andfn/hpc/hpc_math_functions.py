@@ -4,13 +4,15 @@ Notes
 This module contains some general mathematical functions.
 """
 
-import numpy as np
-import numba as nb
 import math
+
+import numba as nb
+import numpy as np
+
+from andfn.hpc import CACHE
 
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
-from andfn.hpc import CACHE
 
 
 @nb.njit(inline="always")
@@ -196,7 +198,7 @@ def well_chi(chi, q):
     Function that return the complex potential for a well as a function of chi.
 
     .. math::
-        \omega = \frac{q}{2 \pi} \log(\chi)
+        \\omega = \frac{q}{2 \\pi} \\log(\\chi)
 
     Parameters
     ----------
@@ -219,7 +221,7 @@ def well_chi_array(omega, chi, q):
     Function that return the complex potential for a well as a function of chi.
 
     .. math::
-        \omega = \frac{q}{2 \pi} \log(\chi)
+        \\omega = \frac{q}{2 \\pi} \\log(\\chi)
 
     Parameters
     ----------

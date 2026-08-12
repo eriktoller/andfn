@@ -6,10 +6,11 @@ This module contains the fracture class.
 
 import numpy as np
 
-from andfn.intersection import Intersection
-from andfn.const_head import ConstantHeadLine
-from andfn.well import Well
 import andfn.bounding
+from andfn.const_head import ConstantHeadLine
+from andfn.intersection import Intersection
+from andfn.well import Well
+
 from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
 
 
@@ -372,9 +373,7 @@ class Fracture:
         return [
             e
             for e in self.elements
-            if isinstance(e, Intersection)
-            or isinstance(e, ConstantHeadLine)
-            or isinstance(e, Well)
+            if isinstance(e, (Intersection, ConstantHeadLine, Well))
         ]
 
     def get_discharge_entries(self):
@@ -418,10 +417,9 @@ class Fracture:
         elements = self.get_discharge_elements()
         q = 0.0
         for e in elements:
-            if isinstance(e, Intersection):
-                if e.frac1 == self:
-                    q -= e.q
-                    continue
+            if isinstance(e, Intersection) and e.frac1 == self:
+                q -= e.q
+                continue
             q += e.q
         return np.abs(q)
 
@@ -437,9 +435,7 @@ class Fracture:
         elements = self.get_discharge_elements()
         head = []
         for e in elements:
-            if isinstance(e, Well):
-                head.append(e.head)
-            elif isinstance(e, ConstantHeadLine):
+            if isinstance(e, (Well, ConstantHeadLine)):
                 head.append(e.head)
         if len(head) == 0:
             return [None, None]

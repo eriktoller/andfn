@@ -4,10 +4,11 @@ Notes
 This module contains the HPC functions for impermeable objects.
 """
 
-import numpy as np
 import numba as nb
-from andfn.hpc import hpc_math_functions as mf
+import numpy as np
+
 from andfn.hpc import hpc_geometry_functions as gf
+from andfn.hpc import hpc_math_functions as mf
 
 ########################################################################################################################
 ## Impermeable Circle

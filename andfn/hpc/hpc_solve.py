@@ -7,21 +7,22 @@ This module contains the HPC solve functions.
 import logging
 import time
 
-import numpy as np
 import numba as nb
+import numpy as np
 import scipy as sp
-from andfn.hpc import hpc_math_functions as mf
+
+from andfn.element import MAX_ELEMENTS, MAX_NCOEF
 from andfn.hpc import (
-    hpc_intersection,
-    hpc_fracture,
-    hpc_const_head_line,
-    hpc_well,
-    hpc_bounding_circle,
-    hpc_imp_object,
-    PARALLEL,
     CACHE,
+    PARALLEL,
+    hpc_bounding_circle,
+    hpc_const_head_line,
+    hpc_fracture,
+    hpc_imp_object,
+    hpc_intersection,
+    hpc_well,
 )
-from andfn.element import MAX_NCOEF, MAX_ELEMENTS
+from andfn.hpc import hpc_math_functions as mf
 
 dtype_work = np.dtype(
     [
@@ -167,7 +168,7 @@ def solve(
                 lu_matrix,
             )
             error_q = np.max(np.abs(discharges - discharges_old))
-            error_q = np.mean(np.abs((discharges - discharges_old)))
+            error_q = np.mean(np.abs(discharges - discharges_old))
             error_q = np.max(
                 np.abs(discharges - discharges_old)
                 / (np.max(np.abs(discharges_old)) + 1e-16)
@@ -1418,11 +1419,10 @@ def get_max_min_phi(
             z0 = z_int["z0"][ids[j]][:discharge_int]
             frac0 = fracture_struc_array[e["frac0"]]
             endpoints = e["endpoints0"]
-            if e["_type"] == 0:  # Intersection
-                if e["frac1"] == frac_id:
-                    z0 = z_int["z1"][ids[j]][:discharge_int]
-                    frac0 = fracture_struc_array[e["frac1"]]
-                    endpoints = e["endpoints1"]
+            if e["_type"] == 0 and e["frac1"] == frac_id:  # Intersection
+                z0 = z_int["z1"][ids[j]][:discharge_int]
+                frac0 = fracture_struc_array[e["frac1"]]
+                endpoints = e["endpoints1"]
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
             for i in range(discharge_int):
                 omega_vec[i] = hpc_fracture.calc_omega(
@@ -1500,16 +1500,7 @@ def set_new_ncoef(self_, n, nint_mult=2):
     nint_mult : int
         The multiplier for the number of integration points.
     """
-    if self_["_type"] == 0:  # Intersection
-        self_["ncoef"] = n
-        self_["nint"] = n * nint_mult
-        stop = 2 * np.pi + 2 * np.pi / self_["nint"]
-        self_["thetas"] = np.linspace(
-            start=np.pi / (2 * self_["nint"]),
-            stop=stop - stop / self_["nint"],
-            num=self_["nint"],
-        )
-    elif self_["_type"] == 3:  # Constant Head Line
+    if self_["_type"] == 0 or self_["_type"] == 3:  # Intersection
         self_["ncoef"] = n
         self_["nint"] = n * nint_mult
         stop = 2 * np.pi + 2 * np.pi / self_["nint"]

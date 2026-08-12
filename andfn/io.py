@@ -1,14 +1,13 @@
 import json
+import logging
 import os
-import scipy as sp
 
 import numpy as np
+import scipy as sp
 
+import andfn.geometry_functions as gf
 from andfn import Fracture
 from andfn.fracture import fracture_from_dict
-import andfn.geometry_functions as gf
-
-import logging
 
 logger = logging.getLogger("andfn")
 

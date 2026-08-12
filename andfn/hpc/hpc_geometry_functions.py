@@ -4,8 +4,8 @@ Notes
 This module contains some geometrical functions.
 """
 
-import numpy as np
 import numba as nb
+import numpy as np
 
 
 @nb.njit(inline="always")

@@ -6,8 +6,10 @@ This module contains the underground structures classes.
 
 import numpy as np
 import pyvista as pv
+
 import andfn.geometry_functions as gf
 from andfn.const_head import ConstantHeadLine
+
 from . import BoundingCircle, Intersection
 from .impermeable_object import ImpermeableLine
 
@@ -117,7 +119,7 @@ class RegularPolygonPrism(Structure):
         vertices : np.ndarray
             The vertices of the tunnel.
         """
-        length, direction, center = self.get_lvc()
+        _, direction, _ = self.get_lvc()
         angle = np.linspace(0, 2 * np.pi, self.n_sides, endpoint=False)
         # rotate it pi/4
         angle += np.pi / 4
@@ -215,10 +217,7 @@ class RegularPolygonPrism(Structure):
         b = start.real - end.real
         c = end.real * start.imag - start.real * end.imag
         dist = np.abs(c) / np.sqrt(a**2 + b**2)
-        if dist > frac_radius * (1 + 1e-10):
-            # The tunnel is too far away from the fracture to intersect
-            return False
-        return True
+        return not dist > frac_radius * (1 + 1e-10)
 
     def frac_intersections(self, fractures, pl=None):
         """
@@ -399,9 +398,7 @@ class RegularPolygonPrism(Structure):
             True if the tunnel is inside the fracture, False otherwise.
         """
         z = gf.map_3d_to_2d(pnt, frac)
-        if np.abs(z) > frac.radius * (1 + 1e-10):
-            return False
-        return True
+        return not np.abs(z) > frac.radius * (1 + 1e-10)
 
     @staticmethod
     def line_plane_intersection(line_start, line_end, plane_point, plane_normal):
@@ -460,9 +457,8 @@ class RegularPolygonPrism(Structure):
                 if isinstance(elem2, BoundingCircle):
                     continue
                 endpoints2 = elem2.endpoints0
-                if isinstance(elem2, Intersection):
-                    if frac == elem2.frac1:
-                        endpoints2 = elem2.endpoints1
+                if isinstance(elem2, Intersection) and frac == elem2.frac1:
+                    endpoints2 = elem2.endpoints1
                 # Check if the two elements are crossing each other
                 z = line_line_intersection(
                     elem1.endpoints0[0],

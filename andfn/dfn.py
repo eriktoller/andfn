@@ -7,48 +7,51 @@ The DFN class is the main class for the AnDFN package. It contains the fractures
 solve the DFN.
 """
 
-import numpy as np
-import numba as nb
+import logging
 import os
-import pyvista as pv
-import scipy as sp
-import h5py
 import time
 
-from andfn import geometry_functions as gf
-from .constants import Constants, dtype_constants
-from .io import IO
-from .fracture import Fracture
-from .hpc.hpc_solve import solve as hpc_solve
-from .hpc.hpc_solve import compute_bnd_error as hpc_compute_bnd_error
-from .hpc.hpc_fracture import (
-    get_flow_nets as hpc_get_flow_nets,
-    get_heads as hpc_get_heads,
-)
-from .structures import STRUCTURES_COLOR
-from .well import Well
-from .impermeable_object import ImpermeableCircle, ImpermeableLine
-from .const_head import ConstantHeadLine
-from .intersection import Intersection
-from .bounding import BoundingCircle
-from .element import (
-    element_dtype,
-    fracture_dtype,
-    element_index_dtype,
-    fracture_index_dtype,
-    element_dtype_hpc,
-    fracture_dtype_hpc,
-    ELEMENT_COLORS,
-    MAX_ELEMENTS,
-    MAX_NCOEF,
-    element_types,
-)
+import h5py
+import numba as nb
+import numpy as np
+import pyvista as pv
+import scipy as sp
 
 # Custom colormaps
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.tri import Triangulation
 
-import logging
+from andfn import geometry_functions as gf
+
+from .bounding import BoundingCircle
+from .const_head import ConstantHeadLine
+from .constants import Constants, dtype_constants
+from .element import (
+    ELEMENT_COLORS,
+    MAX_ELEMENTS,
+    MAX_NCOEF,
+    element_dtype,
+    element_dtype_hpc,
+    element_index_dtype,
+    element_types,
+    fracture_dtype,
+    fracture_dtype_hpc,
+    fracture_index_dtype,
+)
+from .fracture import Fracture
+from .hpc.hpc_fracture import (
+    get_flow_nets as hpc_get_flow_nets,
+)
+from .hpc.hpc_fracture import (
+    get_heads as hpc_get_heads,
+)
+from .hpc.hpc_solve import compute_bnd_error as hpc_compute_bnd_error
+from .hpc.hpc_solve import solve as hpc_solve
+from .impermeable_object import ImpermeableCircle, ImpermeableLine
+from .intersection import Intersection
+from .io import IO
+from .structures import STRUCTURES_COLOR
+from .well import Well
 
 logger = logging.getLogger("andfn")
 
@@ -1077,9 +1080,7 @@ class DFN(Constants, IO):
         self.discharge_elements = [
             e
             for e in self.elements
-            if isinstance(e, Intersection)
-            or isinstance(e, ConstantHeadLine)
-            or isinstance(e, Well)
+            if isinstance(e, (Intersection, ConstantHeadLine, Well))
         ]
 
         self.discharge_elements_index = [e._id for e in self.discharge_elements]
@@ -1357,8 +1358,7 @@ class DFN(Constants, IO):
         """
         min_radius = np.inf
         for f in self.fractures:
-            if f.radius < min_radius:
-                min_radius = f.radius
+            min_radius = min(min_radius, f.radius)
         return min_radius
 
     def set_constant_head_boundary(
@@ -1508,11 +1508,7 @@ class DFN(Constants, IO):
             elements_to_remove = []
             tol_len = min_length * f.radius if radius_fraction else min_length
             for e in f.elements:
-                if isinstance(e, Intersection):
-                    length = np.linalg.norm(e.endpoints0[1] - e.endpoints0[0])
-                    if length < tol_len:
-                        elements_to_remove.append(e)
-                elif isinstance(e, (ConstantHeadLine, ImpermeableLine)):
+                if isinstance(e, (Intersection, ConstantHeadLine, ImpermeableLine)):
                     length = np.linalg.norm(e.endpoints0[1] - e.endpoints0[0])
                     if length < tol_len:
                         elements_to_remove.append(e)
@@ -2121,7 +2117,7 @@ class DFN(Constants, IO):
         # Calculate the hydraulic head for each fracture and get the mapped 3d points
         h = 1 / (n_layers + 1)
         partitions = int(2 * np.pi / h / n_layers)
-        z_array, base_faces = generate_disk(partitions, n_layers)
+        z_array, _ = generate_disk(partitions, n_layers)
         heads, pnts_3d = hpc_get_heads(
             self.fractures_struc_array_hpc_fracs,
             self.elements_struc_array_hpc,
@@ -2168,7 +2164,7 @@ class DFN(Constants, IO):
             opacity=opacity,
             show_edges=False,
             line_width=line_width,
-            scalar_bar_args=dict(title="Hydraulic Head", shadow=True),
+            scalar_bar_args={"title": "Hydraulic Head", "shadow": True},
             name=f"head_{i}",
             clim=limits,
         )
@@ -2290,7 +2286,7 @@ class DFN(Constants, IO):
             opacity=opacity,
             show_edges=False,
             line_width=line_width,
-            scalar_bar_args=dict(title="Hydraulic Head", shadow=True),
+            scalar_bar_args={"title": "Hydraulic Head", "shadow": True},
             clim=limits,
             name="head",
         )
@@ -2444,13 +2440,10 @@ class DFN(Constants, IO):
         ncoef = []
         for e in self.elements:
             ncoef.append(e.ncoef)
-        fig, ax = plt.subplots(figsize=(10, 5), tight_layout=True)
+        _, ax = plt.subplots(figsize=(10, 5), tight_layout=True)
         nbins = np.ceil((max(ncoef) - min(ncoef)) / 5).astype(int)
-        if nbins < 1:
-            nbins = 1
-        counts, edges, bars = ax.hist(
-            ncoef, bins=nbins, color="grey", edgecolor="black"
-        )
+        nbins = max(nbins, 1)
+        _, _, bars = ax.hist(ncoef, bins=nbins, color="grey", edgecolor="black")
         ax.set_title("Number of coefficients for the elements in the DFN")
         ax.set_xlabel("Number of coefficients")
         ax.set_ylabel("Number of elements")

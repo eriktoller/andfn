@@ -5,10 +5,11 @@ This module contains the HPC well functions.
 
 """
 
-import numpy as np
 import numba as nb
-from . import hpc_math_functions as mf
+import numpy as np
+
 from . import hpc_geometry_functions as gf
+from . import hpc_math_functions as mf
 
 
 @nb.njit()

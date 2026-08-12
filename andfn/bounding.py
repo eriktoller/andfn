@@ -4,9 +4,11 @@ Notes
 This module contains the bounding classes.
 """
 
-import andfn.math_functions as mf
-import andfn.geometry_functions as gf
 import numpy as np
+
+import andfn.geometry_functions as gf
+import andfn.math_functions as mf
+
 from .element import Element
 
 

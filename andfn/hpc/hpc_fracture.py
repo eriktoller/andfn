@@ -4,15 +4,16 @@ Notes
 This module contains the HPC fracture functions.
 """
 
-import numpy as np
 import numba as nb
+import numpy as np
+
 from andfn.hpc import (
-    hpc_intersection,
-    hpc_const_head_line,
-    hpc_well,
-    hpc_bounding_circle,
-    hpc_imp_object,
     CACHE,
+    hpc_bounding_circle,
+    hpc_const_head_line,
+    hpc_imp_object,
+    hpc_intersection,
+    hpc_well,
 )
 from andfn.hpc import hpc_geometry_functions as gf
 

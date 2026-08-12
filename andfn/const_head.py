@@ -4,9 +4,10 @@ Notes
 This module contains the constant head classes.
 """
 
-from . import math_functions as mf
-from . import geometry_functions as gf
 import numpy as np
+
+from . import geometry_functions as gf
+from . import math_functions as mf
 from .element import Element
 
 

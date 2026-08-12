@@ -9,7 +9,6 @@ import pyvista as pv
 from scipy.spatial import KDTree
 
 import andfn.geometry_functions as gf
-
 from andfn.const_head import ConstantHeadLine
 
 REGION_COLOR = {0: "00FF00", 1: "0000FF"}
@@ -644,9 +643,7 @@ class RectangularRegion(Region):
             True if the tunnel is inside the fracture, False otherwise.
         """
         z = gf.map_3d_to_2d(pnt, frac)
-        if np.abs(z) > frac.radius * (1 + 1e-10):
-            return False
-        return True
+        return not np.abs(z) > frac.radius * (1 + 1e-10)
 
     @staticmethod
     def line_plane_intersection(line_start, line_end, plane_point, plane_normal):

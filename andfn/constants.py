@@ -4,11 +4,12 @@ Notes
 This module contains the constants used in the AnDFN model as a class.
 """
 
+import logging
+import os
+import sys
+
 import numpy as np
 from numba import set_num_threads
-import logging
-import sys
-import os
 
 dtype_constants = np.dtype(
     [

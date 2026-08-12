@@ -8,17 +8,17 @@ The geometrical functions are used by the element classes and to create the DFN 
 
 import time
 
-import numpy as np
 import numba as nb
+import numpy as np
 from scipy.spatial import KDTree
 
 import andfn
-from . import fracture
-from . import intersection
-from .const_head import ConstantHeadLine
-from .well import Well
-from .impermeable_object import ImpermeableLine
 import andfn.hpc.hpc_geometry_functions as hpc_gf
+
+from . import fracture, intersection
+from .const_head import ConstantHeadLine
+from .impermeable_object import ImpermeableLine
+from .well import Well
 
 
 def map_z_line_to_chi(z, endpoints):
@@ -323,8 +323,8 @@ def fracture_intersection(frac0, frac1):
     z10, z11 = map_3d_to_2d(x0, frac1), map_3d_to_2d(x1, frac1)
 
     # Intersect with circular fracture boundaries
-    a0, b0 = line_circle_intersection(z00, z01, frac0.radius)
-    a1, b1 = line_circle_intersection(z10, z11, frac1.radius)
+    a0, _ = line_circle_intersection(z00, z01, frac0.radius)
+    a1, _ = line_circle_intersection(z10, z11, frac1.radius)
 
     if a0 is None or a1 is None:
         return None, None
@@ -490,7 +490,7 @@ def generate_fractures(
             )
         )
         print(f"\r{i + 1} / {n_fractures}", end="")
-    print("")
+    print()
     return fractures
 
 
@@ -539,27 +539,26 @@ def get_connected_fractures(
                     continue
                 endpoints0, endpoints1 = fracture_intersection(fr, fr2)
                 if endpoints0 is not None:
-                    if fr2 not in []:
-                        length = np.linalg.norm(endpoints0[0] - endpoints0[1])
-                        if (
-                            length < tolerance * fr.radius
-                            or length < tolerance * fr2.radius
-                        ):
-                            continue
-                        endpoints01 = shorten_line(endpoints0, se_factor)
-                        endpoints11 = shorten_line(endpoints1, se_factor)
-                        intersection.Intersection(
-                            f"{fr.label}_{fr2.label}",
-                            endpoints01,
-                            endpoints11,
-                            fr,
-                            fr2,
-                            ncoef,
-                            nint,
-                        )
-                        if fr2 not in connected_fractures:
-                            connected_fractures.append(fr2)
-                            fracture_list_it_temp.append(fr2)
+                    length = np.linalg.norm(endpoints0[0] - endpoints0[1])
+                    if (
+                        length < tolerance * fr.radius
+                        or length < tolerance * fr2.radius
+                    ):
+                        continue
+                    endpoints01 = shorten_line(endpoints0, se_factor)
+                    endpoints11 = shorten_line(endpoints1, se_factor)
+                    intersection.Intersection(
+                        f"{fr.label}_{fr2.label}",
+                        endpoints01,
+                        endpoints11,
+                        fr,
+                        fr2,
+                        ncoef,
+                        nint,
+                    )
+                    if fr2 not in connected_fractures:
+                        connected_fractures.append(fr2)
+                        fracture_list_it_temp.append(fr2)
             print(
                 f"\r{i + 1} / {len(fracture_list_it)}, iteration {cnt}, {len(fracture_list)} potential fractures left to analyze, {len(connected_fractures)} added to the DFN",
                 end="",
@@ -613,26 +612,22 @@ def get_fracture_intersections_org(
                 continue
             endpoints0, endpoints1 = fracture_intersection(fr, fr2)
             if endpoints0 is not None:
-                if fr2 not in []:
-                    length = np.linalg.norm(endpoints0[0] - endpoints0[1])
-                    if (
-                        length < tolerance * fr.radius
-                        or length < tolerance * fr2.radius
-                    ):
-                        continue
-                    endpoints01 = shorten_line(endpoints0, se_factor)
-                    endpoints11 = shorten_line(endpoints1, se_factor)
-                    intersection.Intersection(
-                        f"{fr.label}_{fr2.label}",
-                        endpoints01,
-                        endpoints11,
-                        fr,
-                        fr2,
-                        ncoef,
-                        nint,
-                    )
-                    # fr.add_element(intersections)
-                    # fr2.add_element(intersections)
+                length = np.linalg.norm(endpoints0[0] - endpoints0[1])
+                if length < tolerance * fr.radius or length < tolerance * fr2.radius:
+                    continue
+                endpoints01 = shorten_line(endpoints0, se_factor)
+                endpoints11 = shorten_line(endpoints1, se_factor)
+                intersection.Intersection(
+                    f"{fr.label}_{fr2.label}",
+                    endpoints01,
+                    endpoints11,
+                    fr,
+                    fr2,
+                    ncoef,
+                    nint,
+                )
+                # fr.add_element(intersections)
+                # fr2.add_element(intersections)
 
     return fractures
 
@@ -852,9 +847,9 @@ def split_crossing_elements(fractures):
             elements = [
                 el
                 for el in fr.elements
-                if isinstance(el, intersection.Intersection)
-                or isinstance(el, ConstantHeadLine)
-                or isinstance(el, ImpermeableLine)
+                if isinstance(
+                    el, (intersection.Intersection, ConstantHeadLine, ImpermeableLine)
+                )
             ]
             n_elements = len(elements)
             for i in range(n_elements):

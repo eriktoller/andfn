@@ -7,7 +7,9 @@ This module contains the element class that is a parent class to all elements.
 
 import numpy as np
 import pyvista as pv
+
 import andfn.geometry_functions as gf
+
 from .constants import load_yaml_config
 
 config = load_yaml_config()
@@ -338,10 +340,10 @@ class Element:
         -------
         None. The element is updated in place.
         """
-        assert all(key in element_dtype.names for key in kwargs.keys()), (
+        assert all(key in element_dtype.names for key in kwargs), (
             "Invalid property name."
         )
-        assert all(key in element_index_dtype.names for key in kwargs.keys()), (
+        assert all(key in element_index_dtype.names for key in kwargs), (
             "Invalid property name."
         )
 
@@ -361,7 +363,7 @@ class Element:
         """
         struc_array = initiate_elements_array()
 
-        for key in self.__dict__.keys():
+        for key in self.__dict__:
             if key in element_dtype.names:
                 if key in ["frac0", "frac1"]:
                     struc_array[key][0] = self.__dict__[key]._id
@@ -391,7 +393,7 @@ class Element:
         -------
         None. The element is updated in place.
         """
-        for key in self.__dict__.keys():
+        for key in self.__dict__:
             if key in element_dtype.names:
                 if key in ["frac0", "frac1"]:
                     struc_array[key][i] = self.__dict__[key]._id
@@ -413,7 +415,7 @@ class Element:
         """
         struc_array = initiate_elements_array_hpc()
 
-        for key in self.__dict__.keys():
+        for key in self.__dict__:
             if key in element_dtype_hpc.names:
                 if key in ["frac0", "frac1"]:
                     struc_array[key][0] = self.__dict__[key]._id
@@ -446,7 +448,7 @@ class Element:
         -------
         None. The element is updated in place.
         """
-        for key in self.__dict__.keys():
+        for key in self.__dict__:
             if key in element_dtype_hpc.names:
                 if key in ["frac0", "frac1"]:
                     struc_array[key][i] = self.__dict__[key]._id
@@ -466,7 +468,7 @@ class Element:
         -------
         None. The element is updated in place.
         """
-        for key in self.__dict__.keys():
+        for key in self.__dict__:
             if key in element_dtype.names:
                 if key == "frac0" or key == "frac1":
                     self.__dict__[key] = next(
@@ -493,11 +495,11 @@ class Element:
         q = struc_array["q"]
         error = struc_array["error"]
 
-        setattr(self, "ncoef", ncoef)
-        setattr(self, "nint", nint)
-        setattr(self, "coef", coef)
-        setattr(self, "q", q)
-        setattr(self, "error", error)
+        self.ncoef = ncoef
+        self.nint = nint
+        self.coef = coef
+        self.q = q
+        self.error = error
 
     def plot(self, pl, line_width, color, point_size=5):
         """

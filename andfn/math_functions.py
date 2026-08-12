@@ -12,7 +12,7 @@ import andfn.hpc.hpc_math_functions as hpc_mf
 
 
 def asym_expansion(chi, coef):
-    """
+    r"""
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
     coefficients.
 
@@ -42,7 +42,7 @@ def asym_expansion(chi, coef):
 
 
 def asym_expansion_d1(chi, coef):
-    """
+    r"""
     Function that calculates the first derivative of the asymptotic expansion starting from 0 for a given point chi and
     an array of coefficients.
 
@@ -66,7 +66,7 @@ def asym_expansion_d1(chi, coef):
 
 
 def taylor_series(chi, coef):
-    """
+    r"""
     Function that calculates the Taylor series starting from 0 for a given point chi and an array of
     coefficients.
 
@@ -97,7 +97,7 @@ def taylor_series(chi, coef):
 
 
 def taylor_series_d1(chi, coef):
-    """
+    r"""
     Function that calculates the first derivative of the Taylor series starting from 0 for a given point chi and an array of
     coefficients.
 
