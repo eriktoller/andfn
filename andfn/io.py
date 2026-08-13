@@ -1,15 +1,46 @@
 import json
 import logging
 import os
+import time
 
 import numpy as np
 import scipy as sp
 
 import andfn.geometry_functions as gf
-from andfn import Fracture
-from andfn.fracture import fracture_from_dict
+from andfn.fracture import Fracture, fracture_from_dict
 
 logger = logging.getLogger("andfn")
+
+COLUMN_ALIASES = {
+    "radius_str": ["r", "radius", "EquivRadius[m]"],
+    "x_str": ["x", "east", "easting", "FractureX[m]"],
+    "y_str": ["y", "north", "northing", "FractureY[m]"],
+    "z_str": ["z", "elevation", "depth", "FractureZ[m]"],
+    "t_str": ["t", "transmissivity", "Transmissivity[m2/s]"],
+    "e_str": ["e", "aperture", "Aperture[m]"],
+    "strike_str": ["strike", "Strike[deg]"],
+    "dip_str": ["dip", "Dip_Angle[deg]"],
+    "trend_str": ["trend", "Trend[deg]"],
+    "plunge_str": ["plunge", "Plunge[deg]"],
+}
+
+
+def infer_columns(df, **kwargs):
+    for param, aliases in COLUMN_ALIASES.items():
+        if kwargs.get(param) is None:
+            kwargs[param] = find_column(df, aliases)
+
+    return kwargs
+
+
+def find_column(df, candidates):
+    cols = {c.lower(): c for c in df.columns}
+
+    for candidate in candidates:
+        if candidate.lower() in cols:
+            return cols[candidate.lower()]
+
+    return None
 
 
 def numpy_converter(obj):
@@ -70,16 +101,7 @@ def import_fractures_from_json(filename):
 
 def import_fractures_from_csv(
     path,
-    radius_str=None,
-    x_str=None,
-    y_str=None,
-    z_str=None,
-    t_str=None,
-    e_str=None,
-    strike_str=None,
-    dip_str=None,
-    trend_str=None,
-    plunge_str=None,
+    **kwargs,
 ):
     # Check if pandas is installed
     try:
@@ -88,34 +110,37 @@ def import_fractures_from_csv(
         raise ImportError(
             "Pandas is required to import fractures from a file. Please install pandas."
         )
-    for col in [radius_str, x_str, y_str, z_str, t_str, e_str]:
-        if col is None:
-            raise ValueError(
-                f"The column name for {col} must be provided when importing from a CSV file."
-            )
 
     data_file = pd.read_csv(path)
-    if strike_str is not None and dip_str is not None:
-        orientation_method = gf.convert_strike_dip_to_normal
-        st_str = strike_str
-        dp_str = dip_str
-    elif trend_str is not None and plunge_str is not None:
+    cols = infer_columns(data_file, **kwargs)
+
+    # Check that all required columns are present
+    for col in ["radius_str", "x_str", "y_str", "z_str", "t_str", "e_str"]:
+        if cols[col] is None:
+            raise ValueError(
+                f"Column for '{col}' not found in the data file. Please specify the column name in the function call."
+            )
+
+    if cols["trend_str"] is not None and cols["plunge_str"] is not None:
         orientation_method = gf.convert_trend_plunge_to_normal
-        st_str = trend_str
-        dp_str = plunge_str
+        st_str = cols["trend_str"]
+        dp_str = cols["plunge_str"]
+    elif cols["strike_str"] is not None and cols["dip_str"] is not None:
+        orientation_method = gf.convert_strike_dip_to_normal
+        st_str = cols["strike_str"]
+        dp_str = cols["dip_str"]
     else:
-        raise ValueError("Either strike/dip or trend/plunge must be provided.")
-    for col in [radius_str, x_str, y_str, z_str, t_str, e_str]:
-        if col not in data_file.columns:
-            raise ValueError(f"Column '{col}' not found in the data file.")
+        raise ValueError(
+            "Columns for either 'trend' and 'plunge' or 'strike' and 'dip' must be present in the data file. Please specify the column names in the function call."
+        )
 
     # Extract the data from the file
-    radius_arr = data_file[radius_str].to_numpy()
+    radius_arr = data_file[cols["radius_str"]].to_numpy()
     st_arr = data_file[st_str].to_numpy()
     dp_arr = data_file[dp_str].to_numpy()
-    center_arr = data_file[[x_str, y_str, z_str]].to_numpy()
-    transmissivity_arr = data_file[t_str].to_numpy()
-    aperture_arr = data_file[e_str].to_numpy()
+    center_arr = data_file[[cols["x_str"], cols["y_str"], cols["z_str"]]].to_numpy()
+    transmissivity_arr = data_file[cols["t_str"]].to_numpy()
+    aperture_arr = data_file[cols["e_str"]].to_numpy()
 
     normals = np.array([orientation_method(st, dp) for st, dp in zip(st_arr, dp_arr)])
 
@@ -243,7 +268,7 @@ def import_fractures_from_fab(filename):
         normal = lines[i].split()
 
         fracture["normal"] = np.array(
-            [float(normal[0]), float(normal[1]), float(normal[2])]
+            [float(normal[1]), float(normal[2]), float(normal[3])]
         )
 
         property_remove = [p for p in property_names if p not in ["t", "aperture"]]
@@ -307,19 +332,10 @@ class IO:
     def import_fractures_from_file(
         self,
         path,
-        radius_str=None,
-        x_str=None,
-        y_str=None,
-        z_str=None,
-        t_str=None,
-        e_str=None,
-        strike_str=None,
-        dip_str=None,
-        trend_str=None,
-        plunge_str=None,
         starting_frac=None,
         remove_isolated=True,
         remove_tolerance=-1,
+        **kwargs,
     ):
         """
         Imports fractures from a csv file. More formatting options can be added later.
@@ -328,32 +344,36 @@ class IO:
         ----------
         path : str
             The path to the file containing the fractures. Supported file types are .csv, .fracs, and .fab.
-        radius_str : str
-            The name of the column containing the radius of the fractures.
-        x_str : str
-            The name of the column containing the x coordinate of the center of the fractures.
-        y_str : str
-            The name of the column containing the y coordinate of the center of the fractures.
-        z_str : str
-            The name of the column containing the z coordinate of the center of the fractures.
-        t_str : str
-            The name of the column containing the transmissivity of the fractures.
-        e_str : str, optional
-            The name of the column containing the aperture of the fractures. The default is None.
-        strike_str : str, optional
-            The name of the column containing the strike of the fractures. The default is None.
-        dip_str : str, optional
-            The name of the column containing the dip of the fractures. The default is None.
-        trend_str : str, optional
-            The name of the column containing the trend of the fractures. The default is None.
-        plunge_str : str, optional
-            The name of the column containing the plunge of the fractures. The default is None.
         starting_frac : int, optional
             The fracture to use as the starting point for the connected fractures. The default is None.
         remove_isolated : bool, optional
             If True, removes isolated fractures from the DFN. The default is True.
         remove_tolerance : float, optional
             The tolerance to use when removing isolated fractures. The default is -1 (no tolerance).
+        **kwargs : dict
+            Additional keyword arguments to pass to the import_fractures_from_csv function.
+
+            For example, you can specify the column names for radius, x, y, z, transmissivity, aperture, strike, dip, trend, and plunge when importing from a CSV file. If not specified, the function will try to infer the column names from the file.
+            radius_str : str
+                The name of the column containing the radius of the fractures.
+            x_str : str
+                The name of the column containing the x coordinate of the center of the fractures.
+            y_str : str
+                The name of the column containing the y coordinate of the center of the fractures.
+            z_str : str
+                The name of the column containing the z coordinate of the center of the fractures.
+            t_str : str
+                The name of the column containing the transmissivity of the fractures.
+            e_str : str, optional
+                The name of the column containing the aperture of the fractures. The default is None.
+            strike_str : str, optional
+                The name of the column containing the strike of the fractures. The default is None.
+            dip_str : str, optional
+                The name of the column containing the dip of the fractures. The default is None.
+            trend_str : str, optional
+                The name of the column containing the trend of the fractures. The default is None.
+            plunge_str : str, optional
+                The name of the column containing the plunge of the fractures. The default is None.
 
         Returns
         -------
@@ -370,24 +390,22 @@ class IO:
                 f"The file {path} is not a valid fracture file. Only .csv and .fracs files are supported."
             )
 
+        start = time.time()
+
         if ext == ".fracs":
             frac = import_fractures_from_json(path)
         elif ext == ".csv":
             frac = import_fractures_from_csv(
                 path,
-                radius_str=radius_str,
-                x_str=x_str,
-                y_str=y_str,
-                z_str=z_str,
-                t_str=t_str,
-                e_str=e_str,
-                strike_str=strike_str,
-                dip_str=dip_str,
-                trend_str=trend_str,
-                plunge_str=plunge_str,
+                **kwargs,
             )
         elif ext == ".fab":
             frac = import_fractures_from_fab(path)
+
+        end = time.time()
+        logger.info(
+            f"Imported {len(frac)} fractures from {path} in {end - start:.2f} seconds."
+        )
 
         # sort the fracture by radius, starting with the largest
         frac.sort(key=lambda f: f.radius, reverse=True)
@@ -425,11 +443,15 @@ class IO:
 
         self.add_fracture(fracs)
 
+        logger.info(
+            f"Added and filtered {len(fracs)} fractures to the DFN in {time.time() - end:.2f} seconds."
+        )
+
 
 if __name__ == "__main__":
-    filename = "../data/fab_fracs_test.fab"
+    filename = "../data/test_fab.csv"
 
-    model = import_fractures_from_fab(filename)
+    model = IO.import_fractures_from_file(filename, filename)
 
 # if __name__ == "__main__":
 #
