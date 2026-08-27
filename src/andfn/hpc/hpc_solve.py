@@ -17,12 +17,11 @@ from andfn.hpc import (
     PARALLEL,
     hpc_bounding_circle,
     hpc_const_head_line,
-    hpc_fracture,
-    hpc_imp_object,
     hpc_intersection,
     hpc_well,
 )
 from andfn.hpc import hpc_math_functions as mf
+from src.andfn.hpc import hpc_fracture, hpc_imp_object
 
 dtype_work = np.dtype(
     [

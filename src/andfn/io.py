@@ -449,7 +449,7 @@ class IO:
 
 
 if __name__ == "__main__":
-    filename = "../data/test_fab.csv"
+    filename = "../../data/test_fab.csv"
 
     model = IO.import_fractures_from_file(filename, filename)
 

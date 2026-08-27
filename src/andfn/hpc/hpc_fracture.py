@@ -11,11 +11,11 @@ from andfn.hpc import (
     CACHE,
     hpc_bounding_circle,
     hpc_const_head_line,
-    hpc_imp_object,
     hpc_intersection,
     hpc_well,
 )
 from andfn.hpc import hpc_geometry_functions as gf
+from src.andfn.hpc import hpc_imp_object
 
 
 @nb.njit(cache=CACHE)

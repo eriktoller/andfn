@@ -10,8 +10,8 @@ import pyvista as pv
 import andfn.geometry_functions as gf
 from andfn.bounding import BoundingCircle
 from andfn.const_head import ConstantHeadLine
-from andfn.impermeable_object import ImpermeableLine
 from andfn.intersection import Intersection
+from src.andfn.impermeable_object import ImpermeableLine
 
 STRUCTURES_COLOR = {0: "FF0000", 1: "0000FF"}
 

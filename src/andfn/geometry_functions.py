@@ -12,13 +12,7 @@ import numba as nb
 import numpy as np
 from scipy.spatial import KDTree
 
-import andfn
 import andfn.hpc.hpc_geometry_functions as hpc_gf
-
-from . import fracture, intersection
-from .const_head import ConstantHeadLine
-from .impermeable_object import ImpermeableLine
-from .well import Well
 
 
 def map_z_line_to_chi(z, endpoints):
@@ -479,15 +473,15 @@ def generate_fractures(
     fractures : list
         A list of the generated fractures.
     """
+    from .fracture import Fracture
+
     fractures = []
     radii = np.random.rand(n_fractures) * radius_factor
     centers = np.random.rand(n_fractures, 3) * center_factor
     normals = np.random.rand(n_fractures, 3)
     for i in range(n_fractures):
         fractures.append(
-            fracture.Fracture(
-                f"{i + 1}", 1, radii[i], centers[i], normals[i], ncoef, nint
-            )
+            Fracture(f"{i + 1}", 1, radii[i], centers[i], normals[i], ncoef, nint)
         )
         print(f"\r{i + 1} / {n_fractures}", end="")
     print()
@@ -519,6 +513,8 @@ def get_connected_fractures(
     connected_fractures : list
         A list of connected fractures.
     """
+    from .intersection import Intersection
+
     connected_fractures = []
     fracture_list = fractures.copy()
     if fracture_surface is not None:
@@ -547,7 +543,7 @@ def get_connected_fractures(
                         continue
                     endpoints01 = shorten_line(endpoints0, se_factor)
                     endpoints11 = shorten_line(endpoints1, se_factor)
-                    intersection.Intersection(
+                    Intersection(
                         f"{fr.label}_{fr2.label}",
                         endpoints01,
                         endpoints11,
@@ -600,6 +596,8 @@ def get_fracture_intersections_org(
     connected_fractures : list
         A list of connected fractures.
     """
+    from .intersection import Intersection
+
     for i, fr in enumerate(fractures):
         print(f"\r{i + 1} / {len(fractures)} fractures processed", end="")
         # Get the celltreeboxes
@@ -617,7 +615,7 @@ def get_fracture_intersections_org(
                     continue
                 endpoints01 = shorten_line(endpoints0, se_factor)
                 endpoints11 = shorten_line(endpoints1, se_factor)
-                intersection.Intersection(
+                Intersection(
                     f"{fr.label}_{fr2.label}",
                     endpoints01,
                     endpoints11,
@@ -661,6 +659,8 @@ def get_fracture_intersections(
     connected_fractures : list
         A list of connected fractures.
     """
+    from .intersection import Intersection
+
     # 1. Build a spatial index based on fracture centers
     if tree is None:
         # Sort fractures by radius to optimize the search
@@ -712,7 +712,7 @@ def get_fracture_intersections(
                 continue
             endpoints01 = shorten_line(endpoints0, se_factor)
             endpoints11 = shorten_line(endpoints1, se_factor)
-            intersection.Intersection(
+            Intersection(
                 f"{fr.label}_{fr2.label}",
                 endpoints01,
                 endpoints11,
@@ -740,6 +740,10 @@ def split_crossing_elements(fractures):
     fractures : list
         A list of fractures with crossing intersection elements split.
     """
+
+    from .const_head import ConstantHeadLine
+    from .impermeable_object import ImpermeableLine
+    from .intersection import Intersection
 
     def check_crossing(el, el2, frac):
         if el.frac0 == frac:
@@ -777,7 +781,7 @@ def split_crossing_elements(fractures):
         return z
 
     def create_new_element(frac, el, new_endpoints0, new_endpoints1):
-        if isinstance(el, intersection.Intersection):
+        if isinstance(el, Intersection):
             # map endpoints to correct fractures
             if el.frac0 == frac:
                 z3d = map_2d_to_3d(new_endpoints0, frac)
@@ -785,7 +789,7 @@ def split_crossing_elements(fractures):
             else:
                 z3d = map_2d_to_3d(new_endpoints1, frac)
                 new_endpoints0 = map_3d_to_2d(z3d, el.frac0)
-            intersection.Intersection(
+            Intersection(
                 f"{el.label}_part",
                 new_endpoints0,
                 new_endpoints1,
@@ -847,9 +851,7 @@ def split_crossing_elements(fractures):
             elements = [
                 el
                 for el in fr.elements
-                if isinstance(
-                    el, (intersection.Intersection, ConstantHeadLine, ImpermeableLine)
-                )
+                if isinstance(el, (Intersection, ConstantHeadLine, ImpermeableLine))
             ]
             n_elements = len(elements)
             for i in range(n_elements):
@@ -880,10 +882,12 @@ def remove_isolated_fractures(fractures):
     fractures : list
         A list of fractures with isolated fractures removed.
     """
+    from .intersection import Intersection
+
     return [
         fr
         for fr in fractures
-        if any(isinstance(el, intersection.Intersection) for el in fr.elements)
+        if any(isinstance(el, Intersection) for el in fr.elements)
     ]
 
 
@@ -922,7 +926,10 @@ def set_head_boundary(
     -------
     None
     """
-    fracture_surface = andfn.Fracture(label, 1, radius, center, normal, ncoef, nint)
+    from .const_head import ConstantHeadLine
+    from .fracture import Fracture
+
+    fracture_surface = Fracture(label, 1, radius, center, normal, ncoef, nint)
     fr = fracture_surface
     for fr2 in fractures:
         # Quick Squared Distance Check
@@ -968,7 +975,10 @@ def set_impermeable_boundary(
     -------
     None
     """
-    fracture_surface = andfn.Fracture(label, 1, radius, center, normal, ncoef, nint)
+    from .fracture import Fracture
+    from .impermeable_object import ImpermeableLine
+
+    fracture_surface = Fracture(label, 1, radius, center, normal, ncoef, nint)
     fr = fracture_surface
     for fr2 in fractures:
         if fr == fr2:
@@ -1020,6 +1030,10 @@ def check_connectivity_org(fractures):
     bool
         True if all fractures are connected, False otherwise.
     """
+    from .const_head import ConstantHeadLine
+    from .intersection import Intersection
+    from .well import Well
+
     boundary_fracs = []
     for f in fractures:
         for el in f.elements:
@@ -1034,12 +1048,12 @@ def check_connectivity_org(fractures):
     fracture_list = [f for f in fractures if f not in connected_fractures]
     while fracture_list_it:
         for i, fr in enumerate(fracture_list_it):
-            if any(isinstance(el, intersection.Intersection) for el in fr.elements):
+            if any(isinstance(el, Intersection) for el in fr.elements):
                 fracture_list_it_temp.extend(
                     [
                         el.frac1
                         for el in fr.elements
-                        if isinstance(el, intersection.Intersection)
+                        if isinstance(el, Intersection)
                         and el.frac1 in fracture_list
                         and el.frac1 not in fracture_list_it_temp
                     ]
@@ -1048,7 +1062,7 @@ def check_connectivity_org(fractures):
                     [
                         el.frac0
                         for el in fr.elements
-                        if isinstance(el, intersection.Intersection)
+                        if isinstance(el, Intersection)
                         and el.frac0 in fracture_list
                         and el.frac0 not in fracture_list_it_temp
                     ]
@@ -1083,6 +1097,10 @@ def check_connectivity(fractures):
     """
     from collections import deque
 
+    from .const_head import ConstantHeadLine
+    from .intersection import Intersection
+    from .well import Well
+
     n = len(fractures)
 
     # Map fractures to integer IDs (major speedup)
@@ -1103,7 +1121,7 @@ def check_connectivity(fractures):
         has_boundary = False
 
         for el in f.elements:
-            if isinstance(el, intersection.Intersection):
+            if isinstance(el, Intersection):
                 neighbors[fid].append(id_of[el.frac0])
                 neighbors[fid].append(id_of[el.frac1])
 
@@ -1399,6 +1417,9 @@ def copy_dfn(fractures):
     fracs : list
         A new list of fractures with the same properties as the original list, but with different intersection elements.
     """
+    from .fracture import Fracture
+    from .intersection import Intersection
+
     fracs = []
     elms_labels = []
     elms_ep0 = []
@@ -1410,7 +1431,7 @@ def copy_dfn(fractures):
     processed_elms = set()
     for f in fractures:
         fracs.append(
-            andfn.fracture.Fracture(
+            Fracture(
                 f.label,
                 f.t,
                 f.radius,
@@ -1431,7 +1452,7 @@ def copy_dfn(fractures):
                 elms_nint.append(e.nint)
                 processed_elms.add(e.label)
     for i in range(len(elms_labels)):
-        andfn.intersection.Intersection(
+        Intersection(
             elms_labels[i],
             elms_ep0[i],
             elms_ep1[i],

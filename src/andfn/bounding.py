@@ -6,9 +6,8 @@ This module contains the bounding classes.
 
 import numpy as np
 
-import andfn.geometry_functions as gf
-import andfn.math_functions as mf
-
+from . import geometry_functions as gf
+from . import math_functions as mf
 from .element import Element
 
 

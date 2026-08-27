@@ -1,8 +1,7 @@
 import numba as nb
 import numpy as np
 
-from andfn.hpc import hpc_fracture
-
+from . import hpc_fracture
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
 

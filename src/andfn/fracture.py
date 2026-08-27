@@ -6,12 +6,11 @@ This module contains the fracture class.
 
 import numpy as np
 
-import andfn.bounding
-from andfn.const_head import ConstantHeadLine
-from andfn.intersection import Intersection
-from andfn.well import Well
-
+from .bounding import BoundingCircle
+from .const_head import ConstantHeadLine
 from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
+from .intersection import Intersection
+from .well import Well
 
 
 class Fracture:
@@ -72,7 +71,7 @@ class Fracture:
             self.elements.append(elements)
         else:
             self.elements = []
-            andfn.bounding.BoundingCircle(label, radius, self, ncoef, nint)
+            BoundingCircle(label, radius, self, ncoef, nint)
         self.constant = 0.0
 
         # Set the kwargs

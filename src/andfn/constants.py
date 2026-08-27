@@ -81,6 +81,15 @@ if os.path.exists(".andfn_config.yaml"):
         logger.addHandler(file_handler)
 
 
+def set_log_level(level):
+    """
+    Set the log level of the logger.
+    :param level: The log level to set. Can be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'.
+    """
+    logger.setLevel(level)
+    logger.info(f"Log level set to {level}")
+
+
 class Constants:
     def __init__(self):
         """
