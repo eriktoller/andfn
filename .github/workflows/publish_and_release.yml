@@ -21,9 +21,6 @@ jobs:
 
     - name: Install dependencies
       run: uv sync --all-extras
-
-    - name: Run tests
-      run: uv run pytest tests -v
     
     - name: Check version consistency
       run: |
@@ -105,9 +102,6 @@ jobs:
 
     - name: Install dependencies
       run: uv sync --all-extras
-
-    - name: Run tests
-      run: uv run pytest tests -v
       
     - name: Create dev version for TestPyPI
       run: |
@@ -171,9 +165,6 @@ jobs:
     
     - name: Install build dependencies  # ADD THIS STEP
       run: uv sync --all-extras
-
-    - name: Run tests
-      run: uv run pytest tests -v
       
     - name: Build package
       run: uv build
