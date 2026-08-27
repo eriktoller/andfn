@@ -53,7 +53,7 @@ from .io import IO
 from .structures import STRUCTURES_COLOR
 from .well import Well
 
-logger = logging.getLogger("andfn")
+logger = logging.getLogger(__name__)
 
 
 def _constant_cmap(name, color, n_bin):

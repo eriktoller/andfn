@@ -49,7 +49,7 @@ dtype_z_arrays = np.dtype(
     [("z0", complex, MAX_NCOEF * 2), ("z1", complex, MAX_NCOEF * 2)]
 )
 
-logger = logging.getLogger("andfn")
+logger = logging.getLogger(__name__)
 
 
 def solve(

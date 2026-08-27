@@ -9,7 +9,7 @@ import scipy as sp
 import andfn.geometry_functions as gf
 from andfn.fracture import Fracture, fracture_from_dict
 
-logger = logging.getLogger("andfn")
+logger = logging.getLogger(__name__)
 
 COLUMN_ALIASES = {
     "radius_str": ["r", "radius", "EquivRadius[m]"],

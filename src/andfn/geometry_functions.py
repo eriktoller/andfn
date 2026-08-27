@@ -6,6 +6,7 @@ This module contains some geometrical functions for e.g. conformal mappings and 
 The geometrical functions are used by the element classes and to create the DFN in the andfn module.
 """
 
+import logging
 import time
 
 import numba as nb
@@ -13,6 +14,8 @@ import numpy as np
 from scipy.spatial import KDTree
 
 import andfn.hpc.hpc_geometry_functions as hpc_gf
+
+logger = logging.getLogger(__name__)
 
 
 def map_z_line_to_chi(z, endpoints):
@@ -569,67 +572,6 @@ def get_connected_fractures(
     return connected_fractures
 
 
-def get_fracture_intersections_org(
-    fractures, se_factor, ncoef=5, nint=10, tolerance=-1
-):
-    """
-    Function that finds all connected fractures in a list of fractures. Starting from the first fracture in the list, or
-    a given fracture, the function iterates through the list of fractures and finds all connected fractures.
-
-    Parameters
-    ----------
-    fractures : list
-        A list of fractures.
-    se_factor : float
-        The shortening element factor. This is used to shorten the intersection line between two fractures.
-    ncoef : int
-        The number of coefficients for the intersection elements.
-    nint : int
-        The number of integration points for the intersection elements.
-    tolerance : float, optional
-        The minimum length of the intersection line as a fraction of the fracture radius. Intersections shorter than
-        this value will be ignored. If -1, no tolerance is applied. Default is -1.
-
-
-    Returns
-    -------
-    connected_fractures : list
-        A list of connected fractures.
-    """
-    from .intersection import Intersection
-
-    for i, fr in enumerate(fractures):
-        print(f"\r{i + 1} / {len(fractures)} fractures processed", end="")
-        # Get the celltreeboxes
-        # celltree = numba_celltree.CellTree3d(vertices3d, boxes)
-        # overlapping_i, overlapping_j = celltree.locate_boxes(box_bbounds)
-        for fr2 in fractures[i + 1 :]:
-            if fr == fr2:
-                continue
-            if np.linalg.norm(fr.center - fr2.center) > fr.radius + fr2.radius:
-                continue
-            endpoints0, endpoints1 = fracture_intersection(fr, fr2)
-            if endpoints0 is not None:
-                length = np.linalg.norm(endpoints0[0] - endpoints0[1])
-                if length < tolerance * fr.radius or length < tolerance * fr2.radius:
-                    continue
-                endpoints01 = shorten_line(endpoints0, se_factor)
-                endpoints11 = shorten_line(endpoints1, se_factor)
-                Intersection(
-                    f"{fr.label}_{fr2.label}",
-                    endpoints01,
-                    endpoints11,
-                    fr,
-                    fr2,
-                    ncoef,
-                    nint,
-                )
-                # fr.add_element(intersections)
-                # fr2.add_element(intersections)
-
-    return fractures
-
-
 def get_fracture_intersections(
     fractures, se_factor, ncoef=5, nint=10, tolerance=-1, tree=None
 ):
@@ -723,148 +665,6 @@ def get_fracture_intersections(
             )
     print(f"\r{len(pairs)} fracture pairs processed. Intersection detection complete.")
     return fractures
-
-
-def split_crossing_elements(fractures):
-    """
-    Function that splits crossing intersection elements in a list of fractures. If two intersection elements cross each
-    other, they are split into four new intersection elements.
-
-    Parameters
-    ----------
-    fractures : list
-        A list of fractures.
-
-    Returns
-    -------
-    fractures : list
-        A list of fractures with crossing intersection elements split.
-    """
-
-    from .const_head import ConstantHeadLine
-    from .impermeable_object import ImpermeableLine
-    from .intersection import Intersection
-
-    def check_crossing(el, el2, frac):
-        if el.frac0 == frac:
-            z0 = el.endpoints0[0]
-            z1 = el.endpoints0[1]
-        else:
-            z0 = el.endpoints1[0]
-            z1 = el.endpoints1[1]
-        if el2.frac0 == frac:
-            z2 = el2.endpoints0[0]
-            z3 = el2.endpoints0[1]
-        else:
-            z2 = el2.endpoints1[0]
-            z3 = el2.endpoints1[1]
-
-        z = line_line_intersection(
-            el.endpoints0[0], el.endpoints0[1], el2.endpoints0[0], el2.endpoints0[1]
-        )
-        if z is None:
-            return False
-        atol = 1e-12
-        if np.abs(np.abs(z - z0) + np.abs(z1 - z) - np.abs(z0 - z1)) > atol:
-            return False
-
-        if np.abs(np.abs(z - z2) + np.abs(z - z3) - np.abs(z2 - z3)) > atol:
-            return False
-        ltol = 1e-10
-        if (
-            (np.abs(z - z0) < ltol)
-            or (np.abs(z - z1) < ltol)
-            or (np.abs(z - z2) < ltol)
-            or (np.abs(z - z3) < ltol)
-        ):
-            return False
-        return z
-
-    def create_new_element(frac, el, new_endpoints0, new_endpoints1):
-        if isinstance(el, Intersection):
-            # map endpoints to correct fractures
-            if el.frac0 == frac:
-                z3d = map_2d_to_3d(new_endpoints0, frac)
-                new_endpoints1 = map_3d_to_2d(z3d, el.frac1)
-            else:
-                z3d = map_2d_to_3d(new_endpoints1, frac)
-                new_endpoints0 = map_3d_to_2d(z3d, el.frac0)
-            Intersection(
-                f"{el.label}_part",
-                new_endpoints0,
-                new_endpoints1,
-                el.frac0,
-                el.frac1,
-                el.ncoef,
-                el.nint,
-            )
-        elif isinstance(el, ConstantHeadLine):
-            ConstantHeadLine(
-                f"{el.label}_part",
-                new_endpoints0,
-                el.head,
-                el.frac0,
-                el.ncoef,
-                el.nint,
-            )
-        elif isinstance(el, ImpermeableLine):
-            ImpermeableLine(
-                f"{el.label}_part",
-                new_endpoints0,
-                el.frac0,
-                el.ncoef,
-                el.nint,
-            )
-
-    def split_element_at_point(frac, el, el2, z):
-        if el.frac0 == frac:
-            z0 = el.endpoints0[0]
-            z1 = el.endpoints0[1]
-        else:
-            z0 = el.endpoints1[0]
-            z1 = el.endpoints1[1]
-        if el2.frac0 == frac:
-            z2 = el2.endpoints0[0]
-            z3 = el2.endpoints0[1]
-        else:
-            z2 = el2.endpoints1[0]
-            z3 = el2.endpoints1[1]
-        # Split el
-        new_el1_endpoints0 = np.array([z0, z])
-        new_el2_endpoints0 = np.array([z, z1])
-        # Split el2
-        new_el1_endpoints1 = np.array([z2, z])
-        new_el2_endpoints1 = np.array([z, z3])
-        create_new_element(frac, el, new_el1_endpoints0, new_el1_endpoints1)
-        create_new_element(frac, el, new_el2_endpoints0, new_el2_endpoints1)
-        create_new_element(frac, el2, new_el1_endpoints1, new_el1_endpoints0)
-        create_new_element(frac, el2, new_el2_endpoints1, new_el2_endpoints0)
-
-        # Remove old elements
-        frac.delete_element(el)
-        frac.delete_element(el2)
-
-    for fr in fractures:
-        cond = True
-        while cond:
-            cond = False
-            elements = [
-                el
-                for el in fr.elements
-                if isinstance(el, (Intersection, ConstantHeadLine, ImpermeableLine))
-            ]
-            n_elements = len(elements)
-            for i in range(n_elements):
-                el = elements[i]
-                for j in range(i + 1, n_elements):
-                    el2 = elements[j]
-                    z = check_crossing(el, el2, fr)
-                    if z is not False:
-                        cond = True
-                        split_element_at_point(fr, el, el2, z)
-                        break
-
-    print("coming here")
 
 
 def remove_isolated_fractures(fractures):
@@ -1013,71 +813,6 @@ def shorten_line(endpoints, se_factor):
     z0 = center + (z0 - center) * se_factor
     z1 = center + (z1 - center) * se_factor
     return np.array([z0, z1])
-
-
-def check_connectivity_org(fractures):
-    """
-    Function that checks the connectivity of a list of fractures. The function returns
-    any fractures that are not connected to a constant head boundary.
-
-    Parameters
-    ----------
-    fractures : list
-        A list of fractures.
-
-    Returns
-    -------
-    bool
-        True if all fractures are connected, False otherwise.
-    """
-    from .const_head import ConstantHeadLine
-    from .intersection import Intersection
-    from .well import Well
-
-    boundary_fracs = []
-    for f in fractures:
-        for el in f.elements:
-            if isinstance(el, (ConstantHeadLine, Well)):
-                boundary_fracs.append(f)
-                break
-
-    # Get all connected fractures to the boundary fractures
-    fracture_list_it = boundary_fracs.copy()
-    connected_fractures = boundary_fracs.copy()
-    fracture_list_it_temp = []
-    fracture_list = [f for f in fractures if f not in connected_fractures]
-    while fracture_list_it:
-        for i, fr in enumerate(fracture_list_it):
-            if any(isinstance(el, Intersection) for el in fr.elements):
-                fracture_list_it_temp.extend(
-                    [
-                        el.frac1
-                        for el in fr.elements
-                        if isinstance(el, Intersection)
-                        and el.frac1 in fracture_list
-                        and el.frac1 not in fracture_list_it_temp
-                    ]
-                )
-                fracture_list_it_temp.extend(
-                    [
-                        el.frac0
-                        for el in fr.elements
-                        if isinstance(el, Intersection)
-                        and el.frac0 in fracture_list
-                        and el.frac0 not in fracture_list_it_temp
-                    ]
-                )
-
-        fracture_list_it = [
-            f for f in fracture_list_it_temp if f not in connected_fractures
-        ]
-        connected_fractures.extend(fracture_list_it)
-        fracture_list_it_temp = []
-        fracture_list = [f for f in fractures if f not in connected_fractures]
-
-    remove_list = [f for f in fractures if f not in connected_fractures]
-
-    return len(remove_list) == 0, remove_list
 
 
 def check_connectivity(fractures):
@@ -1313,8 +1048,10 @@ def check_connectivity_hpc(fractures_struc_array, elements_struc_array):
         adj_indices,
         boundary,
     )
-    print(
-        f"Adjacency: {s1 - s:.2f} sec, Boundary: {s2 - s1:.2f} sec, BFS: {time.time() - s2:.2f} sec"
+    s3 = time.time()
+
+    logger.debug(
+        f"check_connectivity_hpc: build adjacency {s1 - s:.3f}s, compute boundary {s2 - s1:.3f}s, bfs {s3 - s2:.3f}s"
     )
 
     # fractures to remove (Python side)

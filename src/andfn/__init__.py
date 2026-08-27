@@ -10,6 +10,28 @@ __author__ = "Erik A.L. Toller"
 __version__ = "0.1.17"
 
 from importlib import import_module
+from typing import TYPE_CHECKING
+
+from .utils import configure_logging
+
+if TYPE_CHECKING:
+    from .bounding import BoundingCircle
+    from .const_head import ConstantHeadLine
+    from .dfn import DFN
+    from .fracture import Fracture
+    from .geometry_functions import (
+        copy_dfn,
+        fracture_intersection,
+        map_2d_to_3d,
+        map_3d_to_2d,
+    )
+    from .impermeable_object import ImpermeableCircle, ImpermeableLine
+    from .intersection import Intersection
+    from .io import export_fractures
+    from .regions import RectangularRegion
+    from .structures import ConstantHeadPrism, ImpermeablePrism
+    from .utils import enable_file_logging, set_log_level
+    from .well import Well
 
 __all__ = [
     "DFN",
@@ -24,6 +46,7 @@ __all__ = [
     "RectangularRegion",
     "Well",
     "copy_dfn",
+    "enable_file_logging",
     "export_fractures",
     "fracture_intersection",
     "map_2d_to_3d",
@@ -48,7 +71,8 @@ _LAZY_EXPORTS = {
     "fracture_intersection": ("geometry_functions", "fracture_intersection"),
     "map_2d_to_3d": ("geometry_functions", "map_2d_to_3d"),
     "map_3d_to_2d": ("geometry_functions", "map_3d_to_2d"),
-    "set_log_level": ("constants", "set_log_level"),
+    "set_log_level": ("utils", "set_log_level"),
+    "enable_file_logging": ("utils", "enable_logging"),
 }
 
 
@@ -64,3 +88,6 @@ def __getattr__(name):
 
 def __dir__():
     return sorted(list(globals().keys()) + list(_LAZY_EXPORTS.keys()))
+
+
+configure_logging()

@@ -6,7 +6,6 @@ This module contains the constants used in the AnDFN model as a class.
 
 import logging
 import os
-import sys
 
 import numpy as np
 from numba import set_num_threads
@@ -57,37 +56,7 @@ def load_yaml_config():
     return config
 
 
-# set the packages to WARNING level to avoid too much output
-logging.getLogger("matplotlib").propagate = False
-logging.getLogger("numba").propagate = False
-logging.getLogger("PIL").propagate = False
-
-# Configure the logging
-logging.basicConfig(level="INFO", format="%(message)s", stream=sys.stdout)
-
-# Set up the logger
-logger = logging.getLogger("andfn")
-if os.path.exists(".andfn_config.yaml"):
-    config = load_yaml_config()
-    if config.get("LOG_LEVEL"):
-        logger.setLevel(config["LOG_LEVEL"])
-        logger.info(f"Log level set to {config['LOG_LEVEL']}")
-    if config.get("LOG_FILE"):
-        file_handler = logging.FileHandler(config["LOG_FILE"], mode="w")
-        formatter = logging.Formatter(
-            "%(asctime)s [%(module)s] %(levelname)s - %(message)s"
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-
-def set_log_level(level):
-    """
-    Set the log level of the logger.
-    :param level: The log level to set. Can be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'.
-    """
-    logger.setLevel(level)
-    logger.info(f"Log level set to {level}")
+logger = logging.getLogger(__name__)
 
 
 class Constants:
