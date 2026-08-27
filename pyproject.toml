@@ -41,7 +41,7 @@ classifiers = [
 
 [project.optional-dependencies]
 all = ["pyyaml", "pandas", "matplotlib"]
-dev = ["sphinx", "sphinx-book-theme", "sphinx-copybutton","pyyaml", "pandas", "matplotlib", "pytest", "pre-commit"]
+dev = ["sphinx", "sphinx-book-theme", "sphinx-copybutton","pyyaml", "pandas", "matplotlib", "pytest", "pre-commit", "ghp-import"]
 
 [project.urls]
 Homepage = "https://eriktoller.github.io/andfn"
@@ -55,7 +55,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["andfn"]
 addopts = [
     "-ra",
     "--strict-markers",
