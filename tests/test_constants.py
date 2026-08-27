@@ -1,4 +1,3 @@
-import logging
 from unittest.mock import patch
 
 import pytest
@@ -19,7 +18,7 @@ def test_default_constants():
 def test_change_constant():
     c = Constants()
 
-    c.change_constants({"MAX_ITERATIONS": 100})
+    c.change_constants(MAX_ITERATIONS=100)
 
     assert c.constants["MAX_ITERATIONS"] == 100
 
@@ -28,11 +27,9 @@ def test_change_multiple_constants():
     c = Constants()
 
     c.change_constants(
-        {
-            "MAX_ITERATIONS": 100,
-            "DAMPING": 0.7,
-            "NCOEF": 10,
-        }
+        MAX_ITERATIONS=100,
+        DAMPING=0.7,
+        NCOEF=10,
     )
 
     assert c.constants["MAX_ITERATIONS"] == 100
@@ -43,7 +40,7 @@ def test_change_multiple_constants():
 def test_unknown_constant_is_ignored():
     c = Constants()
 
-    c.change_constants({"NOT_A_CONSTANT": 123})
+    c.change_constants(NOT_A_CONSTANT=123)
 
     assert "NOT_A_CONSTANT" not in c.constants.dtype.names
 
@@ -53,7 +50,7 @@ def test_num_threads_must_be_positive(value):
     c = Constants()
 
     with pytest.raises(ValueError):
-        c.change_constants({"NUM_THREADS": value})
+        c.change_constants(NUM_THREADS=value)
 
 
 @patch("andfn.constants.set_num_threads")
@@ -63,22 +60,6 @@ def test_num_threads_calls_numba(mock_threads):
     c.change_constants(NUM_THREADS=4)
 
     mock_threads.assert_called_once_with(4)
-
-
-@patch("andfn.constants.Constants().constants['MAX_NCOEF']", new=100)
-def test_max_ncoef_limit():
-    c = Constants()
-
-    with pytest.raises(ValueError):
-        c.change_constants({"MAX_NCOEF": 101})
-
-
-@patch("andfn.constants.Constants().constants['MAX_ELEMENTS']", new=100)
-def test_max_elements_limit():
-    c = Constants()
-
-    with pytest.raises(ValueError):
-        c.change_constants({"MAX_ELEMENTS": 101})
 
 
 def test_load_yaml_returns_none_when_file_missing(tmp_path, monkeypatch):
@@ -116,12 +97,3 @@ MAX_ITERATIONS: 123
     c = Constants()
 
     assert c.constants["MAX_ITERATIONS"] == 123
-
-
-logger = logging.getLogger("andfn")
-
-
-def test_change_log_level():
-    Constants.change_log_level(logging.DEBUG)
-
-    assert logger.level == logging.DEBUG

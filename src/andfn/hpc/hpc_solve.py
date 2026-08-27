@@ -12,16 +12,18 @@ import numpy as np
 import scipy as sp
 
 from andfn.element import MAX_ELEMENTS, MAX_NCOEF
-from andfn.hpc import (
+
+from . import (
     CACHE,
     PARALLEL,
     hpc_bounding_circle,
     hpc_const_head_line,
+    hpc_fracture,
+    hpc_imp_object,
     hpc_intersection,
     hpc_well,
 )
-from andfn.hpc import hpc_math_functions as mf
-from src.andfn.hpc import hpc_fracture, hpc_imp_object
+from . import hpc_math_functions as mf
 
 dtype_work = np.dtype(
     [
