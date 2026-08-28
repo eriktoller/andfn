@@ -5,8 +5,9 @@
   <a href="https://pypi.org/project/andfn/"><img src="https://img.shields.io/pypi/pyversions/andfn.svg" alt="Python versions"></a>
   <a href="https://github.com/eriktoller/andfn/blob/main/LICENSE"><img src="https://img.shields.io/github/license/eriktoller/andfn.svg" alt="License"></a>
   <a href="https://eriktoller.github.io/andfn/"><img src="https://img.shields.io/badge/docs-latest-brightgreen.svg" alt="Documentation"></a>
-  <a href="https://github.com/eriktoller/andfn/actions"><img src="https://img.shields.io/github/actions/workflow/status/eriktoller/andfn/.github/workflows/publish_and_release.yml?branch=main" alt="Build status"></a>
-  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+  <a href=""><img src="https://img.shields.io/github/actions/workflow/status/eriktoller/andfn/.github/workflows/publish_and_release.yml?branch=main" alt="Build status"></a>
+  <a href="https://github.com/eriktoller/andfn/actions/workflows/format_lint.yml"><img src="https://github.com/eriktoller/andfn/actions/workflows/format_lint.yml/badge.svg" alt="CI RUFF"></a>
+  <a href="https://github.com/eriktoller/andfn/actions/workflows/run_tests.yml"><img src="https://github.com/eriktoller/andfn/actions/workflows/run_tests.yml/badge.svg" alt="CI PYTESTS"></a>
   <a href="https://github.com/eriktoller/andfn"><img src="https://img.shields.io/github/stars/eriktoller/andfn?style=social" alt="GitHub stars"></a>
 </p>
 
