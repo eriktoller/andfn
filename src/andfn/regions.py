@@ -8,8 +8,8 @@ import numpy as np
 import pyvista as pv
 from scipy.spatial import KDTree
 
-import andfn.geometry_functions as gf
-from andfn.const_head import ConstantHeadLine
+from . import geometry_functions as gf
+from .const_head import ConstantHeadLine
 
 REGION_COLOR = {0: "00FF00", 1: "0000FF"}
 

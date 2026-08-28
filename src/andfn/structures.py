@@ -7,11 +7,11 @@ This module contains the underground structures classes.
 import numpy as np
 import pyvista as pv
 
-import andfn.geometry_functions as gf
-from andfn.bounding import BoundingCircle
-from andfn.const_head import ConstantHeadLine
-from andfn.intersection import Intersection
-from src.andfn.impermeable_object import ImpermeableLine
+from . import geometry_functions as gf
+from .bounding import BoundingCircle
+from .const_head import ConstantHeadLine
+from .impermeable_object import ImpermeableLine
+from .intersection import Intersection
 
 STRUCTURES_COLOR = {0: "FF0000", 1: "0000FF"}
 

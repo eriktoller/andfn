@@ -8,7 +8,7 @@ The mathematical functions are used by the element classes in the andfn module.
 
 import numpy as np
 
-import andfn.hpc.hpc_math_functions as hpc_mf
+from .hpc import hpc_math_functions as hpc_mf
 
 
 def asym_expansion(chi, coef):
