@@ -31,6 +31,8 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.githubpages",
     "sphinx_copybutton",
+    "sphinx.ext.napoleon",
+    "sphinx_design",
 ]
 
 templates_path = ["_templates"]
@@ -51,6 +53,7 @@ master_doc = "index"
 
 html_theme = "sphinx_book_theme"
 html_title = "AnDFN"
+html_static_path = ["_static"]
 html_theme_options = {
     "navbar_align": "content",
     "icon_links": [

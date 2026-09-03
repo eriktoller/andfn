@@ -16,8 +16,3 @@ Publications
 The software is based on the following publications:
 
 Otto D.L. Strack, Erik A.L. Toller, An analytic element model for flow in fractured impermeable rock, *Journal of Hydrology*, 2024, 131983, ISSN 0022-1694, https://doi.org/10.1016/j.jhydrol.2024.131983.
-
-.. toctree::
-    :maxdepth: 1
-
-    release_notes

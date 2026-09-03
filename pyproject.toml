@@ -40,8 +40,8 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-all = ["pyyaml", "pandas", "matplotlib"]
-dev = ["sphinx", "sphinx-book-theme", "sphinx-copybutton","pyyaml", "pandas", "matplotlib", "pytest", "pre-commit", "ghp-import"]
+all = ["pyyaml", "pandas", "matplotlib", "pyvista[jupyter]"]
+dev = ["pyvista[jupyter]", "sphinx", "sphinx-book-theme", "sphinx-copybutton", "sphinx_design" ,"pyyaml", "pandas", "matplotlib", "pytest", "pre-commit", "ghp-import"]
 
 [project.urls]
 Homepage = "https://eriktoller.github.io/andfn"

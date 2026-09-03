@@ -270,7 +270,7 @@ class RectangularRegion(Region):
         # Update the faces
         self.get_vertices_faces()
 
-    def plot(self, pl, opacity=0.5, **kwargs):
+    def plot(self, pl, opacity=0.25, **kwargs):
         """
         Plots the rectangular region.
 
