@@ -64,9 +64,11 @@ Now the DFN read almost ready to be solved. First we need to run a connectivity 
     # Run connectivity analysis
     dfn.check_connectivity()
 
-It is all set to solve the DFN model., which we do using the following code.
-
+It is all set to solve the DFN model., which we do using the following code. We can also adjust the solver parameters, such as the maximum number of iterations and the tolerance.
 .. code-block:: python
+
+    # Set solver parameters
+    dfn.set_kwargs(COEF_RATIO=0.001, MAX_ITERATIONS=30, MAX_NCOEF=200, MAX_ERROR=5e-4)
 
     # Solve the DFN model
     dfn.solve()

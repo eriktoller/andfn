@@ -9,7 +9,7 @@ The code is written by and maintained by Dr. Erik Toller.
 
 Acknowledgements
 ----------------
-The development of the original code for AnDFN was funded by BeFo (Stifftelsen Bergteknisk Forskning) grant number 529.
+The development of the original code for AnDFN (up to version 1.0.0) was funded by BeFo (Stifftelsen Bergteknisk Forskning) grant number 529.
 
 Publications
 ------------
