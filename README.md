@@ -51,7 +51,7 @@ The basic theory for this program is published in:
 
 Otto D.L. Strack, Erik A.L. Toller, An analytic element model for flow in fractured impermeable rock, *Journal of Hydrology*, 2024, 131983, ISSN 0022-1694, https://doi.org/10.1016/j.jhydrol.2024.131983.
 
-You can also cite the software itself from Zenodo: https://doi.org/10.5281/zenodo.22275899
+You can also cite the software itself from Zenodo: https://doi.org/10.5281/zenodo.22275898
 
 ## Acknowledgements
 The original development of this code was funded by [BeFo](https://www.befo.se) (Stiftelsen Bergteknisk Forskning) grant number 529.
