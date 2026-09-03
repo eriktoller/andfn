@@ -8,8 +8,7 @@ This module contains the element class that is a parent class to all elements.
 import numpy as np
 import pyvista as pv
 
-import andfn.geometry_functions as gf
-
+from . import geometry_functions as gf
 from .constants import load_yaml_config
 
 config = load_yaml_config()

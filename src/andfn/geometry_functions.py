@@ -13,7 +13,7 @@ import numba as nb
 import numpy as np
 from scipy.spatial import KDTree
 
-import andfn.hpc.hpc_geometry_functions as hpc_gf
+from .hpc import hpc_geometry_functions as hpc_gf
 
 logger = logging.getLogger(__name__)
 

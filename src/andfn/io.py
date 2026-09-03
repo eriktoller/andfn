@@ -7,7 +7,8 @@ import numpy as np
 import scipy as sp
 
 import andfn.geometry_functions as gf
-from andfn.fracture import Fracture, fracture_from_dict
+
+from .fracture import Fracture, fracture_from_dict
 
 logger = logging.getLogger(__name__)
 
