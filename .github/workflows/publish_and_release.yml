@@ -14,15 +14,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: '3.11'
 
     - name: Install dependencies
-      run: | 
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      run: uv sync --all-extras
     
     - name: Check version consistency
       run: |
@@ -31,56 +29,46 @@ jobs:
         PACKAGE_NAME="andfn"
     
         # -----------------------------
-        # Extract versions from sources
+        # Extract version from pyproject.toml
         # -----------------------------
     
-        INIT_VERSION=$(python -c "from andfn import __version__; print(__version__)")
+        PROJECT_VERSION=$(uv run python - <<EOF
+        import tomllib
     
-        TOML_VERSION=$(python -c "import tomllib; data = tomllib.load(open('pyproject.toml', 'rb')); print(data['project']['version'] if 'version' in data['project'] else data['tool']['setuptools']['dynamic']['version'].split(\"'\")[1])" \
-          2>/dev/null || \
-          python -c "import toml; data = toml.load('pyproject.toml'); print(data.get('project', {}).get('version', ''))")
+        with open("pyproject.toml", "rb") as f:
+          print(tomllib.load(f)["project"]["version"])
+        EOF
+        )
     
-        SH_VERSION=$(python -c "from docs.conf import release; print(release)")
+        echo "Local version: $PROJECT_VERSION"
     
         # -----------------------------
         # Fetch latest published version
         # -----------------------------
     
-        PUBLISHED_VERSION=$(python - <<EOF
-        import json, urllib.request
+        PUBLISHED_VERSION=$(uv run python - <<EOF
+        import json
+        import urllib.request
+        
         pkg = "$PACKAGE_NAME"
-        url = f"https://pypi.org/pypi/{pkg}/json"
-        with urllib.request.urlopen(url) as r:
+        
+        with urllib.request.urlopen(
+            f"https://pypi.org/pypi/{pkg}/json"
+        ) as r:
             print(json.load(r)["info"]["version"])
         EOF
             )
-        
-            echo "Version in __init__.py:        $INIT_VERSION"
-            echo "Version in pyproject.toml:    $TOML_VERSION"
-            echo "Version in conf.py:           $SH_VERSION"
-            echo "Published version on PyPI:    $PUBLISHED_VERSION"
-        
-            # --------------------------------
-            # Internal consistency check
-            # --------------------------------
-        
-            if [ "$INIT_VERSION" != "$TOML_VERSION" ] || \
-               [ "$INIT_VERSION" != "$SH_VERSION" ] || \
-               [ "$TOML_VERSION" != "$SH_VERSION" ]; then
-                echo "❌ Version mismatch between source files!"
-                exit 1
-            fi
-        
-            echo "✅ Internal versions match"
-        
-            # --------------------------------
-            # Compare to published PyPI version
-            # --------------------------------
-        
-            python - <<EOF
+    
+        echo "Published version on PyPI: $PUBLISHED_VERSION"
+    
+        # -----------------------------
+        # Compare versions
+        # -----------------------------
+    
+        uv run python - <<EOF
         from packaging.version import Version
         
-        local = Version("$INIT_VERSION")
+        local = Version("$PROJECT_VERSION")
         published = Version("$PUBLISHED_VERSION")
         
         if local <= published:
@@ -88,9 +76,10 @@ jobs:
                 f"❌ Local version {local} must be greater than published version {published}"
             )
         
-        print(f"✅ Local version {local} is newer than published version {published}")
+        print(
+            f"✅ Local version {local} is newer than published version {published}"
+        )
         EOF
-        ``
 
     
   test-publish:
@@ -105,19 +94,15 @@ jobs:
     - uses: actions/checkout@v4
 
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: '3.11'
 
 
     - name: Install dependencies
-      run: | 
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install build
-
-
+      run: uv sync --all-extras
+      
     - name: Create dev version for TestPyPI
       run: |
         # 1. Get the current version from the code
@@ -134,7 +119,7 @@ jobs:
         echo "Created dev version: $DEV_VERSION"
         
     - name: Build package
-      run: python -m build
+      run: uv build
       
     - name: Publish to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
@@ -173,19 +158,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Installing uv
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: '3.11'
     
     - name: Install build dependencies  # ADD THIS STEP
-      run: |
-        python -m pip install --upgrade pip
-        pip install build
-        pip install -r requirements.txt
+      run: uv sync --all-extras
       
     - name: Build package
-      run: python -m build
+      run: uv build
       
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
@@ -193,7 +175,7 @@ jobs:
     - name: Get version from pyproject.toml
       id: get_version
       run: |
-        VERSION=$(python -c "from andfn import __version__; print(__version__)")
+        VERSION=$(uv run python -c "from andfn import __version__; print(__version__)")
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
         

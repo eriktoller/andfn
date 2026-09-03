@@ -11,8 +11,9 @@ Repository: https://github.com/eriktoller/andfn
 """
 
 # Import the andfn package and numpy
-import andfn
 import numpy as np
+
+import andfn
 
 if __name__ == "__main__":
     print("\n")
