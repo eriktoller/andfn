@@ -5,7 +5,7 @@
   <a href="https://pypi.org/project/andfn/"><img src="https://img.shields.io/pypi/pyversions/andfn.svg" alt="Python versions"></a>
   <a href="https://github.com/eriktoller/andfn/blob/main/LICENSE"><img src="https://img.shields.io/github/license/eriktoller/andfn.svg" alt="License"></a>
   <a href="https://eriktoller.github.io/andfn/"><img src="https://img.shields.io/badge/docs-latest-brightgreen.svg" alt="Documentation"></a>
-  <a href="https://doi.org/10.5281/zenodo.22275898"><img src="https://zenodo.org/badge/857873613.svg" alt="DOI"></a> 
+  <a href="https://doi.org/10.5281/zenodo.22275898"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.22275898.svg" alt="DOI"></a> 
   <a href=""><img src="https://img.shields.io/github/actions/workflow/status/eriktoller/andfn/.github/workflows/publish_and_release.yml?branch=main" alt="Build status"></a>
   <a href="https://github.com/eriktoller/andfn/actions/workflows/format_lint.yml"><img src="https://github.com/eriktoller/andfn/actions/workflows/format_lint.yml/badge.svg" alt="CI RUFF"></a>
   <a href="https://github.com/eriktoller/andfn/actions/workflows/run_tests.yml"><img src="https://github.com/eriktoller/andfn/actions/workflows/run_tests.yml/badge.svg" alt="CI PYTESTS"></a>
