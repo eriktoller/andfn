@@ -25,8 +25,6 @@ if __name__ == "__main__":
     In this example fracture outside the box are deleted. 
     """
     # Add Region Box boundary
-    head0 = 100
-    head1 = 200
     regbox = andfn.RectangularRegion(
         label="box",
         center=[0, 0, 0],
@@ -46,10 +44,10 @@ if __name__ == "__main__":
     )
 
     regbox.frac_intersections(
-        dfn.fractures, face="left", head=head0
+        dfn.fractures, face="left", head=100
     )  # apply constant head boundary condition to the fractures that intersect with the left face of the box
     regbox.frac_intersections(
-        dfn.fractures, face="right", head=head1
+        dfn.fractures, face="right", head=200
     )  # apply constant head boundary condition to the fractures that intersect with the right face of the box
 
     # check the connectivity of the DFN
@@ -72,14 +70,13 @@ if __name__ == "__main__":
     The hydraulic head distribution in the DFN can be visualized using the plotting functions provided by the andfn library. The plot_fractures_head function will create a 3D plot of the fractures colored by their hydraulic head values. The region box is also plotted to show the boundaries of the simulation domain.
     """
     # This will create a plot window
-    p1 = dfn.initiate_plotter(title=True, off_screen=True, scale=1, axis=True)
+    p1 = dfn.initiate_plotter(title=True, axis=True)
 
     # This will plot the fractures colored by their hydraulic head values, with a contour and opacity of 1.
     dfn.plot_fractures_head(p1, 40, 3, opacity=1, contour=True)
 
     regbox.plot(p1, opacity=0.2)  # plot the region box with an opacity of 0.1
 
-    p1.export_html("example3_3d.html")
     p1.show()  # show the plot
 
     print("All done!")
