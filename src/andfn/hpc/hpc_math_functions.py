@@ -285,6 +285,8 @@ def cauchy_integral_real(
         # z = work_array["z_integral"][ii]
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["phi"][ii] = np.real(omega)
+
+    """
     for jj in range(m):
         res_tmp = 0.0 + 0.0j
         for ii in range(n):
@@ -293,6 +295,17 @@ def cauchy_integral_real(
                 exp_val *= work_array["exp_array_m"][ii]
             res_tmp += work_array["phi"][ii] * exp_val
         work_array["integral"][jj] = res_tmp
+
+    """
+    for ii in range(n):
+        phi = work_array["phi"][ii]
+        base = work_array["exp_array_m"][ii]
+
+        term = 1.0 + 0.0j
+
+        for jj in range(m):
+            work_array["integral"][jj] += phi * term
+            term *= base
 
     for ii in range(m):
         coef[ii] = 2 * work_array["integral"][ii] / n

@@ -14,7 +14,7 @@ if __name__ == "__main__":
     """
     dfn = andfn.DFN("My DFN")
     dfn.import_fractures_from_file("large_dfn.fracs")
-
+    andfn.set_log_level("DEBUG")
     """
     ADD CONSTANT HEAD BOUNDARY CONDITIONS
     This part create a region box and add constant head boundary conditions to the fractures that intersect with the specified faces of the box. It also checks the connectivity of the DFN and sets the solver parameters.

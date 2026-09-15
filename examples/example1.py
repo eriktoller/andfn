@@ -14,6 +14,7 @@ if __name__ == "__main__":
     """
     dfn = andfn.DFN("My DFN")
     dfn.import_fractures_from_file("small_dfn.fracs")
+    andfn.set_log_level("DEBUG")
 
     """
     ADD CONSTANT HEAD BOUNDARY CONDITIONS

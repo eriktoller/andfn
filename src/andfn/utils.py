@@ -51,14 +51,23 @@ def set_log_level(level: str, all_handlers: bool = False) -> None:
     numeric_level = getattr(logging, level.upper(), None)
     if not isinstance(numeric_level, int):
         raise TypeError(f"Invalid log level: {level}")
+
+    root_logger = logging.getLogger()
+    # Logger level gates records before handlers; set it explicitly.
+    root_logger.setLevel(numeric_level)
+
     if all_handlers:
-        for handler in logging.getLogger().handlers:
+        for handler in root_logger.handlers:
             handler.setLevel(numeric_level)
     else:
-        for handler in logging.getLogger().handlers:
-            if isinstance(handler, logging.StreamHandler):
+        for handler in root_logger.handlers:
+            # FileHandler inherits StreamHandler; exclude it in default mode.
+            if isinstance(handler, logging.StreamHandler) and not isinstance(
+                handler, logging.FileHandler
+            ):
                 handler.setLevel(numeric_level)
-    logger.info(f"Log level set to {level}")
+
+    root_logger.log(numeric_level, "Log level set to %s", level.upper())
 
 
 def enable_file_logging(
