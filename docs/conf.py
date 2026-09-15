@@ -14,7 +14,11 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "andfn"
 copyright = "2025, Erik A. L. Toller"
 author = "Erik A. L. Toller"
-release = "0.1.16"
+
+from andfn import __version__
+
+release = __version__
+version = ".".join(__version__.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -27,6 +31,8 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.githubpages",
     "sphinx_copybutton",
+    "sphinx.ext.napoleon",
+    "sphinx_design",
 ]
 
 templates_path = ["_templates"]
@@ -47,6 +53,7 @@ master_doc = "index"
 
 html_theme = "sphinx_book_theme"
 html_title = "AnDFN"
+html_static_path = ["_static"]
 html_theme_options = {
     "navbar_align": "content",
     "icon_links": [
