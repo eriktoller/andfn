@@ -7,22 +7,23 @@ This module contains the HPC solve functions.
 import logging
 import time
 
-import numpy as np
 import numba as nb
+import numpy as np
 import scipy as sp
-from andfn.hpc import hpc_math_functions as mf
-from andfn.hpc import hpc_geometry_functions as gf
+
+from andfn.element import MAX_ELEMENTS, MAX_NCOEF
 from andfn.hpc import (
-    hpc_intersection,
-    hpc_fracture,
-    hpc_const_head_line,
-    hpc_well,
-    hpc_bounding_circle,
-    hpc_imp_object,
-    PARALLEL,
     CACHE,
+    PARALLEL,
+    hpc_bounding_circle,
+    hpc_const_head_line,
+    hpc_fracture,
+    hpc_imp_object,
+    hpc_intersection,
+    hpc_well,
 )
-from andfn.element import MAX_NCOEF, MAX_ELEMENTS
+from andfn.hpc import hpc_geometry_functions as gf
+from andfn.hpc import hpc_math_functions as mf
 
 dtype_work = np.dtype(
     [
@@ -99,6 +100,7 @@ def solve_error(
     discharge_elements = get_discharge_elements(error_struc_array)
     num_elements = len(error_struc_array)
     work_array = np.zeros(num_elements, dtype=dtype_work)
+    work_array_org = np.zeros(num_elements, dtype=dtype_work)
     # head matrix
     size = discharge_elements.size + fracture_struc_array.size
     head_matrix = np.zeros(size)
@@ -142,6 +144,13 @@ def solve_error(
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_m"], -1)
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_p"], 1)
         mf.fill_z_integral(e, work_array[i])
+    for i, e in enumerate(element_struc_array):
+        n = e["nint"]
+        mf.calc_thetas(n, e["_type"], e["thetas"][:n])
+        thetas = e["thetas"]
+        mf.fill_exp_array(n, thetas, work_array_org[i]["exp_array_m"], -1)
+        mf.fill_exp_array(n, thetas, work_array_org[i]["exp_array_p"], 1)
+        mf.fill_z_integral(e, work_array_org[i])
 
     logger.info(f"Number of elements: {len(error_struc_array)}")
     logger.info(f"Number of fractures: {len(fracture_struc_array)}")
@@ -245,6 +254,7 @@ def solve_error(
         element_struc_array,
         error_struc_array,
         work_array,
+        work_array_org,
         discharge_int,
         bnd_error,
         z_int,
@@ -965,6 +975,7 @@ def get_bnd_error(
     element_struc_array,
     error_struc_array,
     work_array,
+    work_array_org,
     discharge_int,
     bnd_error,
     z_int,
@@ -1108,15 +1119,28 @@ def get_bnd_error(
             z0 = z_int["z0"][j][:discharge_int]
             # Locate branch cuts and fill work_array[j] fields
             mf.find_branch_cuts(
-                e, z0, fracture_struc_array, element_struc_array, work_array[j], nint
+                e,
+                z0,
+                fracture_struc_array,
+                element_struc_array,
+                work_array_org[j],
+                nint,
+            )
+            mf.find_branch_cuts(
+                error_struc_array[j],
+                z0,
+                fracture_struc_array,
+                error_struc_array,
+                work_array[j],
+                nint,
             )
 
             # Build dpsi_corr vector (length nint-1) from work_array results
             dpsi_corr = np.zeros(nint)
-            for k in range(work_array[j]["len_discharge_element"]):
-                ek = element_struc_array[work_array[j]["discharge_element"][k]]
-                pos = int(work_array[j]["element_pos"][k])
-                dpsi_corr[pos] += ek["q"] * work_array[j]["sign_array"][k]
+            for k in range(work_array_org[j]["len_discharge_element"]):
+                ek = element_struc_array[work_array_org[j]["discharge_element"][k]]
+                pos = int(work_array_org[j]["element_pos"][k])
+                dpsi_corr[pos] += ek["q"] * work_array_org[j]["sign_array"][k]
 
             # Evaluate ω at each of the nint points
             omega_pts = np.zeros(nint, dtype=np.complex128)
@@ -1140,8 +1164,9 @@ def get_bnd_error(
             plt.figure()
             plt.title(f"Boundary condition error for element {j} (type {e['_type']})")
             plt.plot(psi, label="BC")
+            plt.plot(omega_pts.imag, label="BC org")
             plt.plot(om_error.imag, label="Im E(z)")
-            plt.plot(om_error.real, label="Re E(z)")
+            # plt.plot(om_error.real, label="Re E(z)")
             plt.legend()
 
     plt.show()
