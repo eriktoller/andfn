@@ -303,22 +303,58 @@ def calc_omega(self_, z, frac_is_id, radius, mirror=False):
         m_endpoints = gf.mirror_endpoints(endpoints, radius)
         chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
         omega += sign * mf.well_chi(chi_mirror, self_["q"])
-        # omega += sign * mf.asym_expansion(chi_mirror, self_["coef"][: self_["ncoef"]])
-        # plot the endpoints and the z point in the chi plane for debugging
-        """
-        import matplotlib.pyplot as plt
-        plt.plot(endpoints.real, endpoints.imag, color="red", label="chi")
-        plt.plot(m_endpoints.real, m_endpoints.imag, color="blue", label="chi_mirror")
-        plt.gca().add_patch(plt.Circle((0, 0), radius, color="black", fill=False, label="chi point"))
-        plt.legend()
-        plt.axis("equal")
-        plt.show()
-        """
     return omega
 
 
 @nb.njit(inline="always")
-def calc_omega_error(self_, z, frac_is_id):
+def calc_omega_error(self_, z, frac_is_id, radius, mirror=False):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    z : complex
+        An array of points in the complex z-plane
+    frac_is_id : np.int64
+        The fracture that the point is in
+    radius : float
+        The radius of the fracture (used for the mirror term)
+    mirror : bool, optional
+        Whether to include the mirror term in the calculation (default is False)
+
+    Return
+    ------
+    omega : complex
+        The resulting value for the omega function
+    """
+    # See if function is in the first or second fracture that the intersection is associated with
+    if frac_is_id == self_["frac0"]:
+        endpoints = self_["endpoints0"]
+        sign = 1.0
+    else:
+        endpoints = self_["endpoints1"]
+        sign = -1.0
+    if mirror:
+        cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
+        if cond0:
+            m_endpoints = gf.mirror_endpoints(endpoints, radius)
+            chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+            return sign * mf.well_chi(chi_mirror, self_["q"])
+        return 0.0 + 0.0j
+    chi = gf.map_z_line_to_chi(z, endpoints)
+    omega = sign * mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    omega += sign * mf.well_chi(chi, self_["q"])
+    cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
+    if cond0:
+        m_endpoints = gf.mirror_endpoints(endpoints, radius)
+        chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+        omega += sign * mf.well_chi(chi_mirror, self_["q"])
+    return omega
+
+
+def calc_omega_error_org(self_, z, frac_is_id):
     """
     Function that calculates the omega function for a given point z and fracture.
 

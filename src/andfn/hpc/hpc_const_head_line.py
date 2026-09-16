@@ -218,11 +218,54 @@ def calc_omega(self_, z, radius, mirror=False):
         m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
         chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
         omega += mf.well_chi(chi_mirror, self_["q"])
-        # omega += mf.asym_expansion(chi_mirror, self_["coef"][: self_["ncoef"]])
     return omega
 
 
-def calc_omega_error(self_, z):
+def calc_omega_error(self_, z, radius, mirror=False):
+    """
+    Function that calculates the omega function for a given point z and fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The intersection element
+    z : complex
+        An array of points in the complex z-plane
+    radius : float
+        The radius of the bounding circle for the fracture
+    mirror : bool, optional
+        Whether to include the mirror term in the omega calculation, by default False
+
+    Return
+    ------
+    omega : complex
+        The resulting value for the omega function
+    """
+    if mirror:
+        cond0 = (
+            np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+            > radius * R_COND
+        )
+        if cond0:
+            m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
+            chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+            return mf.well_chi(chi_mirror, self_["q"])
+        return 0.0 + 0.0j
+    chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
+    omega = mf.well_chi(chi, self_["q"])
+    omega += mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    cond0 = (
+        np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
+        > radius * R_COND
+    )
+    if cond0:
+        m_endpoints = gf.mirror_endpoints(self_["endpoints0"], radius)
+        chi_mirror = gf.map_z_line_to_chi(z, m_endpoints)
+        omega += mf.well_chi(chi_mirror, self_["q"])
+    return omega
+
+
+def calc_omega_error_org(self_, z):
     """
     Function that calculates the omega function for a given point z and fracture.
 

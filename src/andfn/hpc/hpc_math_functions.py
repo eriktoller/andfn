@@ -545,54 +545,6 @@ def cauchy_integral_intersection_error(
     """
 
 
-@nb.njit(inline="always")
-def _find_crossings(
-    self_, angles, nint, sign_val, element_id, work_array, cnt, is_mirror
-):
-    """Detect branch cut crossings via phase unwrapping.
-    Crossing at segment ii means the branch cut is between z_pos[ii] and z_pos[ii+1].
-    n_cross counts total crossings from start; a change in n_cross pinpoints the segment.
-    """
-    unwrapped = angles[0]
-    n_cross = 0
-
-    for ii in range(nint - 1):
-        raw_diff = angles[ii + 1] - angles[ii]
-
-        # Wrap step to (-π, π] to get the smooth (unwrapped) increment
-        if raw_diff > np.pi:
-            raw_diff -= 2.0 * np.pi
-        elif raw_diff <= -np.pi:
-            raw_diff += 2.0 * np.pi
-
-        unwrapped += raw_diff
-        # How many full 2π cycles separate the unwrapped phase from the raw angle?
-        new_n_cross = int(np.round((unwrapped - angles[ii + 1]) / (2.0 * np.pi)))
-
-        if new_n_cross != n_cross:
-            work_array["element_pos"][cnt] = ii
-            work_array["discharge_element"][cnt] = element_id
-
-            if is_mirror:
-                # Direction from raw (non-wrapped) diff
-                actual_diff = angles[ii + 1] - angles[ii]
-                if actual_diff > 0:
-                    work_array["sign_array"][cnt] = -sign_val
-                else:
-                    work_array["sign_array"][cnt] = sign_val
-            else:
-                # Reconstruct chi on unit circle from angles for get_sign compatibility
-                chi0 = np.cos(angles[ii]) + 1j * np.sin(angles[ii])
-                chi1 = np.cos(angles[ii + 1]) + 1j * np.sin(angles[ii + 1])
-                get_sign(self_, work_array, cnt, chi0, chi1, sign_val)
-
-            work_array["len_discharge_element"] += 1
-            cnt += 1
-            n_cross = new_n_cross
-
-    return cnt
-
-
 def check_branch_cut_crossing(
     z0,
     z1,
@@ -801,6 +753,56 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
     # set dpsi_corr to zero
     self_["dpsi_corr"][: self_["nint"] - 1] = 0.0
     self_["dpsi_corr"][:] = 0.0
+    for i in range(work_array["len_discharge_element"]):
+        e = element_struc_array[work_array["discharge_element"][i]]
+        self_["dpsi_corr"][work_array["element_pos"][i]] += (
+            e["q"] * work_array["sign_array"][i]
+        )
+
+
+@nb.njit()
+def get_dpsi_corr_error(self_, fracture_struc_array, element_struc_array, work_array):
+    """
+    Get the correction to the stream function due to the branch cuts.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    fracture_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+    work_array : np.ndarray[dtype_work]
+        The work array
+
+    Returns
+    -------
+    None
+        Edits the self_ array in place.
+    """
+    if work_array["len_discharge_element"] == 0:
+        if self_["_type"] in [1, 4]:  # If bounding circle or impermeable circle
+            z_pos = gf.map_chi_to_z_circle(
+                work_array["exp_array_p"][: self_["nint"]],
+                self_["radius"],
+                self_["center"],
+            )
+        elif self_["_type"] == 5:  # If impermeable line
+            z_pos = gf.map_chi_to_z_line(
+                work_array["exp_array_p"][: self_["nint"]], self_["endpoints0"]
+            )
+        else:
+            return
+        find_branch_cuts(
+            self_,
+            z_pos,
+            fracture_struc_array,
+            element_struc_array,
+            work_array,
+            self_["nint"],
+        )
+    # Keep dpsi_corr as is, because this will add the error to the existing dpsi_corr
     for i in range(work_array["len_discharge_element"]):
         e = element_struc_array[work_array["discharge_element"][i]]
         self_["dpsi_corr"][work_array["element_pos"][i]] += (
@@ -1077,15 +1079,15 @@ def cauchy_integral_domega_error(
         E_recon[ii] = taylor_series(chi, coef)
         z = gf.map_chi_to_z_circle(chi, radius, center)
         E_full[ii] = hpc_fracture.calc_omega_error(frac0, z, error_struc_array,
-                                                   element_id_) + taylor_series(chi,
-                                                                                 coef)
+                                                   element_id_) + E_recon[ii]
 
     import matplotlib.pyplot as plt
     plt.figure()
     plt.plot(dpsi, label="BC + error")
     plt.plot(dpsi_only, label="BC only")
-    plt.plot(np.imag(E_recon), label="Re(E)")
-    plt.plot(-np.imag(E_full), label="Re(E) full")
+    plt.plot(np.imag(E_recon), label="Im(E)")
+    plt.plot(-np.imag(E_full), label="Im(E) full")
+    plt.plot(np.imag(E_full) + dpsi_only, label="diff")
     plt.legend()
     plt.show()
     """

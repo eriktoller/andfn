@@ -211,6 +211,7 @@ def solve_error(
     """
 
     mf.get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array)
+    mf.get_dpsi_corr_error(self_, fracture_struc_array, error_struc_array, work_array)
     frac0 = fracture_struc_array[self_["frac0"]]
     work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
     mf.cauchy_integral_domega_error(

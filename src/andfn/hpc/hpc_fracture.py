@@ -107,7 +107,66 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
 
 
 @nb.njit()
-def calc_omega_error(self_, z, error_struc_array, exclude=-1):
+def calc_omega_error(self_, z, element_struc_array, exclude=-1):
+    """
+    Calculates the omega for the fracture excluding element "exclude".
+
+    Parameters
+    ----------
+    self_ : np.ndarray[fracture_dtype]
+        The fracture element.
+    z : complex
+        A point in the complex z plane.
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements.
+    exclude : int
+        Label of element to exclude from the omega calculation.
+
+    Returns
+    -------
+    omega : complex
+        The complex potential for the fracture.
+    """
+    # Initialize omega with the constant value
+    omega = self_["error_constant"] + 0.0j
+
+    # Loop through the elements of the fracture
+    for e in range(self_["nelements"]):
+        el = self_["elements"][e]
+        if el != exclude:
+            element = element_struc_array[el]
+            if element["_type"] == 0:  # Intersection
+                omega += hpc_intersection.calc_omega_error(
+                    element, z, self_["_id"], self_["radius"]
+                )
+            elif element["_type"] == 1:  # Bounding circle
+                omega += hpc_bounding_circle.calc_omega_error(element, z)
+            elif element["_type"] == 2:  # Well
+                omega += hpc_well.calc_omega_error(element, z)
+            elif element["_type"] == 3:  # Constant head line
+                omega += hpc_const_head_line.calc_omega_error(
+                    element, z, self_["radius"]
+                )
+            elif element["_type"] == 4:  # Impermeable circle
+                omega += hpc_imp_object.calc_omega_circle_error(element, z)
+            elif element["_type"] == 5:  # Impermeable line
+                omega += hpc_imp_object.calc_omega_line_error(element, z)
+        else:
+            element = element_struc_array[el]
+            # If the element is the one to exclude, we still need to add  the contribution from the mirror image of the element if it is an intersection or constant head line
+            if element["_type"] == 0:  # Intersection
+                omega += hpc_intersection.calc_omega_error(
+                    element, z, self_["_id"], self_["radius"], mirror=True
+                )
+            elif element["_type"] == 3:  # Constant head line
+                omega += hpc_const_head_line.calc_omega_error(
+                    element, z, self_["radius"], mirror=True
+                )
+    return omega
+
+
+@nb.njit()
+def calc_omega_error_org(self_, z, error_struc_array, exclude=-1):
     """
     Calculates the omega for the fracture excluding element "exclude".
 

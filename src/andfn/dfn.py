@@ -2596,10 +2596,9 @@ class DFN(Constants, IO):
             opacity=opacity,
             show_edges=False,
             line_width=line_width,
-            scalar_bar_args={"title": "Hydraulic Head", "shadow": True},
+            scalar_bar_args={"title": f"Error ({component})", "shadow": True},
             clim=limits,
             name="head",
-            title=f"Error ({component})",
         )
 
         # --- Contours ---

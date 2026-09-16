@@ -587,9 +587,9 @@ def build_discharge_matrix(
     for i, e in enumerate(discharge_elements):
         id_to_pos[e["_id"]] = i
 
-    nnz_per_row = count_discharge_nnz(
-        fractures_struc_array, error_struc_array, discharge_elements
-    )
+    from .hpc_solve import count_discharge_nnz as cdnz
+
+    nnz_per_row = cdnz(fractures_struc_array, error_struc_array, discharge_elements)
     row_offsets, total_nnz = exclusive_prefix_sum(nnz_per_row)
 
     rows = np.empty(total_nnz, np.int64)
@@ -597,7 +597,9 @@ def build_discharge_matrix(
     data = np.empty(total_nnz, np.float64)
     size = len(nnz_per_row)
 
-    fill_discharge_matrix(
+    from .hpc_solve import fill_discharge_matrix as fdm
+
+    fdm(
         fractures_struc_array,
         error_struc_array,
         discharge_elements,
@@ -950,19 +952,14 @@ def get_z_int_array(z_int, elements, discharge_int):
 @nb.njit(cache=CACHE)
 def get_discharge_term(element, z, frac, radius, e_is):
     if element["_type"] == 0:  # Intersection
-        return hpc_intersection.discharge_term_error(
-            element,
-            z,
-            frac,
-            radius,
+        return hpc_intersection.discharge_term(
+            element, z, frac, radius, element["_id"] == e_is
         )
     elif element["_type"] == 2:  # Well
-        return hpc_well.discharge_term_error(element, z)
+        return hpc_well.discharge_term(element, z)
     elif element["_type"] == 3:  # Constant head line
-        return hpc_const_head_line.discharge_term_error(
-            element,
-            z,
-            radius,
+        return hpc_const_head_line.discharge_term(
+            element, z, radius, element["_id"] == e_is
         )
     else:
         return 0.0
@@ -1076,7 +1073,7 @@ def get_bnd_error(
                 )
                 plt.plot(dphi_only, label="BC")
                 plt.plot(dphi, label="BC + E(z)")
-                plt.plot(omega_er.real, label="E(z)")
+                # plt.plot(omega_er.real, label="E(z)")
                 plt.plot(dphi_only + derror, label="Diff")
                 # plt.plot(omega_er1.real, label="Re E(z) frac1", linestyle="dashed")
                 # plt.plot(dphi_only + omega_er.real, label="Diff")
@@ -1137,10 +1134,13 @@ def get_bnd_error(
 
             # Build dpsi_corr vector (length nint-1) from work_array results
             dpsi_corr = np.zeros(nint)
+            dpsi_corr_error = np.zeros(nint)
             for k in range(work_array_org[j]["len_discharge_element"]):
                 ek = element_struc_array[work_array_org[j]["discharge_element"][k]]
                 pos = int(work_array_org[j]["element_pos"][k])
                 dpsi_corr[pos] += ek["q"] * work_array_org[j]["sign_array"][k]
+                er = error_struc_array[work_array[j]["discharge_element"][k]]
+                dpsi_corr_error[pos] += er["q"] * work_array[j]["sign_array"][k]
 
             # Evaluate ω at each of the nint points
             omega_pts = np.zeros(nint, dtype=np.complex128)
@@ -1164,8 +1164,9 @@ def get_bnd_error(
             plt.figure()
             plt.title(f"Boundary condition error for element {j} (type {e['_type']})")
             plt.plot(psi, label="BC")
-            plt.plot(omega_pts.imag, label="BC org")
+            # plt.plot(omega_pts.imag, label="BC org")
             plt.plot(om_error.imag, label="Im E(z)")
+            plt.plot(psi + om_error.imag, label="Diff")
             # plt.plot(om_error.real, label="Re E(z)")
             plt.legend()
 
