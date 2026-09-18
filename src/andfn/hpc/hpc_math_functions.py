@@ -545,6 +545,7 @@ def cauchy_integral_intersection_error(
     """
 
 
+@nb.njit()
 def check_branch_cut_crossing(
     z0,
     z1,

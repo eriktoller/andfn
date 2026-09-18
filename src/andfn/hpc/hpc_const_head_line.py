@@ -221,6 +221,7 @@ def calc_omega(self_, z, radius, mirror=False):
     return omega
 
 
+@nb.njit()
 def calc_omega_error(self_, z, radius, mirror=False):
     """
     Function that calculates the omega function for a given point z and fracture.

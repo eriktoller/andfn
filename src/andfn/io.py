@@ -448,6 +448,20 @@ class IO:
             f"Added and filtered {len(fracs)} fractures to the DFN in {time.time() - end:.2f} seconds."
         )
 
+    def export_fractures(self, filename):
+        """
+        Export the fractures of a DFN to a JSON file.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the output JSON file.
+        """
+
+        # Check the ending of the filename and add .fracs if necessary
+        export_fractures(self, filename)
+        logger.info(f"Exported {len(self.fractures)} fractures to {filename}.")
+
 
 if __name__ == "__main__":
     filename = "../../data/test_fab.csv"

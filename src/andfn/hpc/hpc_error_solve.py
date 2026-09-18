@@ -18,7 +18,6 @@ from andfn.hpc import (
     hpc_bounding_circle,
     hpc_const_head_line,
     hpc_fracture,
-    hpc_imp_object,
     hpc_intersection,
     hpc_well,
 )
@@ -245,7 +244,7 @@ def solve_error(
     # z_int is only used for intersection / well / const-head rows
     get_z_int_array(z_int, error_struc_array, discharge_int)
 
-    max_error = float(constants["MAX_ERROR"])
+    """max_error = float(constants["MAX_ERROR"])
     bnd_error = np.zeros((num_elements, 7), dtype=np.float64)
 
     get_bnd_error(
@@ -258,7 +257,7 @@ def solve_error(
         discharge_int,
         bnd_error,
         z_int,
-    )
+    )"""
 
     return error_struc_array, work_array
 
@@ -323,7 +322,6 @@ def solve_discharge_matrix_error(
     # Solve the discharge matrix
     start0 = time.time()
     discharges[:] = lu_matrix.solve(head_matrix)
-    print(discharges)
     logger.debug(f"Solve matrix time: {time.time() - start0}")
 
     # post solver
@@ -560,10 +558,10 @@ def build_head_matrix(
             diff1 = (fi11 + er11) - (fi00 + er00)
             head_matrix[j] = diff1
 
-            print("fi11-fi00 =", fi11 - fi00)
+            """print("fi11-fi00 =", fi11 - fi00)
             print("er11-er00 =", er11 - er00)
             print("diff_er =", diff_er / discharge_int)
-            print("head row  =", diff1)
+            print("head row  =", diff1)"""
 
         elif e["_type"] in [2, 3]:  # Well or Constant head line
             head_matrix[j] = -(e["phi"] - np.real(omega)) - np.real(er)
@@ -898,21 +896,9 @@ def element_solver_error(
                 work_array[i],
             )
         elif e["_type"] == 4:  # Impermeable circle
-            hpc_imp_object.solve_circle(
-                e,
-                fracture_struc_array,
-                element_struc_array,
-                error_struc_array,
-                work_array[i],
-            )
+            print("Warning: Impermeable circle not implemented yet. Skipping.")
         elif e["_type"] == 5:  # Impermeable line
-            hpc_imp_object.solve_line(
-                e,
-                fracture_struc_array,
-                element_struc_array,
-                error_struc_array,
-                work_array[i],
-            )
+            print("Warning: Impermeable line not implemented yet. Skipping.")
 
     # Get the coefficients from the work array
     for i in nb.prange(num_elements):
@@ -1056,16 +1042,16 @@ def get_bnd_error(
                     )
                     omega_er[ii] = omega_error0
                     omega_er1[ii] = omega_error1
-                    print(
+                    """print(
                         f"omega0={omega0.real}, omega1={omega1.real}, phi_error={omega1.real - omega0.real}, omega_error0={omega_error0.real}, omega_error1={omega_error1.real}"
-                    )
+                    )"""
                     dphi[ii] = (np.real(omega0) + np.real(omega_error0)) - (
                         np.real(omega1) + np.real(omega_error1)
                     )
                     dphi_only[ii] = np.real(omega0) - np.real(omega1)
                     derror[ii] = np.real(omega_error0) - np.real(omega_error1)
 
-                import matplotlib.pyplot as plt
+                """import matplotlib.pyplot as plt
 
                 plt.figure()
                 plt.title(
@@ -1077,7 +1063,7 @@ def get_bnd_error(
                 plt.plot(dphi_only + derror, label="Diff")
                 # plt.plot(omega_er1.real, label="Re E(z) frac1", linestyle="dashed")
                 # plt.plot(dphi_only + omega_er.real, label="Diff")
-                plt.legend()
+                plt.legend()"""
             else:  # Well or Constant head line
                 omega_er = np.zeros(nint, dtype=np.complex128)
                 cnt_discharge += 1
@@ -1094,7 +1080,7 @@ def get_bnd_error(
                     dphi[ii] = e["phi"] - np.real(omega) + np.real(omega_error)
                     dphi_only[ii] = e["phi"] - np.real(omega)
 
-                import matplotlib.pyplot as plt
+                """import matplotlib.pyplot as plt
 
                 print(f"mean={np.mean(dphi_only)}")
                 print(f"mean error={np.mean(omega_er.real)}")
@@ -1107,7 +1093,7 @@ def get_bnd_error(
                 plt.plot(dphi_only, label="BC")
                 plt.plot(omega_er.real, label="Re E(z)")
                 plt.plot(dphi_only + omega_er.real, label="Diff")
-                plt.legend()
+                plt.legend()"""
         elif e["_type"] == 1:  # Bounding circle
             # dpsi_corr = e["dpsi_corr"][: nint - 1]
             # dpsi = np.zeros(nint, dtype=np.float64)
@@ -1159,7 +1145,7 @@ def get_bnd_error(
                 raw_dpsi = np.imag(omega_pts[ii + 1]) - np.imag(omega_pts[ii])
                 psi[ii + 1] = psi[ii] + (raw_dpsi - dpsi_corr[ii])
 
-            import matplotlib.pyplot as plt
+            """import matplotlib.pyplot as plt
 
             plt.figure()
             plt.title(f"Boundary condition error for element {j} (type {e['_type']})")
@@ -1168,6 +1154,6 @@ def get_bnd_error(
             plt.plot(om_error.imag, label="Im E(z)")
             plt.plot(psi + om_error.imag, label="Diff")
             # plt.plot(om_error.real, label="Re E(z)")
-            plt.legend()
+            plt.legend()"""
 
-    plt.show()
+    # plt.show()

@@ -376,6 +376,35 @@ def calc_errors(self_, errors, n_points, z_array, error_struc_array):
         errors[i] = calc_omega_error(self_, z_array[i], error_struc_array)
 
 
+@nb.njit(cache=CACHE)
+def calc_error_heads(self_, errors, n_points, z_array, error_struc_array):
+    """
+    Calculates the head net for the fracture.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[fracture_dtype]
+        The fracture element.
+    errors : np.ndarray[np.complex128]
+        Array to store the head net for the fracture.
+    n_points : int
+        Number of points in the flow net.
+    z_array : np.ndarray[np.complex128]
+        Array of complex coordinates for the points in the sunflower spiral multiplied with the fracture radius.
+    error_struc_array : np.ndarray[element_dtype]
+        Array of elements.
+
+    Returns
+    -------
+    None
+         Modifies the heads array in place.
+    """
+    # Calculate the head net for the fracture
+    for i in range(n_points):
+        error = np.real(calc_omega_error(self_, z_array[i], error_struc_array))
+        errors[i] = head_from_phi(self_, error)
+
+
 @nb.njit(inline="always")
 def head_from_phi(self_, phi):
     """
@@ -490,7 +519,7 @@ def get_heads(fracture_struc_array, element_struc_array, z_array):
 
 
 @nb.njit(cache=CACHE, parallel=True)
-def get_errors(fracture_struc_array, error_struc_array, z_array):
+def get_errors(fracture_struc_array, error_struc_array, z_array, heads=False):
     """
     Get the heads for all fractures.
 
@@ -517,17 +546,30 @@ def get_errors(fracture_struc_array, error_struc_array, z_array):
     pnts_3d = np.zeros((len(fracture_struc_array), n, 3), dtype=np.float64)
     z_arrays = np.zeros((len(fracture_struc_array), n), dtype=np.complex128)
 
-    # Calculate the heads for each fracture
-    for i in nb.prange(len(fracture_struc_array)):
-        z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
-        calc_errors(
-            fracture_struc_array[i],
-            errors[i],
-            n,
-            z_arrays[i],
-            error_struc_array,
-        )
-        # Map the 2D points to 3D
-        gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
+    # Calculate the errors
+    if heads:
+        for i in nb.prange(len(fracture_struc_array)):
+            z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
+            calc_error_heads(
+                fracture_struc_array[i],
+                errors[i],
+                n,
+                z_arrays[i],
+                error_struc_array,
+            )
+            # Map the 2D points to 3D
+            gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
+    else:
+        for i in nb.prange(len(fracture_struc_array)):
+            z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
+            calc_errors(
+                fracture_struc_array[i],
+                errors[i],
+                n,
+                z_arrays[i],
+                error_struc_array,
+            )
+            # Map the 2D points to 3D
+            gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
 
     return errors, pnts_3d

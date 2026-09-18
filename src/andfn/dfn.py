@@ -1744,8 +1744,8 @@ class DFN(Constants, IO):
         logger.info("---------------------------------------")
         error_structured_array = self.elements_struc_array_hpc.copy()
         error_structured_array["coef"][:] = 0
-        error_structured_array["ncoef"][:] = 100
-        error_structured_array["nint"][:] = 200
+        error_structured_array["ncoef"] = self.elements_struc_array_hpc["ncoef"]
+        error_structured_array["nint"] = self.elements_struc_array_hpc["nint"]
         self.print_solver_constants()
         self.error_structured_array, self.work_array = hpc_solve_error(
             self.fractures_struc_array_hpc,
@@ -2070,6 +2070,8 @@ class DFN(Constants, IO):
 
         if show:
             pl.show()
+
+        return pl
 
     def plot_fractures(
         self,
@@ -2488,6 +2490,7 @@ class DFN(Constants, IO):
         self,
         pl,
         component="abs",
+        term="complex",
         lvs=20,
         n_layers=10,
         line_width=2,
@@ -2499,6 +2502,7 @@ class DFN(Constants, IO):
         debug=False,
         fractures=None,
         unit="m",
+        log_scale=False,
     ):
 
         start = time.time()
@@ -2529,7 +2533,16 @@ class DFN(Constants, IO):
         h = 1 / (n_layers + 1)
         partitions = int(2 * np.pi / h / n_layers)
         z_array, base_faces = generate_disk(partitions, n_layers)
-        heads, pnts_3d = hpc_get_errors(fracs_arr, self.error_structured_array, z_array)
+        if term == "head":
+            heads, pnts_3d = hpc_get_errors(
+                fracs_arr, self.error_structured_array, z_array, heads=True
+            )
+        elif term == "complex":
+            heads, pnts_3d = hpc_get_errors(
+                fracs_arr, self.error_structured_array, z_array
+            )
+        else:
+            raise ValueError(f"Unknown term '{term}' for error plotting.")
         logger.info(
             f"Calculating heads and points took {time.time() - time_heads:.2f} seconds."
         )
@@ -2596,9 +2609,10 @@ class DFN(Constants, IO):
             opacity=opacity,
             show_edges=False,
             line_width=line_width,
-            scalar_bar_args={"title": f"Error ({component})", "shadow": True},
+            scalar_bar_args={"title": f"Error {term} ({component})", "shadow": True},
             clim=limits,
             name="head",
+            log_scale=log_scale,
         )
 
         # --- Contours ---
@@ -2611,6 +2625,7 @@ class DFN(Constants, IO):
                     line_width=line_width,
                     opacity=opacity,
                     clim=limits,
+                    log_scale=log_scale,
                 )
 
         if not colorbar:
