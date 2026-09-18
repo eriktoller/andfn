@@ -13,6 +13,7 @@ from andfn.hpc import CACHE
 
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
+from .hpc_intersection import R_COND
 
 
 @nb.njit(inline="always")
@@ -300,93 +301,401 @@ def cauchy_integral_real(
 
 
 @nb.njit()
-def find_branch_cuts(
-    self_, z_pos, fracture_struc_array, element_struc_array, work_array, nint
+def cauchy_integral_real_error(
+    n,
+    m,
+    thetas,
+    frac0,
+    element_id_,
+    element_struc_array,
+    error_struc_array,
+    endpoints0,
+    work_array,
+    coef,
+    bc_phi,
 ):
     """
-    Find the branch cuts for the fracture.
+    FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
 
     Parameters
     ----------
-    self_ : np.ndarray[element_dtype]
-        The bounding circle element
-    z_pos : np.ndarray[np.complex128]
-        The positions in the complex plane
-    fracture_struc_array : np.ndarray[fracture_dtype]
-        The array of fractures
+    n : int
+        Number of integration points
+    m : int
+        Number of coefficients
+    thetas : np.ndarray
+        Array with thetas along the unit circle
+    frac0 : np.ndarray
+        The fracture
+    element_id_ : int
+        The element id
     element_struc_array : np.ndarray[element_dtype]
-        The array of elements
-    work_array : np.ndarray[dtype_work]
+        Array of elements
+    endpoints0 : np.ndarray[np.complex128]
+        The endpoints of the constant head line
+    work_array : np.ndarray[work_array_dtype]
         The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
 
-    Returns
-    -------
-    dpsi_corr : np.ndarray[np.float64]
-        The correction to the potential due to the branch cuts
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        Array of coefficients
     """
-    # Find the branch cuts
+    # set integral to zero
+    integral = np.zeros(m, dtype=np.complex128)
+    dphi = np.zeros(n, dtype=np.float64)
+    dphi_only = np.zeros(n, dtype=np.float64)
 
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        z = gf.map_chi_to_z_line(chi, endpoints0)
+        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array)
+        omega_error = hpc_fracture.calc_omega_error(
+            frac0, z, error_struc_array, element_id_
+        )
+
+        dphi_only[ii] = bc_phi - np.real(omega)
+
+        # This is the actual function E_recon must match
+        dphi[ii] = dphi_only[ii] + np.real(omega_error)
+
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array["exp_array_m"][ii]
+            res_tmp += dphi[ii] * exp_val
+        integral[jj] = res_tmp
+
+    for ii in range(m):
+        coef[ii] = 2 * integral[ii] / n
+    coef[0] = coef[0] / 2
+
+    """coef = -np.real(coef)
+    coef[0] = 0.0
+    E_recon = np.zeros(n, dtype=np.complex128)
+    E_full = np.zeros(n, dtype=np.complex128)
+    E_other = np.zeros(n, dtype=np.complex128)
+
+
+    for ii in range(n):
+        frac = frac0
+        chi = work_array["exp_array_p"][ii]
+        E_recon[ii] = asym_expansion(chi, coef)
+        z = gf.map_chi_to_z_line(chi, endpoints0)
+        E_other[ii] = (
+            hpc_fracture.calc_omega_error(frac, z, error_struc_array, element_id_)
+        )
+        E_full[ii] = (
+                hpc_fracture.calc_omega_error(frac, z, error_struc_array, element_id_)
+                + asym_expansion(chi, coef)
+        )
+
+    print("n, m:", n, m)
+    print("max |dphi|:", np.max(np.abs(dphi)))
+    print("max |coef|:", np.max(np.abs(coef)))
+    print("max |E_recon|:", np.max(np.abs(np.real(E_recon))))
+    print("max |E_other|:", np.max(np.abs(np.real(E_other))))
+    print("max |E_full|:", np.max(np.abs(np.real(E_full))))
+
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    plt.plot(dphi, label="BC + error, dphi")
+    plt.plot(dphi_only, label="BC only, dphi_oly")
+    plt.plot(np.real(E_recon), label="Re(E)")
+    plt.plot(np.real(E_other), label="Re(E) other")
+    plt.plot(-np.real(E_full), label="Re(E) full")
+    plt.plot(np.real(E_full) + dphi_only, label="Re(E_full) + BC")
+    plt.legend()
+    plt.show()"""
+
+
+@nb.njit()
+def cauchy_integral_intersection_error(
+    n,
+    m,
+    thetas,
+    frac0,
+    frac1,
+    element_id_,
+    element_struc_array,
+    error_struc_array,
+    endpoints0,
+    endpoints1,
+    work_array,
+    coef,
+    frac_is,
+):
+    """
+    FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
+
+    Parameters
+    ----------
+    n : int
+        Number of integration points
+    m : int
+        Number of coefficients
+    thetas : np.ndarray
+        Array with thetas along the unit circle
+    frac0 : np.ndarray
+        The fracture
+    element_id_ : int
+        The element id
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    error_struc_array : np.ndarray[error_dtype]
+        Array of errors
+    endpoints0 : np.ndarray[np.complex128]
+        The endpoints of the constant head line
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
+
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        Array of coefficients
+    """
+    # set integral to zero
+    integral = np.zeros(m, dtype=np.complex128)
+    dphi = np.zeros(n, dtype=np.float64)
+    dphi_only = np.zeros(n, dtype=np.float64)
+
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        z0 = gf.map_chi_to_z_line(chi, endpoints0)
+        z1 = gf.map_chi_to_z_line(chi, endpoints1)
+        omega0 = (
+            np.real(hpc_fracture.calc_omega(frac0, z0, element_struc_array))
+            / frac0["t"]
+        )
+        omega1 = (
+            np.real(hpc_fracture.calc_omega(frac1, z1, element_struc_array))
+            / frac1["t"]
+        )
+        omega_error0 = (
+            np.real(
+                hpc_fracture.calc_omega_error(frac0, z0, error_struc_array, element_id_)
+            )
+            / frac0["t"]
+        )
+        omega_error1 = (
+            np.real(
+                hpc_fracture.calc_omega_error(frac1, z1, error_struc_array, element_id_)
+            )
+            / frac1["t"]
+        )
+        dphi[ii] = -np.real(omega0) + np.real(omega_error0)
+        if frac_is == 1:
+            dphi[ii] = ((omega1 - omega0 * 0) + omega_error1) * frac1["t"]
+        else:
+            dphi[ii] = ((omega1 * 0 + omega0) + omega_error0) * frac0["t"]
+
+        dphi_only[ii] = (omega1 - omega0) * frac0["t"]
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array["exp_array_m"][ii]
+            res_tmp += dphi[ii] * exp_val
+        integral[jj] = res_tmp
+
+    for ii in range(m):
+        coef[ii] = 2 * integral[ii] / n
+    coef[0] = coef[0] / 2
+
+    """
+    coef = -np.real(coef)
+    #coef[0] = 0.0
+    E_recon = np.zeros(n, dtype=np.complex128)
+    E_full = np.zeros(n, dtype=np.complex128)
+    E_other = np.zeros(n, dtype=np.complex128)
+
+    for ii in range(n):
+        frac = frac0 if frac_is == 0 else frac1
+        chi = work_array["exp_array_p"][ii]
+        E_recon[ii] = asym_expansion(chi, coef)
+        z = gf.map_chi_to_z_line(chi, endpoints0 if frac_is == 0 else endpoints1)
+        E_other[ii] = (
+            hpc_fracture.calc_omega_error(frac, z, error_struc_array, element_id_)
+        )
+        E_full[ii] = (
+            hpc_fracture.calc_omega_error(frac, z, error_struc_array, element_id_)
+            + asym_expansion(chi, coef)
+        )
+
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    plt.plot(dphi, label="BC + error")
+    plt.plot(dphi_only, label="BC only")
+    plt.plot(np.real(E_recon), label="Re(E)")
+    plt.plot(np.real(E_other), label="Re(E) other")
+    plt.plot(np.real(E_full), label="Re(E) full")
+    plt.plot(np.real(E_full) + dphi_only, label="Re(E_full) + BC")
+    plt.legend()
+    plt.show()
+
+    """
+
+
+@nb.njit()
+def check_branch_cut_crossing(
+    z0,
+    z1,
+    frac_radius,
+    endpoints,
+    num_check_points=32,
+):
+    chi0 = gf.map_z_line_to_chi(z0, endpoints)
+    chi1 = gf.map_z_line_to_chi(z1, endpoints)
+
+    # No possibility of a negative-real-axis crossing
+    if np.real(chi0) > 0 and np.real(chi1) > 0 and np.imag(chi0) * np.imag(chi1) > 0:
+        return False
+
+    # Sample the actual circular arc
+    theta0 = np.angle(z0)
+    theta1 = np.angle(z1)
+
+    dtheta = (theta1 - theta0) % (2 * np.pi)
+
+    theta = theta0 + np.linspace(
+        0.0,
+        dtheta,
+        num_check_points,
+    )
+
+    z_arc = frac_radius * np.exp(1j * theta)
+
+    chi = gf.map_z_line_to_chi(z_arc, endpoints)
+
+    x0 = np.real(chi[:-1])
+    x1 = np.real(chi[1:])
+
+    y0 = np.imag(chi[:-1])
+    y1 = np.imag(chi[1:])
+
+    return np.any((y0 * y1 < 0.0) & (x0 < 0.0) & (x1 < 0.0))
+
+
+@nb.njit()
+def find_branch_cuts(
+    self_, z_pos, fracture_struc_array, element_struc_array, work_array, nint
+):
     nel = fracture_struc_array[self_["frac0"]]["nelements"]
     elements_list = fracture_struc_array[self_["frac0"]]["elements"][:nel]
     elements = element_struc_array[elements_list]
     work_array["len_discharge_element"] = 0
+    frac_radius = fracture_struc_array[self_["frac0"]]["radius"]
 
     cnt = 0
     for ii in range(nint - 1):
         for e in elements:
             if e["_type"] == 0:  # Intersection
                 if e["frac0"] == self_["frac0"]:
-                    chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
-                    chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
-                    ln0 = np.imag(np.log(chi0))
-                    ln1 = np.imag(np.log(chi1))
-                    if (
-                        np.sign(ln0) != np.sign(ln1)
-                        and np.abs(ln0) + np.abs(ln1) > np.pi
-                    ):
+                    endpoints = e["endpoints0"]
+                    sign_val = -1
+                    crosses = check_branch_cut_crossing(
+                        z_pos[ii], z_pos[ii + 1], frac_radius, endpoints
+                    )
+                    if crosses:
+                        chi0 = gf.map_z_line_to_chi(z_pos[ii], endpoints)
+                        chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], endpoints)
                         work_array["element_pos"][cnt] = ii
                         work_array["discharge_element"][cnt] = e["_id"]
                         get_sign(self_, work_array, cnt, chi0, chi1, -1)
                         work_array["len_discharge_element"] += 1
                         cnt += 1
                 else:
-                    chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints1"])
-                    chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints1"])
-                    ln0 = np.imag(np.log(chi0))
-                    ln1 = np.imag(np.log(chi1))
-                    if (
-                        np.sign(ln0) != np.sign(ln1)
-                        and np.abs(ln0) + np.abs(ln1) > np.pi
-                    ):
+                    endpoints = e["endpoints1"]
+                    sign_val = 1
+                    crosses = check_branch_cut_crossing(
+                        z_pos[ii], z_pos[ii + 1], frac_radius, endpoints
+                    )
+                    if crosses:
+                        chi0 = gf.map_z_line_to_chi(z_pos[ii], endpoints)
+                        chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], endpoints)
                         work_array["element_pos"][cnt] = ii
                         work_array["discharge_element"][cnt] = e["_id"]
                         get_sign(self_, work_array, cnt, chi0, chi1, 1)
                         work_array["len_discharge_element"] += 1
                         cnt += 1
+
+                # Mirror branch cut
+                cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > frac_radius * R_COND
+                cond1 = cond0
+                if cond0 or cond1:
+                    m_endpoints = gf.mirror_endpoints(endpoints, frac_radius)
+                    crosses = check_branch_cut_crossing(
+                        z_pos[ii], z_pos[ii + 1], frac_radius, m_endpoints
+                    )
+                    if crosses:
+                        chi0m = gf.map_z_line_to_chi(z_pos[ii], m_endpoints)
+                        chi1m = gf.map_z_line_to_chi(z_pos[ii + 1], m_endpoints)
+                        work_array["element_pos"][cnt] = ii
+                        work_array["discharge_element"][cnt] = e["_id"]
+                        # Mirror can be crossed twice with opposite signs — use direction-based sign
+                        if np.imag(chi0m) < np.imag(chi1m):
+                            work_array["sign_array"][cnt] = -sign_val
+                        else:
+                            work_array["sign_array"][cnt] = sign_val
+                        work_array["len_discharge_element"] += 1
+                        cnt += 1
             elif e["_type"] == 2:  # Well
                 chi0 = gf.map_z_circle_to_chi(z_pos[ii], e["radius"], e["center"])
                 chi1 = gf.map_z_circle_to_chi(z_pos[ii + 1], e["radius"], e["center"])
-                if (
-                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
-                    and np.real(chi0) < 0
-                ):
+                ln0 = np.imag(np.log(chi0))
+                ln1 = np.imag(np.log(chi1))
+                if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
                     work_array["len_discharge_element"] += 1
                     cnt += 1
             elif e["_type"] == 3:  # Constant head line
-                chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
-                chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
-                if (
-                    np.sign(np.imag(chi0)) != np.sign(np.imag(chi1))
-                    and np.real(chi0) < 0
-                ):
+                crosses = check_branch_cut_crossing(
+                    z_pos[ii], z_pos[ii + 1], frac_radius, e["endpoints0"]
+                )
+                if crosses:
+                    chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
+                    chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
                     work_array["element_pos"][cnt] = ii
                     work_array["discharge_element"][cnt] = e["_id"]
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
                     work_array["len_discharge_element"] += 1
                     cnt += 1
+
+                # Mirror branch cut
+                cond0 = (
+                    np.abs((e["endpoints0"][0] + e["endpoints0"][1]) / 2.0)
+                    > frac_radius * R_COND
+                )
+                if cond0:
+                    m_endpoints = gf.mirror_endpoints(e["endpoints0"], frac_radius)
+                    crosses = check_branch_cut_crossing(
+                        z_pos[ii], z_pos[ii + 1], frac_radius, m_endpoints
+                    )
+                    if crosses:
+                        chi0m = gf.map_z_line_to_chi(z_pos[ii], m_endpoints)
+                        chi1m = gf.map_z_line_to_chi(z_pos[ii + 1], m_endpoints)
+                        work_array["element_pos"][cnt] = ii
+                        work_array["discharge_element"][cnt] = e["_id"]
+                        # Mirror contributes +well_chi(chi_mirror, q) — same sign as direct term.
+                        # neg→pos Im(chi_m): Im(log) jumps +2π → psi jumps +q → need dpsi_corr=+q → sign=+1
+                        # pos→neg Im(chi_m): Im(log) jumps -2π → psi jumps -q → need dpsi_corr=-q → sign=-1
+                        if np.imag(chi0m) < np.imag(chi1m):
+                            work_array["sign_array"][cnt] = 1
+                        else:
+                            work_array["sign_array"][cnt] = -1
+                        work_array["len_discharge_element"] += 1
+                        cnt += 1
 
 
 @nb.njit(inline="always")
@@ -432,6 +741,8 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
             z_pos = gf.map_chi_to_z_line(
                 work_array["exp_array_p"][: self_["nint"]], self_["endpoints0"]
             )
+        else:
+            return
         find_branch_cuts(
             self_,
             z_pos,
@@ -441,8 +752,58 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
             self_["nint"],
         )
     # set dpsi_corr to zero
-    self_["dpsi_corr"][:] = 0.0  # zeroes the whole array
     self_["dpsi_corr"][: self_["nint"] - 1] = 0.0
+    self_["dpsi_corr"][:] = 0.0
+    for i in range(work_array["len_discharge_element"]):
+        e = element_struc_array[work_array["discharge_element"][i]]
+        self_["dpsi_corr"][work_array["element_pos"][i]] += (
+            e["q"] * work_array["sign_array"][i]
+        )
+
+
+@nb.njit()
+def get_dpsi_corr_error(self_, fracture_struc_array, element_struc_array, work_array):
+    """
+    Get the correction to the stream function due to the branch cuts.
+
+    Parameters
+    ----------
+    self_ : np.ndarray[element_dtype]
+        The bounding circle element
+    fracture_struc_array : np.ndarray[fracture_dtype]
+        The array of fractures
+    element_struc_array : np.ndarray[element_dtype]
+        The array of elements
+    work_array : np.ndarray[dtype_work]
+        The work array
+
+    Returns
+    -------
+    None
+        Edits the self_ array in place.
+    """
+    if work_array["len_discharge_element"] == 0:
+        if self_["_type"] in [1, 4]:  # If bounding circle or impermeable circle
+            z_pos = gf.map_chi_to_z_circle(
+                work_array["exp_array_p"][: self_["nint"]],
+                self_["radius"],
+                self_["center"],
+            )
+        elif self_["_type"] == 5:  # If impermeable line
+            z_pos = gf.map_chi_to_z_line(
+                work_array["exp_array_p"][: self_["nint"]], self_["endpoints0"]
+            )
+        else:
+            return
+        find_branch_cuts(
+            self_,
+            z_pos,
+            fracture_struc_array,
+            element_struc_array,
+            work_array,
+            self_["nint"],
+        )
+    # Keep dpsi_corr as is, because this will add the error to the existing dpsi_corr
     for i in range(work_array["len_discharge_element"]):
         e = element_struc_array[work_array["discharge_element"][i]]
         self_["dpsi_corr"][work_array["element_pos"][i]] += (
@@ -497,6 +858,7 @@ def cauchy_integral_domega_line(
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["psi"][ii] = np.imag(omega)
     delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
+    work_array["dpsi"][0] = 0.0  # Add this line
     work_array["dpsi"][1:n] = delta_psi - dpsi_corr
     # set integral to zero
     work_array["integral"][:] = 0.0
@@ -587,7 +949,7 @@ def cauchy_integral_domega(
         omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
         work_array["psi"][ii] = np.imag(omega)
     delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
-    work_array["dpsi"][0] = 0.0
+    work_array["dpsi"][0] = 0.0  # Add this line to set the first value of dpsi to zero
     work_array["dpsi"][1:n] = delta_psi - dpsi_corr
     # set integral to zero
     work_array["integral"][:] = 0.0
@@ -597,6 +959,12 @@ def cauchy_integral_domega(
         psi1 = psi0 + work_array["dpsi"][ii]
         work_array["psi"][ii] = psi1
         psi0 = psi1
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(work_array["psi"][:n])
+    # plt.plot(dpsi_corr[:n])
+    # plt.title(f"Frac0: {frac0['_id']}, Element ID: {element_id_}")
+    # plt.show()
 
     for jj in range(m):
         res_tmp = 0.0 + 0.0j
@@ -610,6 +978,163 @@ def cauchy_integral_domega(
     for ii in range(m):
         coef[ii] = 2j * work_array["integral"][ii] / n
     coef[0] = coef[0] / 2
+
+
+@nb.njit()
+def cauchy_integral_domega_error(
+    n,
+    m,
+    dpsi_corr,
+    frac0,
+    element_id_,
+    element_struc_array,
+    error_struc_array,
+    radius,
+    center,
+    work_array,
+    coef,
+):
+    """
+    FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
+
+    Parameters
+    ----------
+    n : np.int64
+        Number of integration points
+    m : np.int64
+        Number of coefficients
+    dpsi_corr : np.ndarray[np.complex128]
+        Correction for the stream function
+    frac0 : np.ndarray[fracture_dtype]
+        The fracture
+    element_id_ : np.int64
+        The element id
+    element_struc_array : np.ndarray[element_dtype]
+        Array of elements
+    radius : np.float64
+        The radius of the bounding circle
+    center : np.complex128
+        The center of the bounding circle
+    work_array : np.ndarray[work_array_dtype]
+        The work array
+    coef : np.ndarray[np.complex128]
+        The coefficients that will be filled
+
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        Array of coefficients
+    """
+    dpsi = np.zeros(n, dtype=np.float64)
+    dpsi_only = np.zeros(n, dtype=np.float64)
+    om_error = np.zeros(n, dtype=np.complex128)
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        z = gf.map_chi_to_z_circle(chi, radius, center)
+        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array)
+        omega_error = hpc_fracture.calc_omega_error(
+            frac0, z, error_struc_array, element_id_
+        )
+        om_error[ii] = omega_error
+        work_array["psi"][ii] = np.imag(omega) + np.imag(omega_error)
+    delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
+    work_array["dpsi"][0] = 0.0  # Add this line to set the first value of dpsi to zero
+    work_array["dpsi"][1:n] = delta_psi - dpsi_corr
+    # set integral to zero
+    work_array["integral"][:] = 0.0
+
+    psi0 = work_array["psi"][0]
+    for ii in range(n):
+        psi1 = psi0 + work_array["dpsi"][ii]
+        work_array["psi"][ii] = psi1
+        psi0 = psi1
+        dpsi[ii] = work_array["psi"][ii]
+        dpsi_only[ii] = dpsi[ii] - np.imag(om_error[ii])
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(work_array["psi"][:n])
+    # plt.plot(dpsi_corr[:n])
+    # plt.title(f"Frac0: {frac0['_id']}, Element ID: {element_id_}")
+    # plt.show()
+
+    for jj in range(m):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= work_array["exp_array_m"][ii]
+            res_tmp += work_array["psi"][ii] * exp_val
+        work_array["integral"][jj] = res_tmp
+
+    for ii in range(m):
+        coef[ii] = 2j * work_array["integral"][ii] / n
+    coef[0] = coef[0] / 2
+
+    """
+    coef = -coef
+    E_recon = np.zeros(n, dtype=np.complex128)
+    E_full = np.zeros(n, dtype=np.complex128)
+
+    for ii in range(n):
+        chi = work_array["exp_array_p"][ii]
+        E_recon[ii] = taylor_series(chi, coef)
+        z = gf.map_chi_to_z_circle(chi, radius, center)
+        E_full[ii] = hpc_fracture.calc_omega_error(frac0, z, error_struc_array,
+                                                   element_id_) + E_recon[ii]
+
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.plot(dpsi, label="BC + error")
+    plt.plot(dpsi_only, label="BC only")
+    plt.plot(np.imag(E_recon), label="Im(E)")
+    plt.plot(-np.imag(E_full), label="Im(E) full")
+    plt.plot(np.imag(E_full) + dpsi_only, label="diff")
+    plt.legend()
+    plt.show()
+    """
+
+
+def fourier_coefficients(omega, thetas, ncoef, taylor=False):
+    """
+    Function that calculates the Fourier coefficients for a given array of omega values and thetas.
+
+    Parameters
+    ----------
+    omega : np.ndarray[np.complex128]
+        An array of omega values
+    thetas : np.ndarray[np.float64]
+        An array of thetas
+    ncoef : int
+        The number of coefficients to calculate
+    taylor : bool, optional
+        Whether to calculate the Taylor coefficients (default is False, which calculates the Laurent coefficients)
+
+    Return
+    ------
+    coef : np.ndarray[np.complex128]
+        An array of Fourier coefficients
+    """
+    n = omega.size
+    coef = np.zeros(ncoef, dtype=np.complex128)
+    integral = np.zeros(ncoef, dtype=np.complex128)
+
+    const = -2j if taylor else 2  # Taylor: - , Laurent: +
+    omega = np.convolve(omega, np.ones(5) / 5, mode="same")
+
+    for jj in range(ncoef):
+        res_tmp = 0.0 + 0.0j
+        for ii in range(n):
+            exp_val = 1.0 + 0.0j
+            for _ in range(jj):
+                exp_val *= np.exp(-1j * jj * thetas[ii])
+            res_tmp += omega[ii] * exp_val
+        integral[jj] = res_tmp
+
+    for ii in range(ncoef):
+        coef[ii] = const * integral[ii] / n
+    coef[0] = coef[0] / 2 * 0  # The first coefficient is computed outside of the loop
+
+    return coef
 
 
 @nb.njit(inline="always")

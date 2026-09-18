@@ -39,6 +39,19 @@ from .element import (
     fracture_index_dtype,
 )
 from .fracture import Fracture
+from .hpc.hpc_error_solve import solve_error as hpc_solve_error
+from .hpc.hpc_fracture import (
+    calc_omega as hpc_calc_omega,
+)
+from .hpc.hpc_fracture import (
+    calc_omega_error as hpc_calc_omega_error,
+)
+from .hpc.hpc_fracture import (
+    calc_w as hpc_calc_w,
+)
+from .hpc.hpc_fracture import (
+    get_errors as hpc_get_errors,
+)
 from .hpc.hpc_fracture import (
     get_flow_nets as hpc_get_flow_nets,
 )
@@ -52,6 +65,8 @@ from .intersection import Intersection
 from .io import IO
 from .structures import STRUCTURES_COLOR
 from .well import Well
+
+# Custom colormaps
 
 logger = logging.getLogger(__name__)
 
@@ -1701,7 +1716,7 @@ class DFN(Constants, IO):
         logger.info(f"Number of fractures: {len(self.fractures)}")
         logger.info(f" Number of elements: {len(self.elements)}")
         self.print_solver_constants()
-        self.elements_struc_array = hpc_solve(
+        self.elements_struc_array, self.work_array = hpc_solve(
             self.fractures_struc_array_hpc,
             self.elements_struc_array_hpc,
             self.discharge_int,
@@ -1709,6 +1724,38 @@ class DFN(Constants, IO):
             self.ntype_element,
         )
         if unconsolidate:
+            logger.info("Unconsolidating DFN...")
+            self.unconsolidate_dfn(hpc=True)
+
+    def solve_error(self, unconsolidate=False):
+        """
+        Solves the DFN on a HPC.
+
+        To change the solver constants, use the set_kwargs method.
+
+        Parameters
+        ----------
+        unconsolidate : bool
+            If True, the DFN is unconsolidated after the solve. Default is False.
+        """
+        logger.info("\n")
+        logger.info("---------------------------------------")
+        logger.info("Starting HPC error solve...")
+        logger.info("---------------------------------------")
+        error_structured_array = self.elements_struc_array_hpc.copy()
+        error_structured_array["coef"][:] = 0
+        error_structured_array["ncoef"] = self.elements_struc_array_hpc["ncoef"]
+        error_structured_array["nint"] = self.elements_struc_array_hpc["nint"]
+        self.print_solver_constants()
+        self.error_structured_array, self.work_array = hpc_solve_error(
+            self.fractures_struc_array_hpc,
+            self.elements_struc_array_hpc,
+            error_structured_array,
+            self.discharge_int,
+            self.constants,
+            self.ntype_element,
+        )
+        if unconsolidate or False:
             logger.info("Unconsolidating DFN...")
             self.unconsolidate_dfn(hpc=True)
 
@@ -1751,6 +1798,134 @@ class DFN(Constants, IO):
             f"Boundary condition check: max error = {max_err:.3e} (type: {element_types[int(max_type)]}, index: {max_index}), mean error = {mean_err:.3e}, 99th percentile error = {error_99:.3e}, 95th percentile error = {error_95:.3e}, 90th percentile error = {error_90:.3e}"
         )
         return bnd_error, max_index
+
+    def calc_head(self, z, fracture):
+        """
+        Calculates the head at a given point in a fracture.
+
+        Parameters
+        ----------
+        z : complex
+            The point to calculate the head at.
+        fracture : Fracture
+            The fracture to calculate the head in.
+
+        Returns
+        -------
+        head : float
+            The head at the given point in the fracture.
+        """
+        if (
+            self.elements_struc_array_hpc is None
+            or self.fractures_struc_array_hpc is None
+        ):
+            logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
+            return None
+
+        omega = hpc_calc_omega(
+            self.fractures_struc_array_hpc[fracture._id],
+            z,
+            self.elements_struc_array_hpc,
+        )
+        head = fracture.head_from_phi(np.real(omega))
+
+        return head
+
+    def calc_w(self, z, fracture):
+        """
+        Calculates the w function at a given point in a fracture.
+
+        Parameters
+        ----------
+        z : complex
+            The point to calculate the w function at.
+        fracture : Fracture
+            The fracture to calculate the w function in.
+
+        Returns
+        -------
+        w : complex
+            The w function at the given point in the fracture.
+        """
+        if (
+            self.elements_struc_array_hpc is None
+            or self.fractures_struc_array_hpc is None
+        ):
+            logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
+            return None
+
+        w = hpc_calc_w(
+            self.fractures_struc_array_hpc[fracture._id],
+            z,
+            self.elements_struc_array_hpc,
+        )
+
+        return w
+
+    def calc_velocity(self, z, fracture):
+        """
+        Calculates the velocity at a given point in a fracture.
+
+        Parameters
+        ----------
+        z : complex
+            The point to calculate the velocity at.
+        fracture : Fracture
+            The fracture to calculate the velocity in.
+
+        Returns
+        -------
+        velocity : np.ndarray
+            The velocity at the given point in the fracture.
+        """
+        if (
+            self.elements_struc_array_hpc is None
+            or self.fractures_struc_array_hpc is None
+        ):
+            logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
+            return None
+
+        w = hpc_calc_w(
+            self.fractures_struc_array_hpc[fracture._id],
+            z,
+            self.elements_struc_array_hpc,
+        )
+        velocity = np.abs(w) / fracture.aperture
+
+        return velocity
+
+    def calc_error(self, z, fracture):
+        """
+        Calculates the velocity at a given point in a fracture.
+
+        Parameters
+        ----------
+        z : complex
+            The point to calculate the velocity at.
+        fracture : Fracture
+            The fracture to calculate the velocity in.
+
+        Returns
+        -------
+        velocity : np.ndarray
+            The velocity at the given point in the fracture.
+        """
+        if (
+            self.error_structured_array is None
+            or self.fractures_struc_array_hpc is None
+        ):
+            logger.warning(
+                "DFN error has not been solved yet.  Call dfn.solve_error() first."
+            )
+            return None
+
+        error = hpc_calc_omega_error(
+            self.fractures_struc_array_hpc[fracture._id],
+            z,
+            self.error_structured_array,
+        )
+
+        return error
 
     ####################################################################################################################
     #                    Plotting functions                                                                            #
@@ -1895,6 +2070,8 @@ class DFN(Constants, IO):
 
         if show:
             pl.show()
+
+        return pl
 
     def plot_fractures(
         self,
@@ -2201,6 +2378,7 @@ class DFN(Constants, IO):
         colorbar=True,
         debug=False,
         fractures=None,
+        unit="m",
     ):
 
         start = time.time()
@@ -2308,8 +2486,155 @@ class DFN(Constants, IO):
 
         logger.info(f"Plotting hydraulic head took {time.time() - start:.2f} seconds.")
 
+    def plot_fractures_error(
+        self,
+        pl,
+        component="abs",
+        term="complex",
+        lvs=20,
+        n_layers=10,
+        line_width=2,
+        opacity=1.0,
+        color_map="viridis",
+        limits=None,
+        contour=True,
+        colorbar=True,
+        debug=False,
+        fractures=None,
+        unit="m",
+        log_scale=False,
+    ):
+
+        start = time.time()
+
+        # --- Debug handling ---
+        if debug:
+            assert limits is not None, "For debug mode, limits must be provided."
+            min_lim, max_lim = limits
+            limits = None
+
+        # --- Ensure consolidation ---
+        if self.fractures_struc_array_hpc is None:
+            self.consolidate_dfn(hpc=True)
+
+        # --- Select fractures efficiently ---
+        fracs_arr = self.fractures_struc_array_hpc
+        if fractures is not None:
+            fracture_index = {f: i for i, f in enumerate(self.fractures)}
+            idx = np.fromiter(
+                (fracture_index[f] for f in fractures),
+                dtype=np.int64,
+                count=len(fractures),
+            )
+            fracs_arr = fracs_arr[idx]
+
+        # --- Compute heads & points ---
+        time_heads = time.time()
+        h = 1 / (n_layers + 1)
+        partitions = int(2 * np.pi / h / n_layers)
+        z_array, base_faces = generate_disk(partitions, n_layers)
+        if term == "head":
+            heads, pnts_3d = hpc_get_errors(
+                fracs_arr, self.error_structured_array, z_array, heads=True
+            )
+        elif term == "complex":
+            heads, pnts_3d = hpc_get_errors(
+                fracs_arr, self.error_structured_array, z_array
+            )
+        else:
+            raise ValueError(f"Unknown term '{term}' for error plotting.")
+        logger.info(
+            f"Calculating heads and points took {time.time() - time_heads:.2f} seconds."
+        )
+
+        # --- Get the component of the error to plot ---
+        if component == "abs":
+            heads = np.abs(heads)
+        elif component == "real":
+            heads = np.real(heads)
+        elif component == "imag":
+            heads = np.imag(heads)
+        elif component == "real abs":
+            heads = np.abs(np.real(heads))
+        elif component == "imag abs":
+            heads = np.abs(np.imag(heads))
+        else:
+            raise ValueError("Component must be 'abs', 'real' or 'imag'.")
+
+        # --- Debug filtering BEFORE mesh creation ---
+        if debug:
+            mask = np.array(
+                [(np.nanmin(h) < min_lim) or (np.nanmax(h) > max_lim) for h in heads],
+                dtype=bool,
+            )
+            heads = heads[mask]
+            pnts_3d = pnts_3d[mask]
+
+        if heads.size == 0:
+            return
+
+        # --- Color limits ---
+        if limits is None:
+            limits = [np.nanmin(heads), np.nanmax(heads)]
+
+        # --- Contour levels ---
+        if lvs is not False:
+            lvs = np.linspace(limits[0], limits[1], lvs)
+
+        # --- Build ONE mesh (major speedup) ---
+
+        nf, npts, _ = pnts_3d.shape
+
+        points = pnts_3d.reshape(nf * npts, 3)
+        head_vals = heads.reshape(nf * npts)
+
+        # base_faces = get_faces(pnts_3d[0])  # already VTK-style
+
+        faces = np.tile(base_faces, nf)
+
+        # indices are at positions 1,2,3, 5,6,7, 9,10,11, ...
+        idx = np.arange(len(faces)) % 4 != 0
+
+        repeat_offsets = np.repeat(np.arange(nf) * npts, len(base_faces))
+        faces[idx] += repeat_offsets[idx]
+
+        mesh = pv.PolyData(points, faces)
+        mesh.point_data["head"] = head_vals
+
+        # --- Plot mesh ---
+        pl.add_mesh(
+            mesh,
+            scalars="head",
+            cmap=color_map,
+            opacity=opacity,
+            show_edges=False,
+            line_width=line_width,
+            scalar_bar_args={"title": f"Error {term} ({component})", "shadow": True},
+            clim=limits,
+            name="head",
+            log_scale=log_scale,
+        )
+
+        # --- Contours ---
+        if contour:
+            contours = mesh.contour(isosurfaces=lvs, scalars="head")
+            if contours.n_points > 0:
+                pl.add_mesh(
+                    contours,
+                    color="black",
+                    line_width=line_width,
+                    opacity=opacity,
+                    clim=limits,
+                    log_scale=log_scale,
+                )
+
+        if not colorbar:
+            pl.remove_scalar_bar()
+
+        logger.info(f"Plotting hydraulic head took {time.time() - start:.2f} seconds.")
+
     def plot_elements(
-        self, pl, color=None, elements=None, line_width=3.0, const_elements=False
+        self, pl, color=None, elements=None, line_width=3.0, head_elements=False
     ):
         """
         Plots the elements in the DFN.
@@ -2324,7 +2649,7 @@ class DFN(Constants, IO):
             The list of elements to plot. If None, all elements are plotted.
         line_width : float
             The line width of the elements.
-        const_elements : bool
+        head_elements : bool
             Whether to only plot the constant head elements. Default is False.
         """
         # Check if the elements have been stored in the DFN
@@ -2336,11 +2661,15 @@ class DFN(Constants, IO):
             elements = self.elements
         if not isinstance(elements, list):
             elements = [elements]
-        if const_elements:
-            elements = [e for e in elements if isinstance(e, (ConstantHeadLine, Well))]
+        if head_elements:
+            elements = [
+                e
+                for e in elements
+                if isinstance(e, (ConstantHeadLine, Well, Intersection))
+            ]
         for i, e in enumerate(elements):
             e.plot(pl, line_width=line_width, color=color)
-            logger.debug(f"Plotting elements: {i + 1} / {len(self.elements)}")
+            logger.debug(f"Plotting elements: {i + 1} / {len(elements)}")
         logger.debug("")
 
     def plot_sparse_matrix(
@@ -2577,7 +2906,7 @@ class DFN(Constants, IO):
             length = sum([len(s) for s in streamline])
             # Start the tracking process
             psi = [z_start]
-            w = [frac.calc_velocity(z0)]
+            w = [self.calc_velocity(z0, frac)]
             discharge_elements = frac.get_discharge_elements()
 
             # get the next points
@@ -2589,7 +2918,7 @@ class DFN(Constants, IO):
             )
             while z3 is False:
                 psi.append(z1)
-                w.append(frac.calc_velocity(z1))
+                w.append(self.calc_velocity(z1, frac))
                 z0 = z1
                 z1 = self.runge_kutta(z0, frac, ds_frac, backward)
                 if np.isnan(np.real(z1)) or np.isnan(np.imag(z1)):
@@ -2602,7 +2931,7 @@ class DFN(Constants, IO):
                     z3 = z1
                     break
             psi.append(z3)
-            w.append(frac.calc_velocity(z3))
+            w.append(self.calc_velocity(z3, frac))
 
             streamline.append(psi)
             streamline_frac.append(frac)
@@ -2641,8 +2970,7 @@ class DFN(Constants, IO):
                 return z2, e
         return False, False
 
-    @staticmethod
-    def get_exit_intersection(z3d, element, frac, frac_old, elevation, dchi=1e-4):
+    def get_exit_intersection(self, z3d, element, frac, frac_old, elevation, dchi=1e-3):
         if frac == element.frac0:
             endpoints = element.endpoints0
         else:
@@ -2657,8 +2985,8 @@ class DFN(Constants, IO):
         z1 = gf.map_chi_to_z_line(chi1 * (1 + dchi), endpoints)
         # z2 = gf.map_chi_to_z_line(chi20 * (1 + dchi), endpoints)
         # z3 = gf.map_chi_to_z_line(chi21 * (1 + dchi), endpoints)
-        w0 = frac.calc_w(z0)
-        w1 = frac.calc_w(z1)
+        w0 = self.calc_w(z0, frac)
+        w1 = self.calc_w(z1, frac)
         # w2 = frac_old.calc_w(z2)
         # w3 = frac_old.calc_w(z3)
 
@@ -2695,8 +3023,7 @@ class DFN(Constants, IO):
         elevation = (elevation - divide) / (1 - divide)
         return up, z0, elevation  # * 0 + 0.5
 
-    @staticmethod
-    def runge_kutta(z0, frac, ds, backward, tolerance=1e-6, max_it=10):
+    def runge_kutta(self, z0, frac, ds, backward, tolerance=1e-6, max_it=10):
         """
         Runge-Kutta method for streamline tracing.
 
@@ -2723,7 +3050,7 @@ class DFN(Constants, IO):
         """
         if backward:
             ds = -ds
-        w0 = frac.calc_w(z0)
+        w0 = self.calc_w(z0, frac)
         if np.isnan(np.real(w0)):
             return np.nan + np.nan * 1j
         z1 = z0 + np.conj(w0) / np.abs(w0) * ds
@@ -2732,7 +3059,7 @@ class DFN(Constants, IO):
         dz = 1e99
         it = 0
         while dz > tolerance and it < max_it:
-            w1 = frac.calc_w(z1)
+            w1 = self.calc_w(z1, frac)
             if np.isnan(np.real(w1)):
                 break
             z2 = z0 + np.conj(w0 + w1) / np.abs(w0 + w1) * ds

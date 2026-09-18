@@ -32,6 +32,8 @@ dtype_work = np.dtype(
         ("coef", np.complex128, MAX_NCOEF),
         ("coef0", np.complex128, MAX_NCOEF),
         ("coef1", np.complex128, MAX_NCOEF),
+        ("coef_error", np.complex128, MAX_NCOEF),
+        ("a0_error", np.complex128),
         ("old_coef", np.complex128, MAX_NCOEF),
         ("dpsi", np.float64, MAX_NCOEF * 2),
         ("error", np.float64),
@@ -256,7 +258,7 @@ def solve(
         f"Solve time: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds\n"
     )
 
-    return element_struc_array
+    return element_struc_array, work_array
 
 
 @nb.njit(cache=CACHE)
@@ -519,6 +521,7 @@ def element_solver2(
                     e["nint"], e["thetas"], work_array[i]["exp_array_p"], 1
                 )
                 mf.fill_z_integral(e, work_array[i])
+                # mf.get_dpsi_corr(e, fracture_struc_array, element_struc_array, work_array[i])
 
                 if e["_type"] == 0:  # Intersection
                     hpc_intersection.solve(
@@ -848,16 +851,6 @@ def build_discharge_matrix(
     for i, e in enumerate(discharge_elements):
         id_to_pos[e["_id"]] = i
 
-    """
-    data, rows, cols, size = get_discharge_matrix_arrays(
-        fractures_struc_array,
-        element_struc_array,
-        discharge_elements,
-        discharge_int,
-        z_int,
-    )
-    """
-
     nnz_per_row = count_discharge_nnz(
         fractures_struc_array, element_struc_array, discharge_elements
     )
@@ -889,177 +882,6 @@ def build_discharge_matrix(
     return matrix
 
 
-@nb.njit(parallel=PARALLEL, cache=CACHE)
-def get_discharge_matrix_arrays(
-    fractures_struc_array,
-    element_struc_array,
-    discharge_elements,
-    discharge_int,
-    z_int,
-):
-    """
-    Builds the discharge matrix for the DFN and adds it to the DFN.
-
-    """
-    size = discharge_elements.size + fractures_struc_array.size
-
-    # Create a sparse matrix
-    # create the row, col and data arrays
-    rows_np = np.zeros(size * size, dtype=np.int64)
-    cols_np = np.zeros(size * size, dtype=np.int64)
-    data_np = np.zeros(size * size, dtype=np.float64)
-    inds = np.zeros(size * size, dtype=np.bool)
-
-    # Add the discharge for each discharge element
-    for j in nb.prange(discharge_elements.size):
-        e = discharge_elements[j]
-        cnt_par = size * j
-        row = j
-        if e["_type"] == 0:  # Intersection
-            z0 = z_int["z0"][j][:discharge_int]
-            z1 = z_int["z1"][j][:discharge_int]
-            f0 = fractures_struc_array[e["frac0"]]
-            el0 = f0["elements"]
-            for k in range(f0["nelements"]):
-                ee = element_struc_array[el0[k]]
-                if ee["_id"] == e["_id"] or ee["_type"] not in {
-                    0,
-                    2,
-                    3,
-                }:  # skip itself and elements not type 0,2,3
-                    continue
-                # add the discharge term to the matrix for each element in the first fracture
-                pos = np.where(discharge_elements["_id"] == ee["_id"])[0][0]
-                if ee["_type"] == 0:  # Intersection
-                    rows_np[cnt_par] = row
-                    cols_np[cnt_par] = pos
-                    data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f0, get_discharge_term(ee, z0, e["frac0"])
-                    )
-                    inds[cnt_par] = 1
-                    cnt_par += 1
-                else:
-                    rows_np[cnt_par] = row
-                    cols_np[cnt_par] = pos
-                    data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f0, get_discharge_term(ee, z0, e["frac0"])
-                    )
-                    inds[cnt_par] = 1
-                    cnt_par += 1
-            f1 = fractures_struc_array[e["frac1"]]
-            el1 = f1["elements"]
-            for k in range(f1["nelements"]):
-                ee = element_struc_array[el1[k]]
-                if ee["_id"] == e["_id"] or ee["_type"] not in {
-                    0,
-                    2,
-                    3,
-                }:  # skip itself and elements not type 0,2,3
-                    continue
-                # add the discharge term to the matrix for each element in the second fracture
-                pos = np.where(discharge_elements["_id"] == ee["_id"])[0][0]
-                if ee["_type"] == 0:  # Intersection
-                    rows_np[cnt_par] = row
-                    cols_np[cnt_par] = pos
-                    data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f1, -get_discharge_term(ee, z1, e["frac1"])
-                    )
-                    inds[cnt_par] = 1
-                    cnt_par += 1
-                else:
-                    rows_np[cnt_par] = row
-                    cols_np[cnt_par] = pos
-                    data_np[cnt_par] = hpc_fracture.head_from_phi(
-                        f1, -get_discharge_term(ee, z1, e["frac1"])
-                    )
-                    inds[cnt_par] = 1
-                    cnt_par += 1
-            pos_f0 = e["frac0"]
-            rows_np[cnt_par] = row
-            cols_np[cnt_par] = len(discharge_elements) + pos_f0
-            data_np[cnt_par] = hpc_fracture.head_from_phi(f0, 1)
-            inds[cnt_par] = 1
-            cnt_par += 1
-            pos_f1 = e["frac1"]
-            rows_np[cnt_par] = row
-            cols_np[cnt_par] = len(discharge_elements) + pos_f1
-            data_np[cnt_par] = hpc_fracture.head_from_phi(f1, -1)
-            inds[cnt_par] = 1
-            cnt_par += 1
-        else:
-            z0 = z_int["z0"][j][:discharge_int]
-            f0 = fractures_struc_array[e["frac0"]]
-            el0 = f0["elements"]
-            for k in range(f0["nelements"]):
-                ee = element_struc_array[el0[k]]
-                if ee["_id"] == e["_id"] or ee["_type"] not in {
-                    0,
-                    2,
-                    3,
-                }:  # skip itself and elements not type 0,2,3
-                    continue
-                # add the discharge term to the matrix for each element in the fracture
-                pos = np.where(discharge_elements["_id"] == ee["_id"])[0][0]
-                if ee["_type"] == 0:  # Intersection
-                    rows_np[cnt_par] = row
-                    cols_np[cnt_par] = pos
-                    data_np[cnt_par] = get_discharge_term(ee, z0, e["frac0"])
-                    inds[cnt_par] = 1
-                    cnt_par += 1
-                else:
-                    rows_np[cnt_par] = row
-                    cols_np[cnt_par] = pos
-                    data_np[cnt_par] = get_discharge_term(ee, z0, e["frac0"])
-                    inds[cnt_par] = 1
-                    cnt_par += 1
-            pos_f = e["frac0"]
-            rows_np[cnt_par] = row
-            cols_np[cnt_par] = len(discharge_elements) + pos_f
-            data_np[cnt_par] = 1
-            inds[cnt_par] = 1
-            cnt_par += 1
-
-    # Add the continuity of flow conditions for each fracture
-    for j in nb.prange(fractures_struc_array.size):
-        f = fractures_struc_array[j]
-        row = discharge_elements.size + j
-        cnt_par = size * discharge_elements.size + size * j
-        # if there are only one (or less) discharge element in the fracture, skip
-        # num_discharge_el = sum([e in discharge_elements["_id"] for e in f["elements"][: f["nelements"]]])
-        # if num_discharge_el <= 1:
-        #    continue
-        # fill the matrix for the fractures
-        for e in element_struc_array[f["elements"][: f["nelements"]]]:
-            if e["_type"] in [0, 2, 3]:  # Intersection, Well, Constant head line
-                # add the discharge term to the matrix for each element in the fracture
-                pos = np.where(discharge_elements["_id"] == e["_id"])[0][0]
-                if e["_type"] == 0:  # Intersection
-                    if e["frac0"] == f["_id"]:
-                        rows_np[cnt_par] = row
-                        cols_np[cnt_par] = pos
-                        data_np[cnt_par] = 1
-                        inds[cnt_par] = 1
-                        cnt_par += 1
-                    else:
-                        rows_np[cnt_par] = row
-                        cols_np[cnt_par] = pos
-                        data_np[cnt_par] = -1
-                        inds[cnt_par] = 1
-                        cnt_par += 1
-                else:
-                    rows_np[cnt_par] = row
-                    cols_np[cnt_par] = pos
-                    data_np[cnt_par] = 1
-                    inds[cnt_par] = 1
-                    cnt_par += 1
-
-    rows = rows_np[inds]
-    cols = cols_np[inds]
-    data = data_np[inds]
-
-    return data, rows, cols, size
-
-
 @nb.njit(parallel=True, cache=CACHE)
 def count_discharge_nnz(fractures, elements, discharge_elements):
     n_de = discharge_elements.size
@@ -1077,7 +899,9 @@ def count_discharge_nnz(fractures, elements, discharge_elements):
                 for k in range(f["nelements"]):
                     ee = elements[f["elements"][k]]
                     t = ee["_type"]
-                    if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                    if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
+                        t != 0 and t != 2 and t != 3
+                    ):
                         continue
                     cnt += 1
             cnt += 2  # fracture continuity terms
@@ -1086,7 +910,9 @@ def count_discharge_nnz(fractures, elements, discharge_elements):
             for k in range(f["nelements"]):
                 ee = elements[f["elements"][k]]
                 t = ee["_type"]
-                if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
+                    t != 0 and t != 2 and t != 3
+                ):
                     continue
                 cnt += 1
             cnt += 1
@@ -1147,13 +973,19 @@ def fill_discharge_matrix(
                 for k in range(f["nelements"]):
                     ee = elements[f["elements"][k]]
                     t = ee["_type"]
-                    if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                    if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
+                        t != 0 and t != 2 and t != 3
+                    ):
                         continue
 
                     rows[ptr] = row
                     cols[ptr] = id_to_pos[ee["_id"]]
                     data[ptr] = hpc_fracture.head_from_phi(
-                        f, sign * get_discharge_term(ee, z0 if sign > 0 else z1, f_id)
+                        f,
+                        sign
+                        * get_discharge_term(
+                            ee, z0 if sign > 0 else z1, f_id, f["radius"], e["_id"]
+                        ),
                     )
                     ptr += 1
 
@@ -1173,12 +1005,16 @@ def fill_discharge_matrix(
             for k in range(f["nelements"]):
                 ee = elements[f["elements"][k]]
                 t = ee["_type"]
-                if ee["_id"] == e["_id"] or (t != 0 and t != 2 and t != 3):
+                if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
+                    t != 0 and t != 2 and t != 3
+                ):
                     continue
 
                 rows[ptr] = row
                 cols[ptr] = id_to_pos[ee["_id"]]
-                data[ptr] = get_discharge_term(ee, z0, e["frac0"])
+                data[ptr] = get_discharge_term(
+                    ee, z0, e["frac0"], f["radius"], e["_id"]
+                )
                 ptr += 1
 
             rows[ptr] = row
@@ -1476,13 +1312,17 @@ def get_z_int_array(z_int, elements, discharge_int):
 
 
 @nb.njit(cache=CACHE)
-def get_discharge_term(element, z, frac):
+def get_discharge_term(element, z, frac, radius, e_is):
     if element["_type"] == 0:  # Intersection
-        return hpc_intersection.discharge_term(element, z, frac)
+        return hpc_intersection.discharge_term(
+            element, z, frac, radius, element["_id"] == e_is
+        )
     elif element["_type"] == 2:  # Well
         return hpc_well.discharge_term(element, z)
     elif element["_type"] == 3:  # Constant head line
-        return hpc_const_head_line.discharge_term(element, z)
+        return hpc_const_head_line.discharge_term(
+            element, z, radius, element["_id"] == e_is
+        )
     else:
         return 0.0
 
@@ -1557,7 +1397,7 @@ def compute_bnd_error(
     get_z_int_array(z_int, element_struc_array, discharge_int)
 
     max_error = float(constants["MAX_ERROR"])
-    bnd_error = np.zeros([num_elements, 6], dtype=np.float64)
+    bnd_error = np.zeros([num_elements, 7], dtype=np.float64)
 
     get_bnd_error(
         num_elements,
