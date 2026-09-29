@@ -1167,6 +1167,25 @@ class DFN(Constants, IO):
         for i, f in enumerate(self.fractures):
             f.set_id(i)
 
+    def get_fracture_by_label(self, label):
+        """
+        Gets a fracture by its label.
+
+        Parameters
+        ----------
+        label : str
+            The label of the fracture to get.
+
+        Returns
+        -------
+        Fracture | None
+            The fracture with the given label, or None if not found.
+        """
+        for f in self.fractures:
+            if f.label == label:
+                return f
+        return None
+
     def reset(self, ncoef=5, nint=10):
         """
         Resets the DFN by resetting all coefficients, constants and discharges.
@@ -2083,6 +2102,8 @@ class DFN(Constants, IO):
         show_edges=True,
         line_width=2.0,
         fracs=None,
+        color_by_label=False,
+        color_map="viridis",
     ):
         """
         Plots the fractures in the DFN.
@@ -2105,6 +2126,8 @@ class DFN(Constants, IO):
             The line width of the lines.
         fracs : list
             The list of fractures to plot. If None, all fractures are plotted.
+        color_by_label : bool
+            Whether to color the fractures by their label. If True, the color parameter is ignored.
 
         Returns
         -------
@@ -2115,23 +2138,58 @@ class DFN(Constants, IO):
         if fracs is None:
             fracs = self.fractures
             print_prog = True
-        for i, f in enumerate(fracs):
-            # plot the fractures
-            pl.add_mesh(
-                pv.Polygon(
+        if color_by_label:
+            import pyvista as pv
+
+            meshes = []
+
+            for f in fracs:
+                poly = pv.Polygon(
                     center=f.center,
                     radius=f.radius,
                     normal=f.normal,
                     n_sides=num_side,
                     fill=filled,
-                ),
-                color=color,
+                )
+
+                # One cell per polygon
+                poly.cell_data["fracturenumber"] = [int(f.label), int(f.label)]
+
+                meshes.append(poly)
+
+            # Combine all fractures into a single mesh
+            combined = pv.merge(meshes)
+
+            pl.add_mesh(
+                combined,
                 opacity=opacity,
                 show_edges=show_edges,
                 line_width=line_width,
+                scalars="fracturenumber",
+                cmap=color_map,
+                scalar_bar_args={
+                    "title": "Fracture Number",
+                    "shadow": True,
+                },
             )
-            if print_prog:
-                logger.debug(f"Plotting fractures: {i + 1} / {len(self.fractures)}")
+        else:
+            for i, f in enumerate(fracs):
+                # plot the fractures
+                pl.add_mesh(
+                    pv.Polygon(
+                        center=f.center,
+                        radius=f.radius,
+                        normal=f.normal,
+                        n_sides=num_side,
+                        fill=filled,
+                    ),
+                    color=color,
+                    opacity=opacity,
+                    show_edges=show_edges,
+                    line_width=line_width,
+                )
+                if print_prog:
+                    logger.debug(f"Plotting fractures: {i + 1} / {len(self.fractures)}")
 
     def plot_fractures_flow_net(
         self,
