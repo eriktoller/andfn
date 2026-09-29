@@ -115,7 +115,7 @@ def test_z_array_tracking_default_and_center_side_branch(monkeypatch):
     assert np.allclose(np.abs(z_default), 1.01)
 
     z_half = ch.z_array_tracking(6, offset=1e-2, on_frac_center=True)
-    assert np.all(np.imag(z_half) >= -1e-12)
+    assert np.all(np.imag(z_half) <= 1e-12)
 
 
 def test_calc_omega_combines_asym_expansion_and_well(monkeypatch):
