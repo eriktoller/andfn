@@ -36,22 +36,36 @@ def test_calc_omega_and_w_dispatch_with_pyfunc(monkeypatch):
     f[0]["elements"][:6] = np.arange(6)
     f[0]["nelements"] = 6
 
-    monkeypatch.setattr(hfr.hpc_intersection, "calc_omega", lambda e, z, fid: 10.0 + 0j)
+    monkeypatch.setattr(
+        hfr.hpc_intersection,
+        "calc_omega",
+        lambda e, z, fid, radius, mirror=False: 10.0 + 0j,
+    )
     monkeypatch.setattr(hfr.hpc_bounding_circle, "calc_omega", lambda e, z: 20.0 + 0j)
     monkeypatch.setattr(hfr.hpc_well, "calc_omega", lambda e, z: 30.0 + 0j)
-    monkeypatch.setattr(hfr.hpc_const_head_line, "calc_omega", lambda e, z: 40.0 + 0j)
+    monkeypatch.setattr(
+        hfr.hpc_const_head_line,
+        "calc_omega",
+        lambda e, z, radius, mirror=False: 40.0 + 0j,
+    )
     monkeypatch.setattr(hfr.hpc_imp_object, "calc_omega_circle", lambda e, z: 50.0 + 0j)
     monkeypatch.setattr(hfr.hpc_imp_object, "calc_omega_line", lambda e, z: 60.0 + 0j)
 
     om = hfr.calc_omega.py_func(f[0], 0.0 + 0.0j, elements, exclude=-1)
     assert om == pytest.approx(1.0 + 210.0)
 
-    monkeypatch.setattr(hfr.hpc_intersection, "calc_w", lambda e, z, fid: 1.0 + 0j)
+    monkeypatch.setattr(
+        hfr.hpc_intersection,
+        "calc_w",
+        lambda e, z, fid, radius: 1.0 + 0j,
+    )
     monkeypatch.setattr(hfr.hpc_bounding_circle, "calc_w", lambda e, z: 2.0 + 0j)
     monkeypatch.setattr(hfr.hpc_well, "calc_w", lambda e, z: 3.0 + 0j)
-    monkeypatch.setattr(hfr.hpc_const_head_line, "calc_w", lambda e, z: 4.0 + 0j)
+    monkeypatch.setattr(
+        hfr.hpc_const_head_line, "calc_w", lambda e, z, radius: 4.0 + 0j
+    )
 
-    w = hfr.calc_w(f[0], 0.0 + 0.0j, elements, exclude=-1)
+    w = hfr.calc_w.py_func(f[0], 0.0 + 0.0j, elements, exclude=-1)
     assert w == pytest.approx(10.0 + 0.0j)
 
 
