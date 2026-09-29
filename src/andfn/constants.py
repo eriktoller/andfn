@@ -56,6 +56,12 @@ def load_yaml_config():
     return config
 
 
+config = load_yaml_config()
+R_COND = 90 / 100
+if config:
+    R_COND = config.get("MAX_NCOEF", 90 / 100)
+
+
 logger = logging.getLogger(__name__)
 
 

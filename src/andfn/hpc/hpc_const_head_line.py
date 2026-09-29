@@ -7,9 +7,9 @@ This module contains the HPC Constant head functions.
 import numba as nb
 import numpy as np
 
+from ..constants import R_COND
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
-from .hpc_intersection import R_COND
 
 
 @nb.njit()

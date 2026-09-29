@@ -7,10 +7,9 @@ This module contains the HPC Intersection functions.
 import numba as nb
 import numpy as np
 
+from ..constants import R_COND
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
-
-R_COND = 90 / 100
 
 
 @nb.njit()

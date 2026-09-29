@@ -11,9 +11,9 @@ import numpy as np
 
 from andfn.hpc import CACHE
 
+from ..constants import R_COND
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
-from .hpc_intersection import R_COND
 
 
 @nb.njit(inline="always")
