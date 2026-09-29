@@ -461,7 +461,7 @@ def calc_w(self_, z, frac_is_id, radius):
             * chi_mirror**2
             / (chi_mirror**2 - 1)
             * 2
-            / (endpoints[1] - endpoints[0])
+            / (m_endpoints[1] - m_endpoints[0])
         )
 
     return w

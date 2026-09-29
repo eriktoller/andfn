@@ -357,7 +357,7 @@ def calc_w(self_, z, radius):
             * chi_mirror**2
             / (chi_mirror**2 - 1)
             * 2
-            / (self_["endpoints0"][1] - self_["endpoints0"][0])
+            / (m_endpoints[1] - m_endpoints[0])
         )
     return w
 
