@@ -27,13 +27,13 @@ def test_z_array_discharge_term_and_calc_omega_branches():
     assert np.allclose(z0, np.array([0.5 + 0j, 1.0 + 0j, 1.5 + 0j]))
     assert np.allclose(z1, np.array([0.0 + 1.5j, 0.0 + 2.0j, 0.0 + 2.5j]))
 
-    val0 = hint.discharge_term(it, z0, 0)
-    val1 = hint.discharge_term(it, z1, 1)
+    val0 = hint.discharge_term(it, z0, 0, 10.0)
+    val1 = hint.discharge_term(it, z1, 1, 10.0)
     assert np.isfinite(val0)
     assert np.isfinite(val1)
 
-    om0 = hint.calc_omega(it, 1.0 + 0.2j, 0)
-    om1 = hint.calc_omega(it, 1.0 + 0.2j, 1)
+    om0 = hint.calc_omega(it, 1.0 + 0.2j, 0, 10.0)
+    om1 = hint.calc_omega(it, 1.0 + 0.2j, 1, 10.0)
     assert np.isfinite(np.real(om0))
     assert np.isfinite(np.real(om1))
 
@@ -41,8 +41,8 @@ def test_z_array_discharge_term_and_calc_omega_branches():
 def test_calc_w_branches():
     it = _intersection_row()
 
-    w0 = hint.calc_w(it, 1.0 + 0.3j, 0)
-    w1 = hint.calc_w(it, 1.0 + 0.3j, 1)
+    w0 = hint.calc_w(it, 1.0 + 0.3j, 0, 10.0)
+    w1 = hint.calc_w(it, 1.0 + 0.3j, 1, 10.0)
 
     assert np.isfinite(np.real(w0))
     assert np.isfinite(np.real(w1))

@@ -225,9 +225,10 @@ def test_solve_calls_hpc_and_optional_unconsolidate(monkeypatch):
 
     def fake_hpc_solve(fracs, elems, discharge_int, constants, ntype):
         calls.append(("solve", discharge_int, len(elems)))
-        out = np.zeros(1, dtype=np.dtype([("x", np.float64)]))
+        out = np.zeros(2, dtype=np.dtype([("x", np.float64)]))
         out[0]["x"] = 1.0
-        return out
+        out[1]["x"] = 2.0
+        return out, np.zeros(2, dtype=np.float64)
 
     monkeypatch.setattr(dfn_mod, "hpc_solve", fake_hpc_solve)
 

@@ -100,6 +100,23 @@ def map_chi_to_z_circle(chi, r, center=0.0):
 
 
 @nb.njit()
+def mirror_endpoints(endpoints, radius):
+    center = (endpoints[0] + endpoints[1]) / 2.0
+    if np.abs(center) > 1e-14:
+        half_vec = (endpoints[1] - endpoints[0]) / 2.0
+        r_hat = center / np.abs(center)
+        mirror_half_vec = half_vec - 2.0 * np.real(half_vec * np.conj(r_hat)) * r_hat
+        mirror_dist = radius**2 / np.abs(center)
+        mirror_center = mirror_dist * r_hat
+        mirror_endpoints_out = np.array(
+            [mirror_center - mirror_half_vec, mirror_center + mirror_half_vec]
+        )
+        return mirror_endpoints_out
+    else:
+        return None
+
+
+@nb.njit()
 def map_2d_to_3d(self_, z, pnts):
     """
     Function that maps a point in the complex z-plane to a point in the 3D plane

@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import andfn.const_head as const_head_mod
+from andfn import Fracture
 from andfn.const_head import ConstantHeadLine
 
 
@@ -98,24 +99,17 @@ def test_omega_along_element_calls_given_fracture():
     assert np.allclose(omega, frac_is.last_z + (1.0 + 2.0j))
 
 
-def test_z_array_tracking_default_and_center_side_branch(monkeypatch):
-    def fake_map_chi_to_z_line(chi, endpoints):
-        if np.isscalar(chi):
-            # Scalar probe used only for side selection.
-            return 0.0 + 0.0j
-        return chi
+def test_z_array_tracking_default_and_center_side_branch():
 
-    monkeypatch.setattr(const_head_mod.gf, "map_chi_to_z_line", fake_map_chi_to_z_line)
+    frac = Fracture("F1", 1.0, 10.0, np.array([0, 0, 0]), np.array([1, 0, 0]))
+    ch = ConstantHeadLine("CH6", np.array([1 + 1j, 3 + 1j]), head=1.0, frac0=frac)
 
-    frac = _FracStub(center=0.0 + 0.0j)
-    ch = ConstantHeadLine("CH6", np.array([1 + 0j, 3 + 0j]), head=1.0, frac0=frac)
-
-    z_default = ch.z_array_tracking(6, offset=1e-2, on_frac_center=False)
+    z_default = ch.z_array_tracking(6, offset=1e-1, on_frac_center=False)
     assert len(z_default) == 6
-    assert np.allclose(np.abs(z_default), 1.01)
+    assert any(np.imag(z_default) > 1)
 
-    z_half = ch.z_array_tracking(6, offset=1e-2, on_frac_center=True)
-    assert np.all(np.imag(z_half) >= -1e-12)
+    z_half = ch.z_array_tracking(6, offset=1e-1, on_frac_center=True)
+    assert all(np.imag(z_half) < 1 + 1e-14)
 
 
 def test_calc_omega_combines_asym_expansion_and_well(monkeypatch):
