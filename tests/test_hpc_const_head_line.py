@@ -22,7 +22,7 @@ def test_discharge_and_z_array():
     line = _line_row()
     z = np.array([0.5 + 0.0j, 1.5 + 0.0j], dtype=np.complex128)
 
-    val = hch.discharge_term(line, z)
+    val = hch.discharge_term(line, z, 1.0)
     assert np.isfinite(val)
 
     za = hch.z_array(line, 4)
@@ -32,7 +32,7 @@ def test_discharge_and_z_array():
 def test_calc_omega_calc_omega_array_and_calc_w():
     line = _line_row()
 
-    om = hch.calc_omega(line, 1.0 + 0.2j)
+    om = hch.calc_omega(line, 1.0 + 0.2j, 1.0)
     assert np.isfinite(om.real)
     assert np.isfinite(om.imag)
 
@@ -41,7 +41,7 @@ def test_calc_omega_calc_omega_array_and_calc_w():
     hch.calc_omega_array(line, omega, z)
     assert np.all(np.isfinite(omega.real))
 
-    w = hch.calc_w(line, 1.0 + 0.3j)
+    w = hch.calc_w(line, 1.0 + 0.3j, 1.0)
     assert np.isfinite(np.real(w))
 
 
