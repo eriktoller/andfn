@@ -40,6 +40,7 @@ if __name__ == "__main__":
     dfn.set_kwargs(COEF_RATIO=0.001, MAX_ITERATIONS=30, MAX_NCOEF=200, MAX_ERROR=5e-4)
 
     """
+
     SOLVE THE DFN
 
     Everything is set up, now we can solve the DFN. The solver will use the specified parameters to find a solution to the flow problem in the DFN. 
