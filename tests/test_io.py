@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -296,3 +297,22 @@ def test_import_fractures_from_file_fab_branch(monkeypatch, tmp_path):
 
     io_instance.import_fractures_from_file(str(path))
     assert io_instance.added == [f0]
+
+
+def test_import_fractures_from_file_resolves_repo_example_paths(monkeypatch):
+    io_instance = _IOStub()
+    repo_root = Path(__file__).resolve().parents[1]
+    monkeypatch.chdir(repo_root)
+
+    monkeypatch.setattr(io_mod, "import_fractures_from_json", lambda _p: [])
+    monkeypatch.setattr(io_mod.sp.spatial, "KDTree", lambda centers: object())
+    monkeypatch.setattr(
+        io_mod.gf,
+        "get_fracture_intersections",
+        lambda *args, **kwargs: [],
+    )
+    monkeypatch.setattr(io_mod.gf, "remove_isolated_fractures", lambda frs: frs)
+
+    io_instance.import_fractures_from_file("small_dfn.fracs")
+
+    assert io_instance.added == []

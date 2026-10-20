@@ -325,6 +325,40 @@ def equivalent_radius(area):
     return np.sqrt(area / np.pi)
 
 
+def resolve_input_path(path):
+    """Resolve a user-facing file path to an existing file.
+
+    Relative paths are commonly passed as bare filenames from examples and scripts.
+    When that happens from the repository root, the file is typically stored under
+    the examples/ directory rather than the current working directory. Search the
+    common project locations before raising FileNotFoundError.
+    """
+    if path is None:
+        return path
+
+    path = os.fspath(path)
+    if os.path.exists(path):
+        return path
+
+    if os.path.isabs(path) or os.path.dirname(path):
+        return path
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    search_dirs = [
+        os.getcwd(),
+        repo_root,
+        os.path.join(repo_root, "examples"),
+        os.path.join(repo_root, "src"),
+    ]
+
+    for search_dir in search_dirs:
+        candidate = os.path.join(search_dir, path)
+        if os.path.exists(candidate):
+            return candidate
+
+    return path
+
+
 class IO:
     """
     Class for importing fractures from a file into a DFN model.
@@ -381,7 +415,8 @@ class IO:
         None
             The fractures are added to the DFN.
         """
-        # Check if the file exists
+        # Resolve common relative paths from the repository/examples directories.
+        path = resolve_input_path(path)
         if not os.path.exists(path):
             raise FileNotFoundError(f"The file {path} does not exist.")
 
