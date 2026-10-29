@@ -1152,11 +1152,13 @@ class DFN(Constants, IO):
         if isinstance(fracture, Fracture):
             fracture = [fracture]
 
+        to_remove = {id(f) for f in fracture}
+
         for f in fracture:
             f.delete_all_elements()
 
         # Remove fractures in one operation
-        self.fractures = [f for f in self.fractures if f not in fracture]
+        self.fractures = [f for f in self.fractures if id(f) not in to_remove]
 
         # Reset dependent structures
         self.discharge_matrix = None
