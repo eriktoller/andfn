@@ -79,13 +79,28 @@ _LAZY_EXPORTS = {
 
 
 def __getattr__(name):
+    # Predefined lazy exports
     if name in _LAZY_EXPORTS:
         module_name, attr_name = _LAZY_EXPORTS[name]
         module = import_module(f".{module_name}", __name__)
         value = getattr(module, attr_name)
         globals()[name] = value
         return value
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+    # Try treating `name` as a submodule
+    try:
+        module = import_module(f".{name}", __name__)
+    except ModuleNotFoundError as exc:
+        # Only convert "submodule doesn't exist" into AttributeError.
+        # Do not hide ModuleNotFoundError raised from inside the submodule.
+        expected = f"{__name__}.{name}"
+        if exc.name != expected:
+            raise
+
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'") from None
+
+    globals()[name] = module
+    return module
 
 
 def __dir__():
