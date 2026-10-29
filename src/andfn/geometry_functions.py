@@ -1157,46 +1157,56 @@ def copy_dfn(fractures):
     from .fracture import Fracture
     from .intersection import Intersection
 
-    fracs = []
-    elms_labels = []
-    elms_ep0 = []
-    elms_ep1 = []
-    elms_f0 = []
-    elms_f1 = []
-    elms_ncoef = []
-    elms_nint = []
-    processed_elms = set()
-    for f in fractures:
-        fracs.append(
-            Fracture(
-                f.label,
-                f.t,
-                f.radius,
-                f.center,
-                f.normal,
-                f.aperture,
-            )
+    # Copy fractures and create a mapping from original fracture id to new index
+    frac_to_idx = {id(f): i for i, f in enumerate(fractures)}
+
+    # Copy fractures
+    fracs = [
+        Fracture(
+            f.label,
+            f.t,
+            f.radius,
+            np.array(f.center, copy=True),
+            np.array(f.normal, copy=True),
+            f.aperture,
         )
-        for e in f.elements:
-            if e._type == 0 and e.label not in processed_elms:
-                elms_labels.append(e.label)
-                elms_ep0.append(e.endpoints0)
-                elms_ep1.append(e.endpoints1)
-                # get the frac0 index in fractures
-                elms_f0.append(fractures.index(e.frac0))
-                elms_f1.append(fractures.index(e.frac1))
-                elms_ncoef.append(e.ncoef)
-                elms_nint.append(e.nint)
-                processed_elms.add(e.label)
-    for i in range(len(elms_labels)):
+        for f in fractures
+    ]
+
+    # Re-create only intersection elements
+    seen = set()
+    pending = []
+
+    for f in fractures:
+        for e in getattr(f, "elements", ()):
+            if e._type != 0:
+                continue
+            key = id(e)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            pending.append(
+                (
+                    e.label,
+                    np.array(e.endpoints0, copy=True),
+                    np.array(e.endpoints1, copy=True),
+                    frac_to_idx[id(e.frac0)],
+                    frac_to_idx[id(e.frac1)],
+                    e.ncoef,
+                    e.nint,
+                )
+            )
+
+    for label, ep0, ep1, i0, i1, ncoef, nint in pending:
         Intersection(
-            elms_labels[i],
-            elms_ep0[i],
-            elms_ep1[i],
-            fracs[elms_f0[i]],
-            fracs[elms_f1[i]],
-            ncoef=elms_ncoef[i],
-            nint=elms_nint[i],
+            label,
+            ep0,
+            ep1,
+            fracs[i0],
+            fracs[i1],
+            ncoef=ncoef,
+            nint=nint,
         )
 
     return fracs

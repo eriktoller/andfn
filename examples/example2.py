@@ -55,7 +55,7 @@ if __name__ == "__main__":
     p1 = dfn.initiate_plotter(title=True, axis=True)
 
     # This will plot the fractures colored by their hydraulic head values, with a contour and opacity of 1.
-    dfn.plot_fractures_head(p1, 40, 1, opacity=1, contour=True)
+    dfn.plot_fractures_head(p1, 40, 5, opacity=1, contour=True)
 
     p1.show()  # show the plot
 

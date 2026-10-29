@@ -176,7 +176,7 @@ wheels = [
 
 [[package]]
 name = "andfn"
-version = "0.1.18"
+version = "0.1.21"
 source = { editable = "." }
 dependencies = [
     { name = "h5py" },
@@ -202,6 +202,7 @@ dev = [
     { name = "pandas" },
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "pyvista", extra = ["jupyter"] },
     { name = "pyyaml" },
     { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "sphinx", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -225,6 +226,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pyvista" },
     { name = "pyvista", extras = ["jupyter"], marker = "extra == 'all'" },
+    { name = "pyvista", extras = ["jupyter"], marker = "extra == 'dev'" },
     { name = "pyyaml", marker = "extra == 'all'" },
     { name = "pyyaml", marker = "extra == 'dev'" },
     { name = "scipy" },
