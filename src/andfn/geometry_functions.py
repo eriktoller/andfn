@@ -891,8 +891,11 @@ def count_fracture_adjacency_from_fractures(fractures, elements):
     for i in nb.prange(n_fractures):
         nel = fractures[i]["nelements"]
         el_ids = fractures[i]["elements"][:nel]
-        el = elements[el_ids]
-        counts[i] = sum(el["_type"] == 0)
+        count = 0
+        for element_id in el_ids:
+            if elements[element_id]["_type"] == 0:
+                count += 1
+        counts[i] = count
 
     return counts
 

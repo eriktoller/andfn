@@ -56,7 +56,7 @@ from .hpc.hpc_fracture import (
     get_flow_nets as hpc_get_flow_nets,
 )
 from .hpc.hpc_fracture import (
-    get_heads as hpc_get_heads,
+    get_heads_from_hpc as hpc_get_heads,
 )
 from .hpc.hpc_solve import compute_bnd_error as hpc_compute_bnd_error
 from .hpc.hpc_solve import solve as hpc_solve
@@ -2338,27 +2338,23 @@ class DFN(Constants, IO):
             self.consolidate_dfn(hpc=True)
 
         # Only compute fracture that are given in fracs
+        fracture_indices = None
         if fractures is not None:
-            fracture_dtype_hpc = self.fractures_struc_array_hpc.dtype
-            self.fractures_struc_array_hpc_fracs = np.empty(
-                len(fractures), dtype=fracture_dtype_hpc
+            fracture_indices = np.fromiter(
+                (self.fractures.index(f) for f in fractures),
+                dtype=np.int64,
+                count=len(fractures),
             )
-            for i, f in enumerate(fractures):
-                idx = self.fractures.index(f)
-                self.fractures_struc_array_hpc_fracs[i] = (
-                    self.fractures_struc_array_hpc[idx]
-                )
-        else:
-            self.fractures_struc_array_hpc_fracs = self.fractures_struc_array_hpc
 
         # Calculate the hydraulic head for each fracture and get the mapped 3d points
         h = 1 / (n_layers + 1)
         partitions = int(2 * np.pi / h / n_layers)
         z_array, _ = generate_disk(partitions, n_layers)
         heads, pnts_3d = hpc_get_heads(
-            self.fractures_struc_array_hpc_fracs,
+            self.fractures_struc_array_hpc,
             self.elements_struc_array_hpc,
             z_array,
+            fracture_indices,
         )
 
         # Get the limits for the color map
@@ -2455,14 +2451,14 @@ class DFN(Constants, IO):
 
         # --- Select fractures efficiently ---
         fracs_arr = self.fractures_struc_array_hpc
+        fracture_indices = None
         if fractures is not None:
             fracture_index = {f: i for i, f in enumerate(self.fractures)}
-            idx = np.fromiter(
+            fracture_indices = np.fromiter(
                 (fracture_index[f] for f in fractures),
                 dtype=np.int64,
                 count=len(fractures),
             )
-            fracs_arr = fracs_arr[idx]
 
         # --- Compute heads & points ---
         time_heads = time.time()
@@ -2470,7 +2466,7 @@ class DFN(Constants, IO):
         partitions = int(2 * np.pi / h / n_layers)
         z_array, base_faces = generate_disk(partitions, n_layers)
         heads, pnts_3d = hpc_get_heads(
-            fracs_arr, self.elements_struc_array_hpc, z_array
+            fracs_arr, self.elements_struc_array_hpc, z_array, fracture_indices
         )
         logger.info(
             f"Calculating heads and points took {time.time() - time_heads:.2f} seconds."

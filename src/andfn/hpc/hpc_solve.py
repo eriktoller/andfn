@@ -12,6 +12,7 @@ import numpy as np
 import scipy as sp
 
 from andfn.element import MAX_ELEMENTS, MAX_NCOEF
+from andfn.storage import Connectivity, connectivity_from_hpc
 
 from . import (
     CACHE,
@@ -91,30 +92,36 @@ def solve(
 
     # get the discharge elements
     logger.info("Compiling HPC code...")
-    discharge_elements = get_discharge_elements(element_struc_array)
+    discharge_indices = get_discharge_indices(element_struc_array)
+    connectivity = connectivity_from_hpc(fracture_struc_array, len(element_struc_array))
 
     # Allocate memory for the work array
     num_elements = len(element_struc_array)
     work_array = np.zeros(num_elements, dtype=dtype_work)
     # head matrix
-    size = discharge_elements.size + fracture_struc_array.size
+    size = discharge_indices.size + fracture_struc_array.size
     head_matrix = np.zeros(size)
     discharges = get_old_discharges(
-        element_struc_array, fracture_struc_array, discharge_elements
+        element_struc_array,
+        fracture_struc_array,
+        element_struc_array,
+        discharge_indices,
     )
     discharges_old = np.zeros(size)
     z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
-    get_z_int_array(z_int, discharge_elements, discharge_int)
+    get_z_int_array(z_int, element_struc_array, discharge_int, discharge_indices)
     z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
     get_z_int_array(z_int_error, element_struc_array, discharge_int)
 
     # Discharge matrix
     logger.info("Building discharge matrix...")
     startdm = time.time()
-    discharge_matrix = build_discharge_matrix(
+    discharge_matrix = build_discharge_matrix_csr(
         fracture_struc_array,
         element_struc_array,
-        discharge_elements,
+        connectivity.ids,
+        connectivity.indptr,
+        discharge_indices,
         discharge_int,
         z_int,
     )
@@ -162,13 +169,16 @@ def solve(
             solve_discharge_matrix(
                 fracture_struc_array,
                 element_struc_array,
-                discharge_elements,
+                element_struc_array,
                 discharge_int,
                 head_matrix,
                 discharges,
                 discharges_old,
                 z_int,
                 lu_matrix,
+                connectivity.ids,
+                connectivity.indptr,
+                discharge_indices,
             )
             error_q = np.max(np.abs(discharges - discharges_old))
             error_q = np.mean(np.abs(discharges - discharges_old))
@@ -309,6 +319,22 @@ def get_discharge_elements(element_struc_array):
             el[i] = 1
     discharge_elements = element_struc_array[el]
     return discharge_elements
+
+
+@nb.njit(cache=CACHE)
+def get_discharge_indices(elements):
+    """Ordered array positions; unlike the legacy API, no records are copied."""
+    count = 0
+    for e in elements:
+        if e["_type"] in (0, 2, 3):
+            count += 1
+    indices = np.empty(count, dtype=np.int64)
+    j = 0
+    for i in range(elements.size):
+        if elements[i]["_type"] in (0, 2, 3):
+            indices[j] = i
+            j += 1
+    return indices
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
@@ -606,6 +632,9 @@ def solve_discharge_matrix(
     discharges_old,
     z_int,
     lu_matrix,
+    connectivity_ids=None,
+    connectivity_indptr=None,
+    discharge_indices=None,
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -648,6 +677,9 @@ def solve_discharge_matrix(
         discharge_int,
         head_matrix,
         z_int,
+        connectivity_ids,
+        connectivity_indptr,
+        discharge_indices,
     )
     logger.debug(f"Pre solve time: {time.time() - start0}")
 
@@ -664,6 +696,7 @@ def solve_discharge_matrix(
         discharge_elements,
         discharges,
         discharges_old,
+        discharge_indices,
     )
     logger.debug(f"Post solve time: {time.time() - start0}")
 
@@ -676,6 +709,9 @@ def pre_matrix_solve(
     discharge_int,
     head_matrix,
     z_int,
+    connectivity_ids=None,
+    connectivity_indptr=None,
+    discharge_indices=None,
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -719,6 +755,9 @@ def pre_matrix_solve(
         discharge_int,
         head_matrix,
         z_int,
+        connectivity_ids,
+        connectivity_indptr,
+        discharge_indices,
     )
 
 
@@ -729,6 +768,7 @@ def post_matrix_solve(
     discharge_elements,
     discharges,
     discharges_old,
+    discharge_indices=None,
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -755,27 +795,44 @@ def post_matrix_solve(
     """
     # TODO: Should I use damping here too?
     # Set the discharges for each element
-    for i in nb.prange(len(discharge_elements)):
-        e = discharge_elements[i]
+    n_de = (
+        len(discharge_elements) if discharge_indices is None else len(discharge_indices)
+    )
+    for i in nb.prange(n_de):
+        e = (
+            discharge_elements[i]
+            if discharge_indices is None
+            else element_struc_array[discharge_indices[i]]
+        )
         element_struc_array[e["_id"]]["q"] = discharges[i]
         # element_struc_array[e["_id"]]["q"] = (discharges[i] + discharges_old[i]) / 2.0
 
     # Set the constants for each fracture
     for i in nb.prange(len(fractures_struc_array)):
-        fractures_struc_array[i]["constant"] = discharges[len(discharge_elements) + i]
+        fractures_struc_array[i]["constant"] = discharges[n_de + i]
         # fractures_struc_array[i]["constant"] = (discharges[len(discharge_elements) + i] + discharges_old[len(discharge_elements) + i]) / 2.0
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
-def get_old_discharges(element_struc_array, fractures_struc_array, discharge_elements):
-    discharges_old = np.zeros(
-        len(discharge_elements) + np.max(element_struc_array["frac0"]) + 1
+def get_old_discharges(
+    element_struc_array,
+    fractures_struc_array,
+    discharge_elements,
+    discharge_indices=None,
+):
+    n_de = (
+        len(discharge_elements) if discharge_indices is None else len(discharge_indices)
     )
-    for i in nb.prange(len(discharge_elements)):
-        e = discharge_elements[i]
+    discharges_old = np.zeros(n_de + np.max(element_struc_array["frac0"]) + 1)
+    for i in nb.prange(n_de):
+        e = (
+            discharge_elements[i]
+            if discharge_indices is None
+            else element_struc_array[discharge_indices[i]]
+        )
         discharges_old[i] = element_struc_array[e["_id"]]["q"]
     for i in nb.prange(len(fractures_struc_array)):
-        pos = len(discharge_elements) + i
+        pos = n_de + i
         discharges_old[pos] = fractures_struc_array[i]["constant"]
     return discharges_old
 
@@ -788,6 +845,9 @@ def build_head_matrix(
     discharge_int,
     head_matrix,
     z_int,
+    connectivity_ids=None,
+    connectivity_indptr=None,
+    discharge_indices=None,
 ):
     """
     Builds the head matrix for the DFN and stores it.
@@ -814,20 +874,37 @@ def build_head_matrix(
     """
 
     # Add the head for each discharge element
-    for j in nb.prange(discharge_elements.size):
-        e = discharge_elements[j]
+    n_de = (
+        discharge_elements.size if discharge_indices is None else discharge_indices.size
+    )
+    for j in nb.prange(n_de):
+        e = (
+            discharge_elements[j]
+            if discharge_indices is None
+            else element_struc_array[discharge_indices[j]]
+        )
         frac0 = fractures_struc_array[e["frac0"]]
+        ids0 = hpc_fracture.fracture_element_ids(
+            frac0, connectivity_ids, connectivity_indptr
+        )
         z0 = z_int["z0"][j][:discharge_int]
         omega = 0.0 + 0.0j
         for i in range(discharge_int):
-            omega += hpc_fracture.calc_omega(frac0, z0[i], element_struc_array)
+            omega += hpc_fracture.calc_omega(
+                frac0, z0[i], element_struc_array, -1, ids0
+            )
         omega = omega / discharge_int
         if e["_type"] == 0:  # Intersection
             frac1 = fractures_struc_array[e["frac1"]]
+            ids1 = hpc_fracture.fracture_element_ids(
+                frac1, connectivity_ids, connectivity_indptr
+            )
             z1 = z_int["z1"][j][:discharge_int]
             omega1 = 0.0 + 0.0j
             for i in range(discharge_int):
-                omega1 += hpc_fracture.calc_omega(frac1, z1[i], element_struc_array)
+                omega1 += hpc_fracture.calc_omega(
+                    frac1, z1[i], element_struc_array, -1, ids1
+                )
             omega1 = omega1 / discharge_int
             head_matrix[j] = np.real(omega1) / frac1["t"] - np.real(omega) / frac0["t"]
         elif e["_type"] in [2, 3]:  # Well or Constant head line
@@ -841,18 +918,75 @@ def build_discharge_matrix(
     discharge_int,
     z_int,
 ):
-    """
-    Builds the discharge matrix for the DFN and adds it to the DFN.
+    """Legacy record-based entry point; extract CSR once at this boundary."""
+    connectivity = connectivity_from_hpc(
+        fractures_struc_array, element_struc_array.size
+    )
+    return build_discharge_matrix_csr(
+        fractures_struc_array,
+        element_struc_array,
+        connectivity.ids,
+        connectivity.indptr,
+        np.ascontiguousarray(discharge_elements["_id"], dtype=np.int64),
+        discharge_int,
+        z_int,
+    )
 
-    """
-    # Estimate the maximum number of non-zero entries in the discharge matrix
-    max_id = int(np.max(element_struc_array["_id"]))
-    id_to_pos = np.full(max_id + 1, -1, dtype=np.int32)
-    for i, e in enumerate(discharge_elements):
-        id_to_pos[e["_id"]] = i
+
+def build_discharge_matrix_csr(
+    fractures_struc_array,
+    element_struc_array,
+    connectivity_ids,
+    connectivity_indptr,
+    discharge_indices,
+    discharge_int,
+    z_int,
+):
+    """CSR connectivity and ordered positions; no element-record gathers."""
+    Connectivity(connectivity_ids, connectivity_indptr).validate(
+        fractures_struc_array.size, element_struc_array.size
+    )
+    if not np.array_equal(
+        fractures_struc_array["_id"], np.arange(fractures_struc_array.size)
+    ) or not np.array_equal(
+        element_struc_array["_id"], np.arange(element_struc_array.size)
+    ):
+        raise ValueError("IDs must equal array positions")
+    if (
+        not isinstance(discharge_indices, np.ndarray)
+        or discharge_indices.ndim != 1
+        or discharge_indices.dtype not in (np.dtype(np.int32), np.dtype(np.int64))
+        or not discharge_indices.flags.c_contiguous
+        or not np.array_equal(
+            discharge_indices, get_discharge_indices(element_struc_array)
+        )
+    ):
+        raise ValueError(
+            "Discharge indices must contain all discharge elements in order"
+        )
+    if discharge_int <= 0 or discharge_int > z_int.dtype["z0"].shape[0]:
+        raise ValueError("Invalid discharge integration count")
+    if z_int.size < discharge_indices.size:
+        raise ValueError("Insufficient discharge quadrature rows")
+    for name in ("frac0", "frac1"):
+        references = element_struc_array[name]
+        if np.any(references < -1) or np.any(references >= fractures_struc_array.size):
+            raise ValueError(f"Invalid {name} fracture reference")
+    if np.any(element_struc_array["frac0"][discharge_indices] < 0):
+        raise ValueError("Discharge elements require frac0")
+    intersections = element_struc_array["_type"] == 0
+    if np.any(element_struc_array["frac1"][intersections] < 0):
+        raise ValueError("Intersections require frac1")
+    id_to_pos = np.full(element_struc_array.size, -1, dtype=np.int64)
+    id_to_pos[discharge_indices] = np.arange(discharge_indices.size)
 
     nnz_per_row = count_discharge_nnz(
-        fractures_struc_array, element_struc_array, discharge_elements
+        fractures_struc_array,
+        element_struc_array,
+        element_struc_array,
+        connectivity_ids,
+        connectivity_indptr,
+        discharge_indices,
     )
     row_offsets, total_nnz = exclusive_prefix_sum(nnz_per_row)
 
@@ -864,7 +998,7 @@ def build_discharge_matrix(
     fill_discharge_matrix(
         fractures_struc_array,
         element_struc_array,
-        discharge_elements,
+        element_struc_array,
         id_to_pos,
         z_int,
         discharge_int,
@@ -872,6 +1006,9 @@ def build_discharge_matrix(
         rows,
         cols,
         data,
+        connectivity_ids,
+        connectivity_indptr,
+        discharge_indices,
     )
 
     logger.info(f"Dicharge matrix arrays size: {size}")
@@ -883,21 +1020,37 @@ def build_discharge_matrix(
 
 
 @nb.njit(parallel=True, cache=CACHE)
-def count_discharge_nnz(fractures, elements, discharge_elements):
-    n_de = discharge_elements.size
+def count_discharge_nnz(
+    fractures,
+    elements,
+    discharge_elements,
+    connectivity_ids=None,
+    connectivity_indptr=None,
+    discharge_indices=None,
+):
+    n_de = (
+        discharge_elements.size if discharge_indices is None else discharge_indices.size
+    )
     n_fr = fractures.size
     nnz_per_row = np.zeros(n_de + n_fr, np.int64)
 
     # Discharge element equations
     for j in nb.prange(n_de):
-        e = discharge_elements[j]
+        e = (
+            discharge_elements[j]
+            if discharge_indices is None
+            else elements[discharge_indices[j]]
+        )
         cnt = 0
 
         if e["_type"] == 0:
             for f_id in (e["frac0"], e["frac1"]):
                 f = fractures[f_id]
-                for k in range(f["nelements"]):
-                    ee = elements[f["elements"][k]]
+                element_ids = hpc_fracture.fracture_element_ids(
+                    f, connectivity_ids, connectivity_indptr
+                )
+                for element_id in element_ids:
+                    ee = elements[element_id]
                     t = ee["_type"]
                     if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
                         t != 0 and t != 2 and t != 3
@@ -907,8 +1060,11 @@ def count_discharge_nnz(fractures, elements, discharge_elements):
             cnt += 2  # fracture continuity terms
         else:
             f = fractures[e["frac0"]]
-            for k in range(f["nelements"]):
-                ee = elements[f["elements"][k]]
+            element_ids = hpc_fracture.fracture_element_ids(
+                f, connectivity_ids, connectivity_indptr
+            )
+            for element_id in element_ids:
+                ee = elements[element_id]
                 t = ee["_type"]
                 if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
                     t != 0 and t != 2 and t != 3
@@ -923,8 +1079,11 @@ def count_discharge_nnz(fractures, elements, discharge_elements):
     for j in nb.prange(n_fr):
         f = fractures[j]
         cnt = 0
-        for k in range(f["nelements"]):
-            e = elements[f["elements"][k]]
+        element_ids = hpc_fracture.fracture_element_ids(
+            f, connectivity_ids, connectivity_indptr
+        )
+        for element_id in element_ids:
+            e = elements[element_id]
             if e["_type"] in (0, 2, 3):
                 cnt += 1
         nnz_per_row[n_de + j] = cnt
@@ -954,13 +1113,22 @@ def fill_discharge_matrix(
     rows,
     cols,
     data,
+    connectivity_ids=None,
+    connectivity_indptr=None,
+    discharge_indices=None,
 ):
-    n_de = discharge_elements.size
+    n_de = (
+        discharge_elements.size if discharge_indices is None else discharge_indices.size
+    )
     n_fr = fractures.size
 
     # ---- discharge element equations ----
     for j in nb.prange(n_de):
-        e = discharge_elements[j]
+        e = (
+            discharge_elements[j]
+            if discharge_indices is None
+            else elements[discharge_indices[j]]
+        )
         row = j
         ptr = row_offsets[j]
 
@@ -970,8 +1138,11 @@ def fill_discharge_matrix(
 
             for f_id, sign in ((e["frac0"], 1.0), (e["frac1"], -1.0)):
                 f = fractures[f_id]
-                for k in range(f["nelements"]):
-                    ee = elements[f["elements"][k]]
+                element_ids = hpc_fracture.fracture_element_ids(
+                    f, connectivity_ids, connectivity_indptr
+                )
+                for element_id in element_ids:
+                    ee = elements[element_id]
                     t = ee["_type"]
                     if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
                         t != 0 and t != 2 and t != 3
@@ -1002,8 +1173,11 @@ def fill_discharge_matrix(
             f = fractures[e["frac0"]]
             z0 = z_int["z0"][j][:discharge_int]
 
-            for k in range(f["nelements"]):
-                ee = elements[f["elements"][k]]
+            element_ids = hpc_fracture.fracture_element_ids(
+                f, connectivity_ids, connectivity_indptr
+            )
+            for element_id in element_ids:
+                ee = elements[element_id]
                 t = ee["_type"]
                 if ee["_id"] == e["_id"] + 99 * 99 * 99 or (
                     t != 0 and t != 2 and t != 3
@@ -1027,8 +1201,11 @@ def fill_discharge_matrix(
         row = n_de + j
         ptr = row_offsets[row]
 
-        for k in range(f["nelements"]):
-            e = elements[f["elements"][k]]
+        element_ids = hpc_fracture.fracture_element_ids(
+            f, connectivity_ids, connectivity_indptr
+        )
+        for element_id in element_ids:
+            e = elements[element_id]
             t = e["_type"]
             if t not in (0, 2, 3):
                 continue
@@ -1251,13 +1428,14 @@ def get_max_min_phi(
     z_min = 0.0 + 0.0j
     l_max = 0.0
     l_min = 0.0
-    for j, e in enumerate(element_struc_array[ids]):
+    for element_id in ids:
+        e = element_struc_array[element_id]
         if e["_type"] in [0, 2, 3]:  # Well, Constant head line
-            z0 = z_int["z0"][ids[j]][:discharge_int]
+            z0 = z_int["z0"][element_id][:discharge_int]
             frac0 = fracture_struc_array[e["frac0"]]
             endpoints = e["endpoints0"]
             if e["_type"] == 0 and e["frac1"] == frac_id:  # Intersection
-                z0 = z_int["z1"][ids[j]][:discharge_int]
+                z0 = z_int["z1"][element_id][:discharge_int]
                 frac0 = fracture_struc_array[e["frac1"]]
                 endpoints = e["endpoints1"]
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
@@ -1288,10 +1466,11 @@ def get_max_min_phi(
 
 
 @nb.njit(cache=CACHE)
-def get_z_int_array(z_int, elements, discharge_int):
+def get_z_int_array(z_int, elements, discharge_int, element_indices=None):
     # Add the head for each discharge element
-    for j in range(elements.size):
-        e = elements[j]
+    size = elements.size if element_indices is None else element_indices.size
+    for j in range(size):
+        e = elements[j] if element_indices is None else elements[element_indices[j]]
         if e["_type"] == 0:  # Intersection
             z_int["z0"][j][:discharge_int] = hpc_intersection.z_array(
                 e, discharge_int, e["frac0"]

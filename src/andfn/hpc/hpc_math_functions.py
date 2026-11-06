@@ -586,17 +586,25 @@ def check_branch_cut_crossing(
 
 @nb.njit()
 def find_branch_cuts(
-    self_, z_pos, fracture_struc_array, element_struc_array, work_array, nint
+    self_,
+    z_pos,
+    fracture_struc_array,
+    element_struc_array,
+    work_array,
+    nint,
+    connectivity_ids=None,
+    connectivity_indptr=None,
 ):
-    nel = fracture_struc_array[self_["frac0"]]["nelements"]
-    elements_list = fracture_struc_array[self_["frac0"]]["elements"][:nel]
-    elements = element_struc_array[elements_list]
+    elements_list = hpc_fracture.fracture_element_ids(
+        fracture_struc_array[self_["frac0"]], connectivity_ids, connectivity_indptr
+    )
     work_array["len_discharge_element"] = 0
     frac_radius = fracture_struc_array[self_["frac0"]]["radius"]
 
     cnt = 0
     for ii in range(nint - 1):
-        for e in elements:
+        for element_id in elements_list:
+            e = element_struc_array[element_id]
             if e["_type"] == 0:  # Intersection
                 if e["frac0"] == self_["frac0"]:
                     endpoints = e["endpoints0"]

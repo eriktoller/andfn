@@ -6,6 +6,9 @@ This module contains the HPC fracture functions.
 
 import numba as nb
 import numpy as np
+from numba.extending import overload
+
+from andfn.storage import connectivity_from_hpc, fracture_metadata_from_hpc
 
 from . import (
     CACHE,
@@ -16,6 +19,41 @@ from . import (
     hpc_well,
 )
 from . import hpc_geometry_functions as gf
+
+
+def fracture_element_ids(fracture, ids=None, indptr=None):
+    """Compatibility view with compile-time dispatch for compact records."""
+    if ids is None:
+        return fracture["elements"][: fracture["nelements"]]
+    if indptr is None:
+        return ids
+    i = fracture["_id"]
+    start, end = indptr[i], indptr[i + 1]
+    return ids[start:end]
+
+
+@overload(fracture_element_ids)
+def _overload_fracture_element_ids(fracture, ids=None, indptr=None):
+    # Numba must not type-check legacy fields on a compact metadata record.
+    if ids is None or isinstance(ids, (nb.types.NoneType, nb.types.Omitted)):
+
+        def legacy(fracture, ids=None, indptr=None):
+            return fracture["elements"][: fracture["nelements"]]
+
+        return legacy
+    if indptr is None or isinstance(indptr, (nb.types.NoneType, nb.types.Omitted)):
+
+        def supplied(fracture, ids=None, indptr=None):
+            return ids
+
+        return supplied
+
+    def csr(fracture, ids=None, indptr=None):
+        i = fracture["_id"]
+        start, end = indptr[i], indptr[i + 1]
+        return ids[start:end]
+
+    return csr
 
 
 @nb.njit(cache=CACHE)
@@ -50,7 +88,7 @@ def sunflower_spiral(n_in, n_bnd):
 
 
 @nb.njit()
-def calc_omega(self_, z, element_struc_array, exclude=-1):
+def calc_omega(self_, z, element_struc_array, exclude=-1, element_ids=None):
     """
     Calculates the omega for the fracture excluding element "exclude".
 
@@ -74,8 +112,8 @@ def calc_omega(self_, z, element_struc_array, exclude=-1):
     omega = self_["constant"] + 0.0j
 
     # Loop through the elements of the fracture
-    for e in range(self_["nelements"]):
-        el = self_["elements"][e]
+    ids = fracture_element_ids(self_, element_ids)
+    for el in ids:
         if el != exclude:
             element = element_struc_array[el]
             if element["_type"] == 0:  # Intersection
@@ -210,7 +248,9 @@ def calc_omega_error_org(self_, z, error_struc_array, exclude=-1):
 
 
 @nb.njit()
-def calc_omega_array(self_, omega, z, element_struc_array, exclude=-1):
+def calc_omega_array(
+    self_, omega, z, element_struc_array, exclude=-1, element_ids=None
+):
     """
     Calculates the omega for the fracture excluding element "exclude".
 
@@ -235,8 +275,8 @@ def calc_omega_array(self_, omega, z, element_struc_array, exclude=-1):
     omega[:] = self_["constant"] + 0.0j
 
     # Loop through the elements of the fracture
-    for e in range(self_["nelements"]):
-        el = self_["elements"][e]
+    ids = fracture_element_ids(self_, element_ids)
+    for el in ids:
         if el != exclude:
             element = element_struc_array[el]
             if element["_type"] == 0:  # Intersection
@@ -254,7 +294,7 @@ def calc_omega_array(self_, omega, z, element_struc_array, exclude=-1):
 
 
 @nb.njit()
-def calc_w(self_, z, element_struc_array, exclude=-1):
+def calc_w(self_, z, element_struc_array, exclude=-1, element_ids=None):
     """
     Calculates the omega for the fracture excluding element "exclude".
 
@@ -276,8 +316,8 @@ def calc_w(self_, z, element_struc_array, exclude=-1):
     """
     w = 0.0 + 0.0j
 
-    for e in range(self_["nelements"]):
-        el = self_["elements"][e]
+    ids = fracture_element_ids(self_, element_ids)
+    for el in ids:
         if el != exclude:
             element = element_struc_array[el]
             if element["_type"] == 0:  # Intersection
@@ -290,6 +330,62 @@ def calc_w(self_, z, element_struc_array, exclude=-1):
                 w += hpc_const_head_line.calc_w(element, z, self_["radius"])
 
     return w
+
+
+@nb.njit(cache=CACHE)
+def calc_omega_csr(fracture, z, fractures, elements, ids, indptr, exclude=-1):
+    """CSR entry point; all arguments are numeric arrays or scalars."""
+    start, end = indptr[fracture], indptr[fracture + 1]
+    return calc_omega(fractures[fracture], z, elements, exclude, ids[start:end])
+
+
+@nb.njit(cache=CACHE)
+def calc_w_csr(fracture, z, fractures, elements, ids, indptr, exclude=-1):
+    start, end = indptr[fracture], indptr[fracture + 1]
+    return calc_w(fractures[fracture], z, elements, exclude, ids[start:end])
+
+
+@nb.njit(cache=CACHE, parallel=True)
+def get_heads_csr(fractures, elements, ids, indptr, z_array, fracture_indices=None):
+    """Evaluate the same scaled fracture points as get_heads, without padding."""
+    size = fractures.size if fracture_indices is None else fracture_indices.size
+    heads = np.zeros((size, z_array.size), dtype=np.float64)
+    points = np.zeros((size, z_array.size, 3), dtype=np.float64)
+    for row in nb.prange(size):
+        i = np.int64(row) if fracture_indices is None else fracture_indices[row]
+        start, end = indptr[i], indptr[i + 1]
+        element_ids = ids[start:end]
+        z = z_array * fractures[i]["radius"]
+        for j in range(z_array.size):
+            heads[row, j] = head_from_phi(
+                fractures[i],
+                np.real(calc_omega(fractures[i], z[j], elements, -1, element_ids)),
+            )
+        gf.map_2d_to_3d(fractures[i], z, points[row])
+    return heads, points
+
+
+def get_heads_from_hpc(fractures, elements, z_array, fracture_indices=None):
+    """Python compatibility boundary; build CSR/metadata once per evaluation."""
+    if fracture_indices is not None and (
+        not isinstance(fracture_indices, np.ndarray)
+        or fracture_indices.ndim != 1
+        or fracture_indices.dtype not in (np.dtype(np.int32), np.dtype(np.int64))
+        or not fracture_indices.flags.c_contiguous
+        or np.any(fracture_indices < 0)
+        or np.any(fracture_indices >= fractures.size)
+    ):
+        raise ValueError("Invalid fracture indices")
+    connectivity = connectivity_from_hpc(fractures, elements.size)
+    metadata = fracture_metadata_from_hpc(fractures)
+    return get_heads_csr(
+        metadata,
+        elements,
+        connectivity.ids,
+        connectivity.indptr,
+        z_array,
+        fracture_indices,
+    )
 
 
 @nb.njit(cache=CACHE)
