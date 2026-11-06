@@ -553,8 +553,13 @@ def check_branch_cut_crossing(
     endpoints,
     num_check_points=32,
 ):
+    """Detect logarithmic phase jumps, including cuts at the supplied endpoints."""
     chi0 = gf.map_z_line_to_chi(z0, endpoints)
     chi1 = gf.map_z_line_to_chi(z1, endpoints)
+
+    # Include jumps at quadrature points lying exactly on the branch cut.
+    if np.abs(np.angle(chi1) - np.angle(chi0)) > np.pi:
+        return True
 
     # No possibility of a negative-real-axis crossing
     if np.real(chi0) > 0 and np.real(chi1) > 0 and np.imag(chi0) * np.imag(chi1) > 0:
@@ -576,13 +581,7 @@ def check_branch_cut_crossing(
 
     chi = gf.map_z_line_to_chi(z_arc, endpoints)
 
-    x0 = np.real(chi[:-1])
-    x1 = np.real(chi[1:])
-
-    y0 = np.imag(chi[:-1])
-    y1 = np.imag(chi[1:])
-
-    return np.any((y0 * y1 < 0.0) & (x0 < 0.0) & (x1 < 0.0))
+    return np.any(np.abs(np.diff(np.angle(chi))) > np.pi)
 
 
 @nb.njit()

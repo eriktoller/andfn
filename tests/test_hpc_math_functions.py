@@ -1,6 +1,9 @@
+from itertools import pairwise
+
 import numpy as np
 import pytest
 
+from andfn.hpc import hpc_geometry_functions as hgf
 from andfn.hpc import hpc_math_functions as hmf
 
 
@@ -73,3 +76,38 @@ def test_theta_and_exp_helpers_and_formatters():
     assert hmf.cut_trail("1234000") == "1234"
     assert hmf.float2str(0.0) == "0.0"
     assert hmf.float2str(np.nan) == "nan"
+
+
+@pytest.mark.parametrize("rotation", [0.0, np.pi / 4, np.pi / 2])
+def test_branch_cut_crossing_at_quadrature_point(rotation):
+    radius = np.sqrt(0.9**2 - 0.45**2)
+    endpoints = np.array([-radius, radius], dtype=np.complex128) * np.exp(1j * rotation)
+    theta = np.arange(400) * 2 * np.pi / 400
+    points = radius * np.exp(1j * theta)
+    chi = hgf.map_z_line_to_chi(points, endpoints)
+    phase_jumps = np.abs(np.diff(np.angle(chi))) > np.pi
+    detected = np.array(
+        [
+            hmf.check_branch_cut_crossing(z0, z1, radius, endpoints)
+            for z0, z1 in pairwise(points)
+        ]
+    )
+    assert np.any(phase_jumps)
+    np.testing.assert_array_equal(detected, phase_jumps)
+
+
+def test_branch_cut_crossing_preserves_original_quadrature_endpoints():
+    radius = np.sqrt(0.9**2 - 0.45**2)
+    x = radius / np.sqrt(2)
+    y = np.nextafter(x, np.inf)
+    endpoints = np.array([x + 1j * y, -x - 1j * y])
+    thetas = np.zeros(400)
+    hmf.calc_thetas(400, 1, thetas)
+    exponentials = np.zeros(400, dtype=np.complex128)
+    hmf.fill_exp_array(400, thetas, exponentials, 1)
+    points = hgf.map_chi_to_z_circle(exponentials, radius, 0j)
+    z0, z1 = points[50:52]
+    chi0 = hgf.map_z_line_to_chi(z0, endpoints)
+    chi1 = hgf.map_z_line_to_chi(z1, endpoints)
+    assert abs(np.angle(chi1) - np.angle(chi0)) > np.pi
+    assert hmf.check_branch_cut_crossing(z0, z1, radius, endpoints)
