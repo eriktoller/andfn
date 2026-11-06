@@ -46,9 +46,10 @@ class FixedOrderStorage:
     old_coef_data: NDArray
     coef_start: NDArray
     coef_capacity: NDArray
+    element_dtype = fixed_order_element_dtype
 
     def validate(self):
-        _array(self.elements, fixed_order_element_dtype, "fixed-order elements")
+        _array(self.elements, self.element_dtype, "fixed-order elements")
         for name in ("coef_data", "candidate_coef_data", "old_coef_data"):
             _array(getattr(self, name), np.complex128, name)
         _validate_layout(

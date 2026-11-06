@@ -14,6 +14,7 @@ from andfn.hpc import CACHE
 from ..constants import R_COND
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
+from .hpc_work import integration_view
 
 
 @nb.njit(inline="always")
@@ -787,13 +788,12 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
             self_["nint"],
         )
     # set dpsi_corr to zero
-    self_["dpsi_corr"][: self_["nint"] - 1] = 0.0
-    self_["dpsi_corr"][:] = 0.0
+    correction = integration_view(self_, work_array, "dpsi_corr")
+    correction[: self_["nint"] - 1] = 0.0
+    correction[:] = 0.0
     for i in range(work_array["len_discharge_element"]):
         e = element_struc_array[work_array["discharge_element"][i]]
-        self_["dpsi_corr"][work_array["element_pos"][i]] += (
-            e["q"] * work_array["sign_array"][i]
-        )
+        correction[work_array["element_pos"][i]] += e["q"] * work_array["sign_array"][i]
 
 
 @nb.njit()

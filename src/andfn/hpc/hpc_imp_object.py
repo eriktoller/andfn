@@ -10,6 +10,7 @@ import numpy as np
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
 from .hpc_coefficients import candidate_view, coefficient_view
+from .hpc_work import integration_view
 
 ########################################################################################################################
 ## Impermeable Circle
@@ -54,7 +55,7 @@ def solve_circle(
     mf.cauchy_integral_domega(
         self_["nint"],
         self_["ncoef"],
-        self_["dpsi_corr"][: self_["nint"] - 1],
+        integration_view(self_, work_array, "dpsi_corr")[: self_["nint"] - 1],
         frac0,
         self_["_id"],
         element_struc_array,
@@ -199,7 +200,7 @@ def solve_line(
     mf.cauchy_integral_domega_line(
         self_["nint"],
         self_["ncoef"],
-        self_["dpsi_corr"][: self_["nint"] - 1],
+        integration_view(self_, work_array, "dpsi_corr")[: self_["nint"] - 1],
         frac0,
         self_["_id"],
         element_struc_array,

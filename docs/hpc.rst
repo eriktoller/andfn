@@ -676,6 +676,410 @@ physical integration/work limits and initialized-unused-tail compatibility
 remain review items before any general work-array migration. This phase makes
 no complete-solver memory-reduction claim.
 
+Phase 4A: separate compact work ownership
+-----------------------------------------
+
+The legacy ``dtype_work`` and error solver are unchanged. The compact adaptive
+owner instead publishes a shallow ``WorkArrays`` tuple of separately owned
+plain NumPy arrays. ``work_record`` constructs element-local *views* for the
+same numerical kernels; compile-time overloads select legacy records or compact
+views. No Python storage owner enters nopython code. This is per-element work,
+not per-thread scratch.
+
+The Phase 3B guard at the legacy coefficient/integration export limits remains
+in force. Compact work is capacity-sized, but this phase does not separately
+approve previously unsupported numerical orders.
+
+Work lifetime audit
+~~~~~~~~~~~~~~~~~~~
+
+The table refers to the original ``hpc_solve.dtype_work``. Producers/consumers
+were checked across repository Python code, including error solving and
+diagnostics. ``E`` is element-local scratch, ``B`` persistent cache, ``C``
+iteration state, ``D`` candidate state, ``F`` branch events, ``G`` compatibility,
+and ``H`` apparently unused. Persistent committed numerical state (category A)
+is in element/coefficient storage, not this work dtype.
+
+``local`` below means no numerical dependency beyond that element calculation:
+values may physically remain after a commit, growth or solve, but are not
+required by later calculations. Diagnostic exports can inspect them. ``grid``
+means valid across iterations/commits until integration geometry changes;
+``events`` means valid until branch topology/grid invalidation.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 9 28 20 25
+
+   * - Field
+     - Class
+     - Producer -> consumers
+     - Semantic lifetime
+     - Size/dependency
+   * - phi
+     - E
+     - real Cauchy integration -> same reduction
+     - local; not needed after return
+     - nint; no topology dependency
+   * - psi
+     - E
+     - imaginary/domega integration -> differences and reduction
+     - local; not needed after return
+     - nint; correction values depend on events
+   * - coef
+     - D/G
+     - legacy type solves -> legacy commits/error driver
+     - crosses candidate/commit barrier; overwritten next calculation
+     - ncoef; removed only from compact work
+   * - coef0
+     - E
+     - intersection first-fracture integral -> intersection combination
+     - local; not required across commits/growth
+     - ncoef
+   * - coef1
+     - E
+     - intersection second-fracture integral -> intersection combination
+     - local; not required across commits/growth
+     - ncoef
+   * - coef_error
+     - H
+     - no live repository producer/consumer found
+     - no established numerical lifetime
+     - retained at coefficient capacity, not MAX_NCOEF
+   * - a0_error
+     - H
+     - no live repository producer/consumer found
+     - no established numerical lifetime
+     - one complex scalar per element retained
+   * - old_coef
+     - E
+     - each type solve snapshots current -> calc_error/calc_coef_error
+     - local convergence snapshot; diagnostics retain last value
+     - ncoef; preserved prefix on coefficient relocation
+   * - dpsi
+     - E
+     - domega integrals -> cumulative psi reconstruction
+     - local; not required across commits/growth
+     - nint; corrected using current branch values
+   * - error
+     - H
+     - no work-field consumer (element.error is distinct)
+     - no established numerical lifetime
+     - one real scalar per element retained
+   * - integral
+     - E
+     - Cauchy routines -> coefficient calculation
+     - local; reset before use
+     - ncoef, despite legacy allocation of 2*MAX_NCOEF
+   * - sign_array
+     - F
+     - find_branch_cuts/get_sign -> dpsi correction/diagnostics
+     - events; survives commits and unchanged-grid iterations
+     - event capacity; topology dependent
+   * - discharge_element
+     - F
+     - find_branch_cuts -> correction/diagnostics
+     - events; survives commits and unchanged-grid iterations
+     - event capacity; topology dependent
+   * - element_pos
+     - F
+     - find_branch_cuts -> correction/diagnostics
+     - events; survives commits and unchanged-grid iterations
+     - event capacity; topology and nint dependent
+   * - len_discharge_element
+     - F
+     - find_branch_cuts/invalidation -> correction/diagnostics
+     - events; reset on changed grid
+     - one integer per element
+   * - exp_array_m
+     - B
+     - fill_exp_array -> Cauchy recurrence
+     - grid; survives solve iterations and commits
+     - nint
+   * - exp_array_p
+     - B
+     - fill_exp_array -> evaluation, branch and z-grid construction
+     - grid; survives solve iterations and commits
+     - nint
+   * - z_integral
+     - B/H
+     - fill_z_integral -> diagnostic export; numeric reads commented out
+     - grid; retained rather than deleting an unused field
+     - nint for intersection geometry
+   * - set_zero
+     - C/G
+     - legacy assessment -> legacy commit/count; compact always false
+     - iteration only; no persistent numerical dependency
+     - one bool per element retained
+
+No work field is needed by subsequent public evaluations of a completed
+compact solution. The legacy DFN stores returned work as ``self.work_array``;
+tests/diagnostics inspect coefficient history, caches and branch fields.
+Compact diagnostic exports remain explicit and are never execution bridges.
+Category H fields are retained pending a separate removal decision.
+
+Theta is a persistent grid cache. Dpsi correction is iteration state, rebuilt
+from current discharge and persistent branch events whenever its type solve
+runs. Both move from padded element fields into sized integration ownership.
+Exponentials are persistent per-element caches in this phase; converting them
+or Cauchy temporaries into thread scratch is explicitly deferred.
+
+Compact representation and transaction boundary
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Coefficient work fields and ``integral`` use independent flat NumPy arrays
+sized by coefficient capacity. Theta, dpsi correction, exponentials,
+``z_integral``, phi, psi and dpsi use independent arrays sized by integration
+capacity. Compact element metadata contains no padded integration arrays.
+Coefficient and integration capacities use the established quantum-4,
+factor-1.25 policy and can change independently.
+
+The only remaining padded arrays are the three branch-event arrays, retaining
+``MAX_ELEMENTS`` event slots per element. Event counts are not fracture degree;
+changing their growth policy would combine a separate topology migration with
+this phase. The scalar branch count is independently owned. No compact work
+field retains MAX_NCOEF padding.
+
+Construction produces a ``GrowthTransaction`` with affected metadata and
+theta/correction/exponential/z cache segments, plus replacement families only
+when their own capacity is exceeded. It makes no writes to published state.
+All allocations, cache rebuilding and validation finish before publication.
+The commit barrier then performs prevalidated scalar/slice writes, zeros newly
+exposed coefficient/history entries, invalidates affected event counts,
+updates logical lengths, and publishes the owner state. There are no compiled
+workers executing during publication. Atomicity here is the solver barrier,
+not a promise of lock-free concurrent Python readers.
+
+Within coefficient capacity, current/candidate/compatibility-old and local
+history arrays retain identity: no coefficient copying or relocation occurs.
+Within integration capacity, integration buffers also retain identity; only
+affected logical cache segments are patched. A coefficient repack copies
+current, candidate, compatibility-old, local ``old_coef`` and retained
+``coef_error`` prefixes; coefficient-local scratch is freshly allocated without
+copying dead values. It neither copies nor replaces integration/branch arrays.
+An integration repack copies only theta, correction, exponentials and
+``z_integral`` prefixes; dead phi/psi/dpsi scratch is freshly allocated.
+Branch arrays and scalar work arrays retain identity for every growth case.
+
+Before publication, failures preserve every active buffer identity and value.
+After successful publication, references to old layouts must not be used;
+even a previous state object can share in-place buffers and metadata. Numerical
+arrays are reacquired at the driver boundary, as in Phase 3B. Exported snapshots
+copy their values instead of retaining mutable views.
+
+The overloads for work-field indexing intentionally use ordinary compiled
+lowering, not forced Numba inlining. Forced inline field access lost nested
+branch-sign writes during initial verification; exact branch/cache transition
+tests caught this. Existing arithmetic and reduction order are unchanged.
+
+Phase 4A validation and measured cost
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``uv run pytest tests`` passed all 296 tests. Legacy/compact comparisons now
+require exact equality after every observed transition and iteration, including
+current/candidate/history coefficients, errors, caches and branch events.
+Repeated runs at 1, 2 and 28 threads preserve exact growth requests and order
+trajectories. The reported 12-iteration legacy/compact comparison has maximum
+absolute and relative differences of zero. Cross-thread boundary reductions
+can differ in the legacy baseline (one observed difference was
+``3.46944695e-18``); tests require compact cross-thread deltas to equal the
+legacy deltas exactly, without changing tolerances or arithmetic.
+
+Failure injection covers the original construction/cache failures and
+within-capacity cache failure with every owned buffer identity/value checked.
+The six transaction scenarios below use a small heterogeneous eight-element
+fixture, with ``10 -> 12`` coefficient growth, independent coefficient capacity
+16 (or 10 to force relocation), and integration capacity 32 (or 20 to force
+relocation). The several-element case grows six elements in one batch.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Scenario
+     - Coefficient copy bytes
+     - Integration copy bytes
+     - Cache rebuild bytes
+     - Unrelated work / branch copy bytes
+   * - A: no growth
+     - 0
+     - 0
+     - 0
+     - 0 / 0
+   * - B: within both capacities
+     - 0
+     - 2,016
+     - 1,536
+     - 0 / 0
+   * - C: coefficient repack only
+     - 4,800
+     - 2,016
+     - 1,536
+     - 0 / 0
+   * - D: integration repack only
+     - 0
+     - 9,952
+     - 1,536
+     - 0 / 0
+   * - E: both repack
+     - 4,800
+     - 9,952
+     - 1,536
+     - 0 / 0
+   * - F: several elements, both repack
+     - 4,800
+     - 20,032
+     - 9,216
+     - 0 / 0
+
+Coefficient repack/relocation counters are also exactly zero in B. Integration
+copy counts include affected correction/z prefixes staged for preservation and
+the final cache-segment publication; these are not whole-work copies. Cache
+rebuild counts are writes constructing the replacement grids/caches, reported
+separately rather than counted as coefficient relocation.
+
+The original benchmark cases, orders, six iteration counts, seven alternating
+paired samples, discharge solve and warm-execution boundaries are unchanged.
+New accounting and an optional ``--profile`` add separate diagnostic runs.
+The final warm legacy/compact milliseconds were:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - 1 thread
+     - 2 threads
+     - 28 threads
+   * - 128, no growth
+     - 19.184 / 18.805
+     - 9.825 / 10.005
+     - 4.165 / 4.177
+   * - 128, forced repacks
+     - 83.204 / 96.255
+     - 42.408 / 55.514
+     - 12.355 / 34.855
+   * - 128, spare-capacity growth
+     - 10.869 / 12.572
+     - 5.838 / 7.471
+     - 2.603 / 5.600
+   * - 1024, multiple expansions
+     - 675.767 / 771.762
+     - 344.626 / 442.390
+     - 91.772 / 263.548
+
+Compared directly with the Phase 3B review numbers at 28 threads, spare growth
+improved from 7.442 to 5.600 ms (24.7%), and 1024-element multiple expansion
+improved from 301.042 to 263.548 ms (12.5%). The final no-growth paired ratios
+were 0.980, 1.018 and 1.003. Shared-machine timing varied between runs; these
+are measurements, not portable latency guarantees.
+
+The separate warm instrumented six-step element-only spare-capacity profile
+at 28 threads measured detection 0.608 ms, transaction construction excluding
+cache rebuild 1.799 ms, publication 0.786 ms, cache rebuild 0.134 ms, candidate
+recalculation 0.557 ms, commits 0.315 ms and remaining element work 2.433 ms.
+This diagnostic uses split first-candidate/commit calls to expose commit time;
+it is not substituted for the unchanged comparable benchmark. Ordinary
+benchmark JSON also reports transaction/publication/recalculation/second-commit
+totals for the final sample separately from median elapsed times.
+
+Spare growth remains materially slower than legacy, so Phase 4A stops here
+without claiming final performance approval. CProfile of 100 within-capacity
+constructions took 0.214 seconds: per-element finite-prefix checks alone used
+38,400 generator calls and about 0.081 seconds cumulatively; request/layout
+validation and many small NumPy reductions are additional overhead. Publication
+still executes per-element cache patches in Python. These costs now scale
+with changed state, not the padded work payload, but are expensive at low order.
+The 24-iteration residual probe measured 11.918/17.893 ms and 1.243x after
+the growth iteration; another run measured 1.051x after growth. Steady-step
+profiling attributes most time to compiled numerical/parallel calls plus their
+dispatcher boundary, not Python request detection. The residual is
+load-sensitive and is not hidden with looser numerical tolerances or new
+thread-local scratch.
+
+Phase 4A payload comparison
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Payload accounting deduplicates shared NumPy owners by identity. Coefficient
+payload below is the sum of current, candidate and compatibility-old arrays.
+Integration/cache includes theta, correction, both exponentials and
+``z_integral``. Work includes sized temporaries/history, scalar state, event
+storage and offset arrays. Total state accounting counts shared coefficient
+offsets only once.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - Coefficients
+     - Integration/cache
+     - Compact work
+     - Total state
+     - Transaction temporary
+     - Peak simultaneous state
+   * - 128, no growth
+     - 70,656
+     - 196,608
+     - 2,657,408
+     - 2,949,248
+     - 0
+     - 2,949,248
+   * - 128, forced growth
+     - 218,112
+     - 524,288
+     - 3,026,048
+     - 3,793,024
+     - 1,628,288
+     - 5,280,512
+   * - 128, spare capacity
+     - 55,296
+     - 131,072
+     - 2,607,232
+     - 2,818,176
+     - 148,608
+     - 2,966,784
+   * - 1024, multiple expansions
+     - 1,744,896
+     - 4,194,304
+     - 24,208,384
+     - 30,344,192
+     - 13,026,304
+     - 42,244,096
+
+These are bytes, not RSS. Peak accounts for shared old/new families once,
+replacement caches, requests and transaction control arrays; transient NumPy
+expression allocations, BLAS/matrix/quadrature storage and compiled/Python
+overhead are not included. No-growth has no transaction peak beyond its
+persistent state. Explicitly retained legacy source records add 1,662,976
+bytes at 128 elements or 13,303,808 at 1024; they are not required by the
+compact iteration. Each 128-element legacy coefficient field remains
+409,600 bytes. Legacy work, if separately retained by the caller, adds its
+unchanged payload as well.
+
+The Phase 3B 128-element forced-growth comparison was 819,200 bytes of padded
+integration, 9,015,424 bytes of work, 10,079,360 bytes of compact state plus work,
+and 20,124,928 bytes of old/new coexistence. Phase 4A reduces work by 66.4%,
+state by 62.4%, and the measured transaction peak by 73.8%. Its cache category
+now includes exponentials and ``z_integral``, which were counted inside work
+in Phase 3B, so those two category columns are not identical inventories.
+Branch arrays alone still consume 2,457,600 bytes at 128 elements.
+
+Total copying across 128 forced-growth batches fell from 49,879,680 to
+4,826,112 bytes; spare-capacity transaction copying fell from 9,900,672 to
+182,784 bytes, all affected integration/cache/metadata rather than coefficient
+or unrelated work. At 1024 elements total copying fell from 399,037,440 to
+38,608,896 bytes. Both families repack five times in the forced cases; neither
+repacks in the spare-capacity case.
+
+The optional isolated 4096-element Windows probe reported a lifetime peak
+working set of 582,414,336 bytes both before and after the forced transaction:
+the repack did not exceed the earlier process high-water mark. Measured
+simultaneous transaction state was 124,395,520 bytes, versus Phase 3B's
+636,821,504 bytes. The unchanged RSS high-water mark is not a zero-memory-cost
+claim.
+
+Project Ruff commands were attempted but unavailable; pinned Ruff 0.16.2
+lint/format checks on changed Python files and ``git diff --check`` passed.
+No dependencies, persistence, numerical algorithms, legacy solver dtype or
+error solver were changed. No Phase 4B implementation is included.
+
 Solver functions
 ----------------
 

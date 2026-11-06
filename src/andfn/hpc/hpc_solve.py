@@ -25,7 +25,8 @@ from . import (
     hpc_well,
 )
 from . import hpc_math_functions as mf
-from .hpc_coefficients import candidate_view, coefficient_view
+from .hpc_coefficients import candidate_at, coefficient_view
+from .hpc_work import integration_view, work_record
 
 dtype_work = np.dtype(
     [
@@ -167,11 +168,12 @@ def solve(
     # fill work array ex_array
     for i, e in enumerate(element_struc_array):
         n = e["nint"]
-        mf.calc_thetas(n, e["_type"], e["thetas"][:n])
-        thetas = e["thetas"]
-        mf.fill_exp_array(n, thetas, work_array[i]["exp_array_m"], -1)
-        mf.fill_exp_array(n, thetas, work_array[i]["exp_array_p"], 1)
-        mf.fill_z_integral(e, work_array[i])
+        record = work_record(work_array, i)
+        thetas = integration_view(e, record, "thetas")
+        mf.calc_thetas(n, e["_type"], thetas[:n])
+        mf.fill_exp_array(n, thetas, record["exp_array_m"], -1)
+        mf.fill_exp_array(n, thetas, record["exp_array_p"], 1)
+        mf.fill_z_integral(e, record)
 
     logger.info(f"Number of elements: {len(element_struc_array)}")
     logger.info(f"Number of fractures: {len(fracture_struc_array)}")
@@ -500,12 +502,13 @@ def calculate_candidates(
         if e["error"] < max_error * 0 and nit > 30 and cnt_error == 0:
             cnt += 1
             continue
+        record = work_record(work_array, i)
         if e["_type"] == 0:  # Intersection
             hpc_intersection.solve(
                 e,
                 fracture_struc_array,
                 element_struc_array,
-                work_array[i],
+                record,
                 coef_data,
                 coef_start,
                 candidate_coef_data,
@@ -515,7 +518,7 @@ def calculate_candidates(
                 e,
                 fracture_struc_array,
                 element_struc_array,
-                work_array[i],
+                record,
                 coef_data,
                 coef_start,
                 candidate_coef_data,
@@ -528,7 +531,7 @@ def calculate_candidates(
                 e,
                 fracture_struc_array,
                 element_struc_array,
-                work_array[i],
+                record,
                 coef_data,
                 coef_start,
                 candidate_coef_data,
@@ -538,7 +541,7 @@ def calculate_candidates(
                 e,
                 fracture_struc_array,
                 element_struc_array,
-                work_array[i],
+                record,
                 coef_data,
                 coef_start,
                 candidate_coef_data,
@@ -548,7 +551,7 @@ def calculate_candidates(
                 e,
                 fracture_struc_array,
                 element_struc_array,
-                work_array[i],
+                record,
                 coef_data,
                 coef_start,
                 candidate_coef_data,
@@ -564,7 +567,7 @@ def commit_coefficients(
     for i in nb.prange(elements.size):
         e = elements[i]
         current = coefficient_view(e, coef_data, coef_start)
-        candidate = candidate_view(e, work[i], candidate_coef_data, coef_start)
+        candidate = candidate_at(e, work, i, candidate_coef_data, coef_start)
         current[:] = damping * candidate + (1 - damping) * current
 
 

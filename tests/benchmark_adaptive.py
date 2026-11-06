@@ -5,10 +5,13 @@ process-lifetime peak working set/RSS, separately from measured NumPy payload.
 """
 
 import argparse
+import cProfile
 import ctypes
+import io
 import json
 import logging
 import os
+import pstats
 import subprocess
 import sys
 from statistics import median
@@ -23,6 +26,7 @@ from test_hpc_coefficients import legacy_logical, logical, work_for
 
 from andfn.hpc import hpc_adaptive as adaptive
 from andfn.hpc import hpc_solve as hs
+from andfn.hpc import hpc_work as cw
 from andfn.storage import connectivity_from_hpc
 
 
@@ -34,7 +38,7 @@ def prepare(copies, spare=False):
         elements["nint"][elements["_type"] != 2] = 18
     work = work_for(elements)
     owner = adaptive.adaptive_from_hpc(elements)
-    owner.state.work[:] = work
+    cw.import_work(owner.state.work, work, elements)
     return fractures, elements, work, owner
 
 
@@ -140,6 +144,16 @@ def run_case(copies, ratio, increase, maximum, iterations=6, spare=False):
         "metadata_bytes_copied": sum(x["metadata_bytes_copied"] for x in batches),
         "total_bytes_copied": sum(x["total_bytes_copied"] for x in batches),
         "transaction_ms": 1000 * sum(x["transaction_seconds"] for x in batches),
+        "publication_ms": 1000 * sum(x["publication_seconds"] for x in batches),
+        "commit_ms_growth_batches": 1000 * sum(x["commit_seconds"] for x in batches),
+        "coefficient_repack_bytes": sum(x["coefficient_repack_bytes"] for x in batches),
+        "coefficient_relocation_bytes": sum(
+            x["coefficient_relocation_bytes"] for x in batches
+        ),
+        "cache_rebuild_bytes": sum(x["cache_rebuild_bytes"] for x in batches),
+        "branch_event_bytes_copied": sum(
+            x["branch_event_bytes_copied"] for x in batches
+        ),
         "staging_ms": 1000 * sum(x["transaction_staging_seconds"] for x in batches),
         "cache_rebuild_ms": 1000 * sum(x["cache_rebuild_seconds"] for x in batches),
         "recalculation_ms": 1000 * sum(x["recalculation_seconds"] for x in batches),
@@ -148,7 +162,14 @@ def run_case(copies, ratio, increase, maximum, iterations=6, spare=False):
         "detection_ms_all_assessments": 1000
         * sum(x["detection_seconds"] for x in samples.assessments),
         "maximum_old_new_payload": max(
-            (x["old_payload"] + x["replacement_payload"] for x in batches), default=0
+            (x["peak_simultaneous_numpy_payload"] for x in batches), default=0
+        ),
+        "peak_simultaneous_numpy_payload": max(
+            (x["peak_simultaneous_numpy_payload"] for x in batches),
+            default=cw.state_payload(state),
+        ),
+        "transaction_temporary_payload": max(
+            (x["transaction_temporary_payload"] for x in batches), default=0
         ),
         "payload": {
             "legacy_current": e0["coef"].nbytes,
@@ -156,15 +177,28 @@ def run_case(copies, ratio, increase, maximum, iterations=6, spare=False):
             "compact_current": s.coef_data.nbytes,
             "compact_candidate": s.candidate_coef_data.nbytes,
             "compact_compatibility_old": s.old_coef_data.nbytes,
-            "retained_integration": s.elements["thetas"].nbytes
-            + s.elements["dpsi_corr"].nbytes,
-            "retained_work": state.work.nbytes,
-            "total_compact_state_and_work": s.nbytes + state.work.nbytes,
+            "retained_integration": sum(
+                getattr(state.work, name).nbytes for name in cw.CACHE_FIELDS
+            ),
+            "retained_work": cw.payload(state.work)
+            - sum(getattr(state.work, name).nbytes for name in cw.CACHE_FIELDS),
+            "legacy_compatibility": e0.nbytes,
+            "total_compact_state_and_work": cw.state_payload(state),
         },
         "final_coefficient_difference": differences(
             legacy_logical(last_legacy), logical(s, s.coef_data)
         ),
     }
+    metrics["remaining_solver_work_ms"] = metrics["compact_ms"] - sum(
+        metrics[k]
+        for k in (
+            "transaction_ms",
+            "publication_ms",
+            "commit_ms_growth_batches",
+            "recalculation_ms",
+            "detection_ms_all_assessments",
+        )
+    )
     return metrics
 
 
@@ -223,7 +257,8 @@ def forced_peak():
     mask = e["_type"] != 2
     nc[mask] += 5
     ni[mask] = 2 * nc[mask]
-    replacement, stats = adaptive.build_replacement(owner.state, nc, ni, mask, 100, 5)
+    transaction, stats = adaptive.build_replacement(owner.state, nc, ni, mask, 100, 5)
+    replacement = adaptive.publish(transaction)
     # Keep both states live through the OS measurement.
     print(
         json.dumps(
@@ -231,16 +266,91 @@ def forced_peak():
                 "elements": e.size,
                 "baseline_lifetime_peak_rss": baseline,
                 "after_repack_lifetime_peak_rss": peak_rss(),
-                "old_new_numpy_payload": stats["old_payload"]
-                + stats["replacement_payload"],
-                "replacement_numpy_payload": replacement.storage.nbytes
-                + replacement.work.nbytes,
+                "old_new_numpy_payload": stats["peak_simultaneous_numpy_payload"],
+                "replacement_numpy_payload": cw.state_payload(replacement),
             }
         )
     )
 
 
-def main(include_peak=False):
+def profile_residual():
+    """Separate diagnostic runs; do not alter the comparable timed cases."""
+    f, _e, _, owner = prepare(16, True)
+    adaptive.adaptive_step(owner, f, 1e-12, 1, 0, -1.0, 10, 1, 0.5)
+    adaptive.adaptive_step(owner, f, 1e-12, 2, 0, -1.0, 10, 1, 0.5)
+    steady = cProfile.Profile()
+    steady.enable()
+    for nit in range(3, 203):
+        adaptive.adaptive_step(owner, f, 1e-12, nit, 0, -1.0, 10, 1, 0.5)
+    steady.disable()
+    _, _, _, original = prepare(16, True)
+    s = original.state.storage
+    nc, ni = s.elements["ncoef"].copy(), s.elements["nint"].copy()
+    required = s.elements["_type"] != 2
+    nc[required] += 1
+    ni[required] = 2 * nc[required]
+    construction = cProfile.Profile()
+    construction.enable()
+    for _ in range(100):
+        adaptive.build_replacement(original.state, nc, ni, required, 10, 1)
+    construction.disable()
+    traces = {}
+    for name, profile in (
+        ("steady_adaptive_step", steady),
+        ("spare_construction", construction),
+    ):
+        text = io.StringIO()
+        pstats.Stats(profile, stream=text).strip_dirs().sort_stats(
+            "tottime"
+        ).print_stats(16)
+        traces[name] = text.getvalue()
+    f, _, _, observed = prepare(16, True)
+    transitions = {}
+    commits = []
+
+    def observe(label, state, requests):
+        now = perf_counter()
+        if label == "after_first_commit":
+            commits.append(now - transitions["after_first_candidate"])
+        elif label == "after_second_commit":
+            commits.append(now - transitions["after_adaptive_candidate"])
+        transitions[label] = now
+
+    observed.transition_callback = observe
+    for nit in range(1, 7):
+        adaptive.adaptive_step(observed, f, 1e-12, nit, 0, -1.0, 10, 1, 0.5)
+    f, _, _, observed = prepare(16, True)
+    transitions.clear()
+    commits.clear()
+    observed.transition_callback = observe
+    start = perf_counter()
+    for nit in range(1, 7):
+        adaptive.adaptive_step(observed, f, 1e-12, nit, 0, -1.0, 10, 1, 0.5)
+    total = perf_counter() - start
+    stages = {
+        "detection": sum(x["detection_seconds"] for x in observed.assessments),
+        "transaction_construction": sum(
+            x["transaction_seconds"] - x["cache_rebuild_seconds"]
+            for x in observed.batches
+        ),
+        "publication": sum(x["publication_seconds"] for x in observed.batches),
+        "cache_rebuild": sum(x["cache_rebuild_seconds"] for x in observed.batches),
+        "candidate_recalculation": sum(
+            x["recalculation_seconds"] for x in observed.batches
+        ),
+        "commit": sum(commits),
+    }
+    stages["remaining_element_work"] = total - sum(stages.values())
+    return {
+        "24_iteration_spare_capacity": run_case(
+            16, -1, 1, 10, iterations=24, spare=True
+        ),
+        "six_element_steps_instrumented_ms": {k: 1000 * v for k, v in stages.items()},
+        "profiles": traces,
+    }
+
+
+def main(include_peak=False, include_profile=False):
     logging.getLogger("andfn").setLevel(logging.ERROR)
     normal = nb.get_num_threads()
     nb.set_num_threads(1)
@@ -287,6 +397,9 @@ def main(include_peak=False):
                 text=True,
             )
             report["process_peak"] = json.loads(result.stdout)
+        if include_profile:
+            nb.set_num_threads(normal)
+            report["residual_profile"] = profile_residual()
     finally:
         nb.set_num_threads(normal)
     print(json.dumps(report, indent=2))
@@ -296,8 +409,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--peak-rss", action="store_true")
     parser.add_argument("--peak-child", action="store_true")
+    parser.add_argument("--profile", action="store_true")
     args = parser.parse_args()
     if args.peak_child:
         forced_peak()
     else:
-        main(args.peak_rss)
+        main(args.peak_rss, args.profile)

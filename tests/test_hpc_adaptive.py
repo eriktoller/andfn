@@ -15,7 +15,8 @@ from andfn.constants import Constants
 from andfn.hpc import hpc_adaptive as adaptive
 from andfn.hpc import hpc_math_functions as mf
 from andfn.hpc import hpc_solve as hs
-from andfn.storage import FixedOrderStorage, _layout, fixed_order_to_hpc
+from andfn.hpc import hpc_work as cw
+from andfn.storage import _layout
 
 
 def prepared():
@@ -24,19 +25,22 @@ def prepared():
     e["nint"][[0, 3]] = [30, 17]
     w = work_for(e)
     owner = adaptive.adaptive_from_hpc(e)
-    owner.state.work[:] = w
+    cw.import_work(owner.state.work, w, e)
     return f, e, w, owner
 
 
 def snapshot(state):
     s = state.storage
     arrays = {name: value for name, value in vars(s).items()}
-    arrays["work"] = state.work
+    arrays.update({f"work.{k}": a for k, a in zip(cw.WorkArrays._fields, state.work)})
     return {name: (value, value.copy()) for name, value in arrays.items()}
 
 
 def assert_unchanged(state, before):
-    actual = {**vars(state.storage), "work": state.work}
+    actual = {
+        **vars(state.storage),
+        **{f"work.{k}": a for k, a in zip(cw.WorkArrays._fields, state.work)},
+    }
     for name, (original, copy) in before.items():
         assert actual[name] is original
         np.testing.assert_array_equal(actual[name], copy)
@@ -107,7 +111,7 @@ def test_transaction_failure_preserves_every_published_array(failure, monkeypatc
         if failure == "cache":
             raise RuntimeError("injected cache failure")
         if failure == "nonfinite_cache":
-            w["exp_array_p"][0, 0] = np.nan
+            w.exp_array_p[0] = np.nan
 
     before = snapshot(state)
     with pytest.raises((ValueError, MemoryError, RuntimeError)):
@@ -134,11 +138,13 @@ def test_replacement_preserves_prefixes_zeroes_new_entries_and_rebuilds_cache(in
     for name in ("coef_data", "candidate_coef_data", "old_coef_data"):
         getattr(old.storage, name)[:] += 0.125
     req = requests(owner, increase=increase)
+    old_lengths = old.storage.elements["ncoef"].copy()
     before = snapshot(old)
-    replacement, stats = adaptive.build_replacement(old, *req, 20, increase)
+    transaction, stats = adaptive.build_replacement(old, *req, 20, increase)
     assert_unchanged(old, before)
+    replacement = adaptive.publish(transaction)
     s = replacement.storage
-    for i, previous in enumerate(old.storage.elements["ncoef"]):
+    for i, previous in enumerate(old_lengths):
         a, b = old.storage.coef_start[i], s.coef_start[i]
         for name in ("coef_data", "candidate_coef_data", "old_coef_data"):
             assert_close(
@@ -150,14 +156,16 @@ def test_replacement_preserves_prefixes_zeroes_new_entries_and_rebuilds_cache(in
             )
     assert s.elements["nint"][0] == 2 * (4 + increase)
     assert s.elements["nint"][4] == old.storage.elements["nint"][4]
-    np.testing.assert_array_equal(replacement.work["len_discharge_element"][req[2]], 0)
+    np.testing.assert_array_equal(replacement.work.len_discharge_element[req[2]], 0)
     for i in np.flatnonzero(req[2]):
         n = s.elements["nint"][i]
         theta = np.zeros(n)
         mf.calc_thetas(n, s.elements["_type"][i], theta)
-        assert_close(s.elements["thetas"][i, :n], theta)
-        assert_close(replacement.work["exp_array_p"][i, :n], np.exp(1j * theta))
-    assert stats["integration_repacks"] == 0  # Padded bridge retains capacity.
+        assert_close(cw.work_record(replacement.work, i)["thetas"][:n], theta)
+        assert_close(
+            cw.work_record(replacement.work, i)["exp_array_p"][:n], np.exp(1j * theta)
+        )
+    assert stats["work_bytes_copied"] == 0
     assert stats["coefficient_repacks"] == int(
         np.any(s.coef_capacity != old.storage.coef_capacity)
     )
@@ -177,14 +185,18 @@ def test_growth_within_spare_capacity_and_ignored_nonzero_slack():
                 s.coef_start[i] : s.coef_start[i] + n
             ]
     state = adaptive.AdaptiveState(
-        FixedOrderStorage(s.elements.copy(), *arrays, starts, capacities),
-        owner.state.work.copy(),
+        adaptive.AdaptiveStorage(s.elements.copy(), *arrays, starts, capacities),
+        cw.allocate_work(s.elements, starts, capacities),
     )
-    new, stats = adaptive.build_replacement(state, *requests(owner), 20, 2)
+    transaction, stats = adaptive.build_replacement(state, *requests(owner), 20, 2)
+    new = adaptive.publish(transaction)
     np.testing.assert_array_equal(new.storage.coef_start, starts)
     np.testing.assert_array_equal(new.storage.coef_capacity, capacities)
     assert stats["coefficient_repacks"] == 0
-    assert stats["coefficient_bytes_copied"] > 0  # Transaction staging, not repacking.
+    assert stats["coefficient_bytes_copied"] == 0
+    assert stats["coefficient_relocation_bytes"] == 0
+    assert stats["work_bytes_copied"] == 0
+    assert new.storage.coef_data is state.storage.coef_data
     for i in (0, 1, 3):
         old_n = s.elements["ncoef"][i]
         np.testing.assert_array_equal(
@@ -279,11 +291,11 @@ def test_transition_snapshots_and_actual_legacy_loop(ratio, maximum, increase):
 
     def observe(label, state, requests):
         snapshots[label] = (
-            fixed_order_to_hpc(state.storage),
+            adaptive.to_hpc(state),
             state.storage.candidate_coef_data.copy(),
             state.storage.coef_start.copy(),
             requests,
-            state.work.copy(),
+            cw.export_work(state.work, hs.dtype_work),
         )
 
     owner.transition_callback = observe
@@ -319,19 +331,35 @@ def test_transition_snapshots_and_actual_legacy_loop(ratio, maximum, increase):
                     assert_close(
                         legacy_logical(compact, name), legacy_logical(elements, name)
                     )
+                    np.testing.assert_array_equal(
+                        legacy_logical(compact, name), legacy_logical(elements, name)
+                    )
                 else:
                     assert_close(compact[name], elements[name])
+                    np.testing.assert_array_equal(compact[name], elements[name])
             for i, n in enumerate(elements["ncoef"]):
                 assert_close(flat[starts[i] : starts[i] + n], candidates[i, :n])
+                np.testing.assert_array_equal(
+                    flat[starts[i] : starts[i] + n], candidates[i, :n]
+                )
                 assert_close(
                     compact_work["old_coef"][i, :n],
                     reference_work["old_coef"][i, :n],
                 )
+                np.testing.assert_array_equal(
+                    compact_work["old_coef"][i, :n], reference_work["old_coef"][i, :n]
+                )
                 ni = elements["nint"][i]
                 for name in ("thetas", "dpsi_corr"):
                     assert_close(compact[name][i, :ni], elements[name][i, :ni])
+                    np.testing.assert_array_equal(
+                        compact[name][i, :ni], elements[name][i, :ni]
+                    )
                 for name in ("exp_array_m", "exp_array_p", "z_integral"):
                     assert_close(
+                        compact_work[name][i, :ni], reference_work[name][i, :ni]
+                    )
+                    np.testing.assert_array_equal(
                         compact_work[name][i, :ni], reference_work[name][i, :ni]
                     )
                 events = reference_work["len_discharge_element"][i]
@@ -423,6 +451,7 @@ def run_adaptive(
 def test_adaptive_iteration_trajectory_thread_equivalence_and_repeatability(ratio):
     normal = nb.get_num_threads()
     reference = None
+    reference_legacy = None
     reference_requests = None
     try:
         for threads in sorted({1, 2, normal}):
@@ -440,12 +469,22 @@ def test_adaptive_iteration_trajectory_thread_equivalence_and_repeatability(rati
                         np.testing.assert_array_equal(x, y)
                     for x, y in zip(a[4:], b[4:]):
                         assert_close(x, y)
+                        np.testing.assert_array_equal(x, y)
                 if reference is not None:
-                    for a, b in zip(reference, compact):
+                    for a, b, baseline_a, baseline_b in zip(
+                        reference, compact, reference_legacy, legacy
+                    ):
                         for x, y in zip(a[2:4], b[2:4]):
                             np.testing.assert_array_equal(x, y)
-                        for x, y in zip(a[4:], b[4:]):
+                        for x, y, old_x, old_y in zip(
+                            a[4:], b[4:], baseline_a[4:], baseline_b[4:]
+                        ):
                             assert_close(x, y)
+                            # Cross-thread reductions may have baseline rounding
+                            # differences; require exactly the same legacy delta.
+                            np.testing.assert_array_equal(
+                                np.asarray(x) - y, np.asarray(old_x) - old_y
+                            )
                 owner.state.storage.validate()
                 s = owner.state.storage
                 assert np.all(
@@ -461,6 +500,7 @@ def test_adaptive_iteration_trajectory_thread_equivalence_and_repeatability(rati
                     np.testing.assert_array_equal(ni, legacy[i][3])
                     np.testing.assert_array_equal(mask, nc != legacy[i - 1][2])
                 reference = compact
+                reference_legacy = legacy
                 reference_requests = growth_requests
     finally:
         nb.set_num_threads(normal)
@@ -482,18 +522,21 @@ def test_single_growing_element_and_unaffected_cache_state():
     _, _, _, owner = prepared()
     before = snapshot(owner.state)
     required = requests(owner, ids=(0,), increase=1)
-    replacement, stats = adaptive.build_replacement(owner.state, *required, 5, 1)
+    transaction, stats = adaptive.build_replacement(owner.state, *required, 5, 1)
+    assert_unchanged(owner.state, before)
+    replacement = adaptive.publish(transaction)
     assert stats["expanded_elements"] == 1
     unchanged = ~required[2]
     for name in ("thetas", "dpsi_corr"):
-        np.testing.assert_array_equal(
-            replacement.storage.elements[name][unchanged],
-            owner.state.storage.elements[name][unchanged],
-        )
+        for i in np.flatnonzero(unchanged):
+            np.testing.assert_array_equal(
+                cw.work_record(replacement.work, i)[name],
+                cw.work_record(owner.state.work, i)[name],
+            )
     np.testing.assert_array_equal(
-        replacement.work[unchanged], owner.state.work[unchanged]
+        cw.export_work(replacement.work, hs.dtype_work)[unchanged],
+        cw.export_work(owner.state.work, hs.dtype_work)[unchanged],
     )
-    assert_unchanged(owner.state, before)
 
 
 @pytest.mark.parametrize("increase", [0, -1, np.iinfo(np.int64).max // 2])
@@ -526,14 +569,15 @@ def test_coefficient_and_integration_growth_bridge_cases(spare, previous_nint):
                     s.coef_start[i] : s.coef_start[i] + n
                 ]
         owner.state = adaptive.AdaptiveState(
-            FixedOrderStorage(s.elements.copy(), *arrays, starts, capacities),
-            owner.state.work.copy(),
+            adaptive.AdaptiveStorage(s.elements.copy(), *arrays, starts, capacities),
+            cw.allocate_work(s.elements, starts, capacities),
         )
-    state, stats = adaptive.build_replacement(
+    transaction, stats = adaptive.build_replacement(
         owner.state, *requests(owner, ids=(0,), increase=2), 20, 2
     )
+    state = adaptive.publish(transaction)
     assert stats["coefficient_repacks"] == int(not spare)
-    assert stats["integration_repacks"] == 0
+    assert stats["work_bytes_copied"] == 0
     assert state.storage.elements["nint"][0] == 12
     np.testing.assert_array_equal(
         state.storage.elements["nint"][1:], owner.state.storage.elements["nint"][1:]
