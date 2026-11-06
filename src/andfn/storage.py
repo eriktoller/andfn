@@ -27,6 +27,98 @@ fracture_metadata_dtype = np.dtype(
         if name not in {"elements", "nelements"}
     ]
 )
+fixed_order_element_dtype = np.dtype(
+    [
+        (name, element_dtype_hpc.fields[name][0])
+        for name in element_dtype_hpc.names
+        if name not in {"coef", "old_coef"}
+    ]
+)
+
+
+@dataclass
+class FixedOrderStorage:
+    """Coefficient-only migration; integration fields remain legacy padded."""
+
+    elements: NDArray
+    coef_data: NDArray
+    candidate_coef_data: NDArray
+    old_coef_data: NDArray
+    coef_start: NDArray
+    coef_capacity: NDArray
+
+    def validate(self):
+        _array(self.elements, fixed_order_element_dtype, "fixed-order elements")
+        for name in ("coef_data", "candidate_coef_data", "old_coef_data"):
+            _array(getattr(self, name), np.complex128, name)
+        _validate_layout(
+            self.coef_start,
+            self.elements["ncoef"].copy(),
+            self.coef_capacity,
+            self.coef_data.size,
+            "coef",
+        )
+        if not np.array_equal(self.elements["_id"], np.arange(self.elements.size)):
+            raise ValueError("IDs must equal array positions")
+        buffers = (self.coef_data, self.candidate_coef_data, self.old_coef_data)
+        if any(buffer.size != self.coef_data.size for buffer in buffers):
+            raise ValueError("Coefficient buffers must have identical sizes")
+        if any(
+            np.shares_memory(a, b)
+            for i, a in enumerate(buffers)
+            for b in buffers[i + 1 :]
+        ):
+            raise ValueError("Coefficient buffers must not alias")
+        if np.any(self.elements["ncoef"] > element_dtype_hpc["coef"].shape[0]):
+            raise ValueError("Fixed-order coefficients exceed retained work capacity")
+        nint = self.elements["nint"]
+        if np.any(nint < 0) or np.any(nint > element_dtype_hpc["thetas"].shape[0]):
+            raise ValueError("Invalid fixed integration lengths")
+        if np.any((self.elements["_type"] != 2) & (nint < 2)):
+            raise ValueError(
+                "Non-well elements require at least two integration points"
+            )
+
+    @property
+    def nbytes(self):
+        return sum(array.nbytes for array in vars(self).values())
+
+
+def fixed_order_from_hpc(elements, *, quantum=4):
+    """Copy coefficient state without allocating a complete padded record."""
+    _array(elements, element_dtype_hpc, "legacy elements")
+    lengths = _counts(elements["ncoef"], elements.size, "ncoef")
+    if np.any(lengths > elements["coef"].shape[1]):
+        raise ValueError("ncoef exceeds legacy coefficient storage")
+    capacities = growth_capacities(lengths, quantum=quantum)
+    starts, size = _layout(capacities)
+    metadata = np.empty(elements.size, dtype=fixed_order_element_dtype)
+    for name in metadata.dtype.names:
+        metadata[name] = elements[name]
+    current = np.zeros(size, dtype=np.complex128)
+    old = np.zeros_like(current)
+    for i, length in enumerate(lengths):
+        start = starts[i]
+        current[start : start + length] = elements["coef"][i, :length]
+        old[start : start + length] = elements["old_coef"][i, :length]
+    storage = FixedOrderStorage(
+        metadata, current, np.zeros_like(current), old, starts, capacities
+    )
+    storage.validate()
+    return storage
+
+
+def fixed_order_to_hpc(storage):
+    """Explicit compatibility export; never called by the fixed-order solver."""
+    storage.validate()
+    elements = np.zeros(storage.elements.size, dtype=element_dtype_hpc)
+    for name in storage.elements.dtype.names:
+        elements[name] = storage.elements[name]
+    for i, n in enumerate(storage.elements["ncoef"]):
+        start = storage.coef_start[i]
+        elements["coef"][i, :n] = storage.coef_data[start : start + n]
+        elements["old_coef"][i, :n] = storage.old_coef_data[start : start + n]
+    return elements
 
 
 def _array(array, dtype, name, ndim=1):

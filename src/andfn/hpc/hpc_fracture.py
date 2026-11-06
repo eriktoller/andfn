@@ -88,7 +88,15 @@ def sunflower_spiral(n_in, n_bnd):
 
 
 @nb.njit()
-def calc_omega(self_, z, element_struc_array, exclude=-1, element_ids=None):
+def calc_omega(
+    self_,
+    z,
+    element_struc_array,
+    exclude=-1,
+    element_ids=None,
+    coef_data=None,
+    coef_start=None,
+):
     """
     Calculates the omega for the fracture excluding element "exclude".
 
@@ -118,28 +126,56 @@ def calc_omega(self_, z, element_struc_array, exclude=-1, element_ids=None):
             element = element_struc_array[el]
             if element["_type"] == 0:  # Intersection
                 omega += hpc_intersection.calc_omega(
-                    element, z, self_["_id"], self_["radius"]
+                    element,
+                    z,
+                    self_["_id"],
+                    self_["radius"],
+                    coef_data=coef_data,
+                    coef_start=coef_start,
                 )
             elif element["_type"] == 1:  # Bounding circle
-                omega += hpc_bounding_circle.calc_omega(element, z)
+                omega += hpc_bounding_circle.calc_omega(
+                    element, z, coef_data=coef_data, coef_start=coef_start
+                )
             elif element["_type"] == 2:  # Well
                 omega += hpc_well.calc_omega(element, z)
             elif element["_type"] == 3:  # Constant head line
-                omega += hpc_const_head_line.calc_omega(element, z, self_["radius"])
+                omega += hpc_const_head_line.calc_omega(
+                    element,
+                    z,
+                    self_["radius"],
+                    coef_data=coef_data,
+                    coef_start=coef_start,
+                )
             elif element["_type"] == 4:  # Impermeable circle
-                omega += hpc_imp_object.calc_omega_circle(element, z)
+                omega += hpc_imp_object.calc_omega_circle(
+                    element, z, coef_data=coef_data, coef_start=coef_start
+                )
             elif element["_type"] == 5:  # Impermeable line
-                omega += hpc_imp_object.calc_omega_line(element, z)
+                omega += hpc_imp_object.calc_omega_line(
+                    element, z, coef_data=coef_data, coef_start=coef_start
+                )
         else:
             element = element_struc_array[el]
             # If the element is the one to exclude, we still need to add  the contribution from the mirror image of the element if it is an intersection or constant head line
             if element["_type"] == 0:  # Intersection
                 omega += hpc_intersection.calc_omega(
-                    element, z, self_["_id"], self_["radius"], mirror=True
+                    element,
+                    z,
+                    self_["_id"],
+                    self_["radius"],
+                    mirror=True,
+                    coef_data=coef_data,
+                    coef_start=coef_start,
                 )
             elif element["_type"] == 3:  # Constant head line
                 omega += hpc_const_head_line.calc_omega(
-                    element, z, self_["radius"], mirror=True
+                    element,
+                    z,
+                    self_["radius"],
+                    mirror=True,
+                    coef_data=coef_data,
+                    coef_start=coef_start,
                 )
     return omega
 
@@ -249,7 +285,14 @@ def calc_omega_error_org(self_, z, error_struc_array, exclude=-1):
 
 @nb.njit()
 def calc_omega_array(
-    self_, omega, z, element_struc_array, exclude=-1, element_ids=None
+    self_,
+    omega,
+    z,
+    element_struc_array,
+    exclude=-1,
+    element_ids=None,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     Calculates the omega for the fracture excluding element "exclude".
@@ -280,21 +323,44 @@ def calc_omega_array(
         if el != exclude:
             element = element_struc_array[el]
             if element["_type"] == 0:  # Intersection
-                hpc_intersection.calc_omega_array(element, omega, z, self_["_id"])
+                hpc_intersection.calc_omega_array(
+                    element,
+                    omega,
+                    z,
+                    self_["_id"],
+                    coef_data=coef_data,
+                    coef_start=coef_start,
+                )
             elif element["_type"] == 1:  # Bounding circle
-                hpc_bounding_circle.calc_omega_array(element, omega, z)
+                hpc_bounding_circle.calc_omega_array(
+                    element, omega, z, coef_data=coef_data, coef_start=coef_start
+                )
             elif element["_type"] == 2:  # Well
                 hpc_well.calc_omega_array(element, omega, z)
             elif element["_type"] == 3:  # Constant head line
-                hpc_const_head_line.calc_omega_array(element, omega, z)
+                hpc_const_head_line.calc_omega_array(
+                    element, omega, z, coef_data=coef_data, coef_start=coef_start
+                )
             elif element["_type"] == 4:  # Impermeable circle
-                hpc_imp_object.calc_omega_circle_array(element, omega, z)
+                hpc_imp_object.calc_omega_circle_array(
+                    element, omega, z, coef_data=coef_data, coef_start=coef_start
+                )
             elif element["_type"] == 5:  # Impermeable line
-                hpc_imp_object.calc_omega_line_array(element, omega, z)
+                hpc_imp_object.calc_omega_line_array(
+                    element, omega, z, coef_data=coef_data, coef_start=coef_start
+                )
 
 
 @nb.njit()
-def calc_w(self_, z, element_struc_array, exclude=-1, element_ids=None):
+def calc_w(
+    self_,
+    z,
+    element_struc_array,
+    exclude=-1,
+    element_ids=None,
+    coef_data=None,
+    coef_start=None,
+):
     """
     Calculates the omega for the fracture excluding element "exclude".
 
@@ -321,32 +387,92 @@ def calc_w(self_, z, element_struc_array, exclude=-1, element_ids=None):
         if el != exclude:
             element = element_struc_array[el]
             if element["_type"] == 0:  # Intersection
-                w += hpc_intersection.calc_w(element, z, self_["_id"], self_["radius"])
+                w += hpc_intersection.calc_w(
+                    element,
+                    z,
+                    self_["_id"],
+                    self_["radius"],
+                    coef_data=coef_data,
+                    coef_start=coef_start,
+                )
             elif element["_type"] == 1:  # Bounding circle
-                w += hpc_bounding_circle.calc_w(element, z)
+                w += hpc_bounding_circle.calc_w(
+                    element, z, coef_data=coef_data, coef_start=coef_start
+                )
             elif element["_type"] == 2:  # Well
                 w += hpc_well.calc_w(element, z)
             elif element["_type"] == 3:  # Constant head line
-                w += hpc_const_head_line.calc_w(element, z, self_["radius"])
+                w += hpc_const_head_line.calc_w(
+                    element,
+                    z,
+                    self_["radius"],
+                    coef_data=coef_data,
+                    coef_start=coef_start,
+                )
 
     return w
 
 
 @nb.njit(cache=CACHE)
-def calc_omega_csr(fracture, z, fractures, elements, ids, indptr, exclude=-1):
+def calc_omega_csr(
+    fracture,
+    z,
+    fractures,
+    elements,
+    ids,
+    indptr,
+    exclude=-1,
+    coef_data=None,
+    coef_start=None,
+):
     """CSR entry point; all arguments are numeric arrays or scalars."""
     start, end = indptr[fracture], indptr[fracture + 1]
-    return calc_omega(fractures[fracture], z, elements, exclude, ids[start:end])
+    return calc_omega(
+        fractures[fracture],
+        z,
+        elements,
+        exclude,
+        ids[start:end],
+        coef_data=coef_data,
+        coef_start=coef_start,
+    )
 
 
 @nb.njit(cache=CACHE)
-def calc_w_csr(fracture, z, fractures, elements, ids, indptr, exclude=-1):
+def calc_w_csr(
+    fracture,
+    z,
+    fractures,
+    elements,
+    ids,
+    indptr,
+    exclude=-1,
+    coef_data=None,
+    coef_start=None,
+):
     start, end = indptr[fracture], indptr[fracture + 1]
-    return calc_w(fractures[fracture], z, elements, exclude, ids[start:end])
+    return calc_w(
+        fractures[fracture],
+        z,
+        elements,
+        exclude,
+        ids[start:end],
+        coef_data=coef_data,
+        coef_start=coef_start,
+    )
 
 
 @nb.njit(cache=CACHE, parallel=True)
-def get_heads_csr(fractures, elements, ids, indptr, z_array, fracture_indices=None):
+def get_heads_csr(
+    fractures,
+    elements,
+    ids,
+    indptr,
+    z_array,
+    fracture_indices=None,
+    coef_data=None,
+    coef_start=None,
+):
     """Evaluate the same scaled fracture points as get_heads, without padding."""
     size = fractures.size if fracture_indices is None else fracture_indices.size
     heads = np.zeros((size, z_array.size), dtype=np.float64)
@@ -359,7 +485,17 @@ def get_heads_csr(fractures, elements, ids, indptr, z_array, fracture_indices=No
         for j in range(z_array.size):
             heads[row, j] = head_from_phi(
                 fractures[i],
-                np.real(calc_omega(fractures[i], z[j], elements, -1, element_ids)),
+                np.real(
+                    calc_omega(
+                        fractures[i],
+                        z[j],
+                        elements,
+                        -1,
+                        element_ids,
+                        coef_data=coef_data,
+                        coef_start=coef_start,
+                    )
+                ),
             )
         gf.map_2d_to_3d(fractures[i], z, points[row])
     return heads, points

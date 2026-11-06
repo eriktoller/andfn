@@ -36,6 +36,8 @@ def asym_expansion(chi, coef):
     """
     res = 0.0 + 0.0j
     length = len(coef)
+    if length == 0:
+        return res
     for n in range(length - 1):
         res += coef[length - n - 1]
         res /= chi
@@ -44,7 +46,7 @@ def asym_expansion(chi, coef):
 
 
 @nb.njit()
-def asym_expansion_array(omega, chi, coef):
+def asym_expansion_array(omega, chi, coef, negative=False):
     """
     Function that calculates the asymptotic expansion starting from 0 for a given point chi and an array of
     coefficients.
@@ -65,6 +67,8 @@ def asym_expansion_array(omega, chi, coef):
     """
     n_omega = omega.size
     length = len(coef)
+    if length == 0:
+        return
 
     for i in range(n_omega):
         tmp = 0.0 + 0.0j
@@ -72,7 +76,7 @@ def asym_expansion_array(omega, chi, coef):
             tmp += coef[length - n - 1]
             tmp /= chi[i]
         tmp += coef[0]
-        omega[i] += tmp
+        omega[i] += -tmp if negative else tmp
 
 
 @nb.njit(inline="always")
@@ -123,6 +127,8 @@ def taylor_series(chi, coef):
     """
     res = 0.0 + 0.0j
     length = len(coef)
+    if length == 0:
+        return res
     for n in range(length - 1):
         res += coef[length - n - 1]
         res *= chi
@@ -153,6 +159,8 @@ def taylor_series_array(omega, chi, coef):
     """
     n_omega = omega.size
     length = len(coef)
+    if length == 0:
+        return
 
     for i in range(n_omega):
         tmp = 0.0 + 0.0j
@@ -184,6 +192,8 @@ def taylor_series_d1(chi, coef):
 
     res = 0.0 + 0.0j
     length = len(coef)
+    if length < 2:
+        return res
     for n in range(length - 2):
         res += coef[length - n - 1] * (length - n - 1)
         res *= chi
@@ -245,7 +255,17 @@ def well_chi_array(omega, chi, q):
 
 @nb.njit()
 def cauchy_integral_real(
-    n, m, thetas, frac0, element_id_, element_struc_array, endpoints0, work_array, coef
+    n,
+    m,
+    thetas,
+    frac0,
+    element_id_,
+    element_struc_array,
+    endpoints0,
+    work_array,
+    coef,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     FUnction that calculates the Cauchy integral with the discharge potential for a given array of thetas.
@@ -284,7 +304,14 @@ def cauchy_integral_real(
         chi = work_array["exp_array_p"][ii]
         z = gf.map_chi_to_z_line(chi, endpoints0)
         # z = work_array["z_integral"][ii]
-        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
+        omega = hpc_fracture.calc_omega(
+            frac0,
+            z,
+            element_struc_array,
+            element_id_,
+            coef_data=coef_data,
+            coef_start=coef_start,
+        )
         work_array["phi"][ii] = np.real(omega)
     for jj in range(m):
         res_tmp = 0.0 + 0.0j
@@ -297,7 +324,8 @@ def cauchy_integral_real(
 
     for ii in range(m):
         coef[ii] = 2 * work_array["integral"][ii] / n
-    coef[0] = coef[0] / 2
+    if m:
+        coef[0] = coef[0] / 2
 
 
 @nb.njit()
@@ -829,6 +857,8 @@ def cauchy_integral_domega_line(
     endpoints0,
     work_array,
     coef,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
@@ -862,7 +892,14 @@ def cauchy_integral_domega_line(
     for ii in range(n):
         chi = work_array["exp_array_p"][ii]
         z = gf.map_chi_to_z_line(chi, endpoints0)
-        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
+        omega = hpc_fracture.calc_omega(
+            frac0,
+            z,
+            element_struc_array,
+            element_id_,
+            coef_data=coef_data,
+            coef_start=coef_start,
+        )
         work_array["psi"][ii] = np.imag(omega)
     delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
     work_array["dpsi"][0] = 0.0  # Add this line
@@ -903,7 +940,8 @@ def cauchy_integral_domega_line(
 
     for ii in range(m):
         coef[ii] = 2j * work_array["integral"][ii] / n
-    coef[0] = coef[0] / 2
+    if m:
+        coef[0] = coef[0] / 2
 
 
 @nb.njit()
@@ -918,6 +956,8 @@ def cauchy_integral_domega(
     center,
     work_array,
     coef,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     FUnction that calculates the Cauchy integral with the stream function for a given array of thetas.
@@ -953,7 +993,14 @@ def cauchy_integral_domega(
     for ii in range(n):
         chi = work_array["exp_array_p"][ii]
         z = gf.map_chi_to_z_circle(chi, radius, center)
-        omega = hpc_fracture.calc_omega(frac0, z, element_struc_array, element_id_)
+        omega = hpc_fracture.calc_omega(
+            frac0,
+            z,
+            element_struc_array,
+            element_id_,
+            coef_data=coef_data,
+            coef_start=coef_start,
+        )
         work_array["psi"][ii] = np.imag(omega)
     delta_psi = work_array["psi"][1:n] - work_array["psi"][: n - 1]
     work_array["dpsi"][0] = 0.0  # Add this line to set the first value of dpsi to zero
@@ -984,7 +1031,8 @@ def cauchy_integral_domega(
 
     for ii in range(m):
         coef[ii] = 2j * work_array["integral"][ii] / n
-    coef[0] = coef[0] / 2
+    if m:
+        coef[0] = coef[0] / 2
 
 
 @nb.njit()

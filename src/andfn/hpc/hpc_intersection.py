@@ -10,6 +10,7 @@ import numpy as np
 from ..constants import R_COND
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
+from .hpc_coefficients import candidate_view, coefficient_view
 
 
 @nb.njit()
@@ -90,7 +91,15 @@ def discharge_term_error(self_, z, frac_is, radius):
 
 
 @nb.njit()
-def solve(self_, fracture_struc_array, element_struc_array, work_array):
+def solve(
+    self_,
+    fracture_struc_array,
+    element_struc_array,
+    work_array,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
+):
     """
     Solves the intersection element.
 
@@ -109,9 +118,12 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     -------
     Edits the self_ array and works_array in place.
     """
+    candidate = candidate_view(self_, work_array, candidate_coef_data, coef_start)
     frac0 = fracture_struc_array[self_["frac0"]]
     frac1 = fracture_struc_array[self_["frac1"]]
-    work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    work_array["old_coef"][: self_["ncoef"]] = coefficient_view(
+        self_, coef_data, coef_start
+    )
     mf.cauchy_integral_real(
         self_["nint"],
         self_["ncoef"],
@@ -122,6 +134,8 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
         self_["endpoints0"],
         work_array,
         work_array["coef0"][: self_["ncoef"]],
+        coef_data=coef_data,
+        coef_start=coef_start,
     )
     mf.cauchy_integral_real(
         self_["nint"],
@@ -133,25 +147,26 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
         self_["endpoints1"],
         work_array,
         work_array["coef1"][: self_["ncoef"]],
+        coef_data=coef_data,
+        coef_start=coef_start,
     )
 
     for i in range(self_["ncoef"]):
-        work_array["coef"][i] = np.real(
+        candidate[i] = np.real(
             (frac0["t"] * work_array["coef1"][i] - frac1["t"] * work_array["coef0"][i])
             / (frac0["t"] + frac1["t"])
         )
-    work_array["coef"][0] = (
-        0.0  # Set the first coefficient to zero (constant embedded in discharge matrix)
-    )
+    if candidate.size:
+        candidate[0] = 0.0
 
     # self_['error'] = np.max(np.abs(work_array['coef'][:self_['ncoef']] - work_array['old_coef'][:self_['ncoef']]))
     self_["error_old2"] = self_["error_old"]
     self_["error_old"] = self_["error"]
     self_["error"] = mf.calc_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
     self_["error_coef"] = mf.calc_coef_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
 
 
@@ -258,7 +273,9 @@ def solve_error(
 
 
 @nb.njit(inline="always")
-def calc_omega(self_, z, frac_is_id, radius, mirror=False):
+def calc_omega(
+    self_, z, frac_is_id, radius, mirror=False, coef_data=None, coef_start=None
+):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -295,7 +312,9 @@ def calc_omega(self_, z, frac_is_id, radius, mirror=False):
             return sign * mf.well_chi(chi_mirror, self_["q"])
         return 0.0 + 0.0j
     chi = gf.map_z_line_to_chi(z, endpoints)
-    omega = sign * mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    omega = sign * mf.asym_expansion(
+        chi, coefficient_view(self_, coef_data, coef_start)
+    )
     omega += sign * mf.well_chi(chi, self_["q"])
     cond0 = np.abs(endpoints[0] + endpoints[1]) / 2.0 > radius * R_COND
     if cond0:
@@ -385,7 +404,7 @@ def calc_omega_error_org(self_, z, frac_is_id):
 
 
 @nb.njit()
-def calc_omega_array(self_, omega, z, frac_is_id):
+def calc_omega_array(self_, omega, z, frac_is_id, coef_data=None, coef_start=None):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -407,16 +426,20 @@ def calc_omega_array(self_, omega, z, frac_is_id):
     # See if function is in the first or second fracture that the intersection is associated with
     if frac_is_id == self_["frac0"]:
         chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
-        mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+        mf.asym_expansion_array(
+            omega, chi, coefficient_view(self_, coef_data, coef_start)
+        )
         mf.well_chi_array(omega, chi, self_["q"])
     else:
         chi = gf.map_z_line_to_chi(z, self_["endpoints1"])
-        mf.asym_expansion_array(omega, chi, -self_["coef"][: self_["ncoef"]])
+        mf.asym_expansion_array(
+            omega, chi, coefficient_view(self_, coef_data, coef_start), negative=True
+        )
         mf.well_chi_array(omega, chi, -self_["q"])
 
 
 @nb.njit()
-def calc_w(self_, z, frac_is_id, radius):
+def calc_w(self_, z, frac_is_id, radius, coef_data=None, coef_start=None):
     """
     Calculate the complex discharge vector for the intersection.
 
@@ -444,7 +467,9 @@ def calc_w(self_, z, frac_is_id, radius):
         endpoints = self_["endpoints1"]
         sign = -1.0
     chi = gf.map_z_line_to_chi(z, endpoints)
-    w = -sign * mf.asym_expansion_d1(chi, self_["coef"][: self_["ncoef"]])
+    w = -sign * mf.asym_expansion_d1(
+        chi, coefficient_view(self_, coef_data, coef_start)
+    )
     w -= sign * self_["q"] / (2 * np.pi * chi)
     w *= 2 * chi**2 / (chi**2 - 1) * 2 / (endpoints[1] - endpoints[0])
     # Mirror term: -d/dz[ well_chi(chi_mirror, q) ]

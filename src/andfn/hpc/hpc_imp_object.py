@@ -9,6 +9,7 @@ import numpy as np
 
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
+from .hpc_coefficients import candidate_view, coefficient_view
 
 ########################################################################################################################
 ## Impermeable Circle
@@ -16,7 +17,15 @@ from . import hpc_math_functions as mf
 
 
 @nb.njit()
-def solve_circle(self_, fracture_struc_array, element_struc_array, work_array):
+def solve_circle(
+    self_,
+    fracture_struc_array,
+    element_struc_array,
+    work_array,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
+):
     """
     Solves the constant head line element.
 
@@ -36,9 +45,12 @@ def solve_circle(self_, fracture_struc_array, element_struc_array, work_array):
     None
         Edits the self_ array and works_array in place.
     """
+    candidate = candidate_view(self_, work_array, candidate_coef_data, coef_start)
     mf.get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array)
     frac0 = fracture_struc_array[self_["frac0"]]
-    work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    work_array["old_coef"][: self_["ncoef"]] = coefficient_view(
+        self_, coef_data, coef_start
+    )
     mf.cauchy_integral_domega(
         self_["nint"],
         self_["ncoef"],
@@ -49,24 +61,27 @@ def solve_circle(self_, fracture_struc_array, element_struc_array, work_array):
         self_["radius"],
         self_["center"],
         work_array,
-        work_array["coef"][: self_["ncoef"]],
+        candidate[: self_["ncoef"]],
+        coef_data=coef_data,
+        coef_start=coef_start,
     )
 
     for i in range(self_["ncoef"]):
-        work_array["coef"][i] = np.conj(work_array["coef"][i])
-    work_array["coef"][0] = 0.0 + 0.0j  # Set the first coefficient to zero
+        candidate[i] = np.conj(candidate[i])
+    if candidate.size:
+        candidate[0] = 0.0 + 0.0j
     self_["error_old2"] = self_["error_old"]
     self_["error_old"] = self_["error"]
     self_["error"] = mf.calc_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
     self_["error_coef"] = mf.calc_coef_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
 
 
 @nb.njit(inline="always")
-def calc_omega_circle(self_, z):
+def calc_omega_circle(self_, z, coef_data=None, coef_start=None):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -85,7 +100,7 @@ def calc_omega_circle(self_, z):
     chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
     if np.abs(chi) < 1.0 - 1e-10:
         return np.nan + 1j * np.nan
-    omega = mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    omega = mf.asym_expansion(chi, coefficient_view(self_, coef_data, coef_start))
     return omega
 
 
@@ -114,7 +129,7 @@ def calc_omega_circle_error(self_, z):
 
 
 @nb.njit()
-def calc_omega_circle_array(self_, omega, z):
+def calc_omega_circle_array(self_, omega, z, coef_data=None, coef_start=None):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -133,7 +148,7 @@ def calc_omega_circle_array(self_, omega, z):
         Edits the omega array in place with the resulting value for the omega function
     """
     chi = gf.map_z_circle_to_chi(z, self_["radius"], self_["center"])
-    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    mf.asym_expansion_array(omega, chi, coefficient_view(self_, coef_data, coef_start))
     for i in range(len(omega)):
         if np.abs(chi[i]) < 1.0 - 1e-10:
             omega[i] = (
@@ -147,7 +162,15 @@ def calc_omega_circle_array(self_, omega, z):
 
 
 @nb.njit()
-def solve_line(self_, fracture_struc_array, element_struc_array, work_array):
+def solve_line(
+    self_,
+    fracture_struc_array,
+    element_struc_array,
+    work_array,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
+):
     """
     Solves the constant head line element.
 
@@ -167,9 +190,12 @@ def solve_line(self_, fracture_struc_array, element_struc_array, work_array):
     None
         Edits the self_ array and works_array in place.
     """
+    candidate = candidate_view(self_, work_array, candidate_coef_data, coef_start)
     mf.get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array)
     frac0 = fracture_struc_array[self_["frac0"]]
-    work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    work_array["old_coef"][: self_["ncoef"]] = coefficient_view(
+        self_, coef_data, coef_start
+    )
     mf.cauchy_integral_domega_line(
         self_["nint"],
         self_["ncoef"],
@@ -179,7 +205,9 @@ def solve_line(self_, fracture_struc_array, element_struc_array, work_array):
         element_struc_array,
         self_["endpoints0"],
         work_array,
-        work_array["coef"][: self_["ncoef"]],
+        candidate[: self_["ncoef"]],
+        coef_data=coef_data,
+        coef_start=coef_start,
     )
     # frac0 = fracture_struc_array[self_["frac0"]]
     # work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
@@ -196,20 +224,21 @@ def solve_line(self_, fracture_struc_array, element_struc_array, work_array):
     # )
 
     for i in range(self_["ncoef"]):
-        work_array["coef"][i] = -np.imag(work_array["coef"][i]) * 1j
-    work_array["coef"][0] = 0.0 + 0.0j  # Set the first coefficient to zero
+        candidate[i] = -np.imag(candidate[i]) * 1j
+    if candidate.size:
+        candidate[0] = 0.0 + 0.0j
     self_["error_old2"] = self_["error_old"]
     self_["error_old"] = self_["error"]
     self_["error"] = mf.calc_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
     self_["error_coef"] = mf.calc_coef_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
 
 
 @nb.njit(inline="always")
-def calc_omega_line(self_, z):
+def calc_omega_line(self_, z, coef_data=None, coef_start=None):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -226,7 +255,7 @@ def calc_omega_line(self_, z):
         The resulting value for the omega function
     """
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
-    omega = mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    omega = mf.asym_expansion(chi, coefficient_view(self_, coef_data, coef_start))
     return omega
 
 
@@ -253,7 +282,7 @@ def calc_omega_line_error(self_, z):
 
 
 @nb.njit()
-def calc_omega_line_array(self_, omega, z):
+def calc_omega_line_array(self_, omega, z, coef_data=None, coef_start=None):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -272,4 +301,4 @@ def calc_omega_line_array(self_, omega, z):
         Edits the omega array in place with the resulting value for the omega function
     """
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
-    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    mf.asym_expansion_array(omega, chi, coefficient_view(self_, coef_data, coef_start))

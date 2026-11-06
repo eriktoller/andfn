@@ -25,6 +25,7 @@ from . import (
     hpc_well,
 )
 from . import hpc_math_functions as mf
+from .hpc_coefficients import candidate_view, coefficient_view
 
 dtype_work = np.dtype(
     [
@@ -58,7 +59,17 @@ logger = logging.getLogger(__name__)
 
 
 def solve(
-    fracture_struc_array, element_struc_array, discharge_int, constants, ntype_elements
+    fracture_struc_array,
+    element_struc_array,
+    discharge_int,
+    constants,
+    ntype_elements,
+    *,
+    fixed_order=False,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
+    iteration_callback=None,
 ):
     """
     Solves the DFN.
@@ -82,6 +93,16 @@ def solve(
         The array of elements
 
     """
+    if coef_data is not None and not fixed_order:
+        raise ValueError("Flat coefficient buffers require fixed-order execution")
+    if (coef_data is None) != (candidate_coef_data is None) or (
+        (coef_data is None) != (coef_start is None)
+    ):
+        raise ValueError(
+            "Current, candidate, and start arrays must be supplied together"
+        )
+    if not element_struc_array.size or not fracture_struc_array.size:
+        raise ValueError("Solving requires at least one element and fracture")
     # Get the constants, this is necessary for Numba parallelization to work
     max_error = constants["MAX_ERROR"]
     max_iterations = constants["MAX_ITERATIONS"]
@@ -179,6 +200,8 @@ def solve(
                 connectivity.ids,
                 connectivity.indptr,
                 discharge_indices,
+                coef_data,
+                coef_start,
             )
             error_q = np.max(np.abs(discharges - discharges_old))
             error_q = np.mean(np.abs(discharges - discharges_old))
@@ -190,19 +213,34 @@ def solve(
 
         # Solve the elements
         starte = time.time()
-        cnt_set_zero = element_solver2(
-            num_elements,
-            element_struc_array,
-            fracture_struc_array,
-            work_array,
-            max_error,
-            nit,
-            cnt_error,
-            coef_ratio,
-            max_coef,
-            coef_increase,
-            damping,
-        )
+        if fixed_order:
+            fixed_order_step(
+                element_struc_array,
+                fracture_struc_array,
+                work_array,
+                max_error,
+                nit,
+                cnt_error,
+                damping,
+                coef_data,
+                coef_start,
+                candidate_coef_data,
+            )
+            cnt_set_zero = 0
+        else:
+            cnt_set_zero = element_solver2(
+                num_elements,
+                element_struc_array,
+                fracture_struc_array,
+                work_array,
+                max_error,
+                nit,
+                cnt_error,
+                coef_ratio,
+                max_coef,
+                coef_increase,
+                damping,
+            )
         timee = time.time() - starte
         sum_timee += timee
         sum_timeq += timeq
@@ -245,6 +283,9 @@ def solve(
                 nit,
                 cnt_error,
                 damping,
+                coef_data,
+                coef_start,
+                candidate_coef_data,
             )
             # error = 1.0
 
@@ -252,6 +293,16 @@ def solve(
             cnt_error += 1
             error_q = 1e30
             # error = 1.0
+        if iteration_callback is not None:
+            iteration_callback(
+                nit,
+                element_struc_array,
+                fracture_struc_array,
+                work_array,
+                discharges,
+                error_q,
+                cnt_error,
+            )
 
     # Print the solver results
     logger.info("---------------------------------------")
@@ -269,6 +320,37 @@ def solve(
     )
 
     return element_struc_array, work_array
+
+
+def solve_fixed_order(
+    storage, fractures, discharge_int, constants, *, iteration_callback=None
+):
+    """Opt-in compact solve; no export, expansion, or layout mutation."""
+    storage.validate()
+    ncoef, nint = storage.elements["ncoef"].copy(), storage.elements["nint"].copy()
+    starts, capacities = storage.coef_start.copy(), storage.coef_capacity.copy()
+    result = solve(
+        fractures,
+        storage.elements,
+        discharge_int,
+        constants,
+        None,
+        fixed_order=True,
+        coef_data=storage.coef_data,
+        coef_start=storage.coef_start,
+        candidate_coef_data=storage.candidate_coef_data,
+        iteration_callback=iteration_callback,
+    )
+    if not (
+        np.array_equal(ncoef, storage.elements["ncoef"])
+        and np.array_equal(nint, storage.elements["nint"])
+        and np.array_equal(starts, storage.coef_start)
+        and np.array_equal(capacities, storage.coef_capacity)
+    ):
+        raise RuntimeError(
+            "Fixed-order solve changed coefficient or integration layout"
+        )
+    return result
 
 
 @nb.njit(cache=CACHE)
@@ -338,7 +420,7 @@ def get_discharge_indices(elements):
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
-def element_solver(
+def calculate_candidates(
     num_elements,
     element_struc_array,
     fracture_struc_array,
@@ -347,9 +429,12 @@ def element_solver(
     nit,
     cnt_error,
     damping,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
 ):
     """
-    Solves the elements and updates the coefficients in the work array.
+    Calculate candidates and convergence metadata without changing current coefficients.
 
     Parameters
     ----------
@@ -387,37 +472,147 @@ def element_solver(
             continue
         if e["_type"] == 0:  # Intersection
             hpc_intersection.solve(
-                e, fracture_struc_array, element_struc_array, work_array[i]
+                e,
+                fracture_struc_array,
+                element_struc_array,
+                work_array[i],
+                coef_data,
+                coef_start,
+                candidate_coef_data,
             )
         elif e["_type"] == 1:  # Bounding circle
             hpc_bounding_circle.solve(
-                e, fracture_struc_array, element_struc_array, work_array[i]
+                e,
+                fracture_struc_array,
+                element_struc_array,
+                work_array[i],
+                coef_data,
+                coef_start,
+                candidate_coef_data,
             )
         elif e["_type"] == 2:  # Well
             e["error"] = 0.0
             cnt += 1
         elif e["_type"] == 3:  # Constant head line
             hpc_const_head_line.solve(
-                e, fracture_struc_array, element_struc_array, work_array[i]
+                e,
+                fracture_struc_array,
+                element_struc_array,
+                work_array[i],
+                coef_data,
+                coef_start,
+                candidate_coef_data,
             )
         elif e["_type"] == 4:  # Impermeable circle
             hpc_imp_object.solve_circle(
-                e, fracture_struc_array, element_struc_array, work_array[i]
+                e,
+                fracture_struc_array,
+                element_struc_array,
+                work_array[i],
+                coef_data,
+                coef_start,
+                candidate_coef_data,
             )
         elif e["_type"] == 5:  # Impermeable line
             hpc_imp_object.solve_line(
-                e, fracture_struc_array, element_struc_array, work_array[i]
+                e,
+                fracture_struc_array,
+                element_struc_array,
+                work_array[i],
+                coef_data,
+                coef_start,
+                candidate_coef_data,
             )
 
-    # Get the coefficients from the work array
-    for i in nb.prange(num_elements):
-        e = element_struc_array[i]
-        e["coef"][: e["ncoef"]] = (
-            damping * work_array[i]["coef"][: e["ncoef"]]
-            + (1 - damping) * e["coef"][: e["ncoef"]]
-        )
-
     return cnt
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
+def commit_coefficients(
+    elements, work, damping, coef_data=None, coef_start=None, candidate_coef_data=None
+):
+    for i in nb.prange(elements.size):
+        e = elements[i]
+        current = coefficient_view(e, coef_data, coef_start)
+        candidate = candidate_view(e, work[i], candidate_coef_data, coef_start)
+        current[:] = damping * candidate + (1 - damping) * current
+
+
+@nb.njit(cache=CACHE)
+def element_solver(
+    num_elements,
+    element_struc_array,
+    fracture_struc_array,
+    work_array,
+    max_error,
+    nit,
+    cnt_error,
+    damping,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
+):
+    cnt = calculate_candidates(
+        num_elements,
+        element_struc_array,
+        fracture_struc_array,
+        work_array,
+        max_error,
+        nit,
+        cnt_error,
+        damping,
+        coef_data,
+        coef_start,
+        candidate_coef_data,
+    )
+    commit_coefficients(
+        element_struc_array,
+        work_array,
+        damping,
+        coef_data,
+        coef_start,
+        candidate_coef_data,
+    )
+    return cnt
+
+
+@nb.njit(cache=CACHE)
+def fixed_order_step(
+    elements,
+    fractures,
+    work,
+    max_error,
+    nit,
+    cnt_error,
+    damping,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
+):
+    """The no-growth element_solver2 schedule, including its second commit."""
+    if not 1.0 > max_error:
+        return
+    calculate_candidates(
+        elements.size,
+        elements,
+        fractures,
+        work,
+        max_error,
+        nit,
+        cnt_error,
+        damping,
+        coef_data,
+        coef_start,
+        candidate_coef_data,
+    )
+    commit_coefficients(
+        elements, work, damping, coef_data, coef_start, candidate_coef_data
+    )
+    if nit >= 2:
+        work["set_zero"][:] = False
+        commit_coefficients(
+            elements, work, damping, coef_data, coef_start, candidate_coef_data
+        )
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
@@ -635,6 +830,8 @@ def solve_discharge_matrix(
     connectivity_ids=None,
     connectivity_indptr=None,
     discharge_indices=None,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -680,6 +877,8 @@ def solve_discharge_matrix(
         connectivity_ids,
         connectivity_indptr,
         discharge_indices,
+        coef_data=coef_data,
+        coef_start=coef_start,
     )
     logger.debug(f"Pre solve time: {time.time() - start0}")
 
@@ -712,6 +911,8 @@ def pre_matrix_solve(
     connectivity_ids=None,
     connectivity_indptr=None,
     discharge_indices=None,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     Solves the discharge matrix for the DFN and stores the discharges and constants in the elements and fractures.
@@ -758,6 +959,8 @@ def pre_matrix_solve(
         connectivity_ids,
         connectivity_indptr,
         discharge_indices,
+        coef_data=coef_data,
+        coef_start=coef_start,
     )
 
 
@@ -848,6 +1051,8 @@ def build_head_matrix(
     connectivity_ids=None,
     connectivity_indptr=None,
     discharge_indices=None,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     Builds the head matrix for the DFN and stores it.
@@ -891,7 +1096,13 @@ def build_head_matrix(
         omega = 0.0 + 0.0j
         for i in range(discharge_int):
             omega += hpc_fracture.calc_omega(
-                frac0, z0[i], element_struc_array, -1, ids0
+                frac0,
+                z0[i],
+                element_struc_array,
+                -1,
+                ids0,
+                coef_data=coef_data,
+                coef_start=coef_start,
             )
         omega = omega / discharge_int
         if e["_type"] == 0:  # Intersection
@@ -903,7 +1114,13 @@ def build_head_matrix(
             omega1 = 0.0 + 0.0j
             for i in range(discharge_int):
                 omega1 += hpc_fracture.calc_omega(
-                    frac1, z1[i], element_struc_array, -1, ids1
+                    frac1,
+                    z1[i],
+                    element_struc_array,
+                    -1,
+                    ids1,
+                    coef_data=coef_data,
+                    coef_start=coef_start,
                 )
             omega1 = omega1 / discharge_int
             head_matrix[j] = np.real(omega1) / frac1["t"] - np.real(omega) / frac0["t"]
@@ -1228,6 +1445,8 @@ def get_bnd_error(
     nit,
     max_error,
     constants,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     Builds the head matrix for the DFN and stores it.
@@ -1277,7 +1496,11 @@ def get_bnd_error(
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
             for i in range(discharge_int):
                 omega_vec[i] = hpc_fracture.calc_omega(
-                    frac0, z0[i], element_struc_array
+                    frac0,
+                    z0[i],
+                    element_struc_array,
+                    coef_data=coef_data,
+                    coef_start=coef_start,
                 )
             head0 = np.real(omega_vec) / frac0["t"]
             # omega = np.sum(omega_vec) / discharge_int
@@ -1287,7 +1510,11 @@ def get_bnd_error(
                 omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
                 for i in range(discharge_int):
                     omega1_vec[i] = hpc_fracture.calc_omega(
-                        frac1, z1[i], element_struc_array
+                        frac1,
+                        z1[i],
+                        element_struc_array,
+                        coef_data=coef_data,
+                        coef_start=coef_start,
                     )
                 # omega1 = np.sum(omega1_vec) / discharge_int
                 head1 = np.real(omega1_vec) / frac1["t"]
@@ -1336,7 +1563,11 @@ def get_bnd_error(
             omega_pts = np.zeros(nint, dtype=np.complex128)
             for i in range(nint):
                 omega_pts[i] = hpc_fracture.calc_omega(
-                    frac0, z_pos[i], element_struc_array
+                    frac0,
+                    z_pos[i],
+                    element_struc_array,
+                    coef_data=coef_data,
+                    coef_start=coef_start,
                 )
 
             # Reconstruct corrected ψ by integrating branch-cut-corrected increments
@@ -1542,6 +1773,8 @@ def compute_bnd_error(
     element_struc_array,
     discharge_int,
     constants,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     Wrapper that calls get_bnd_error after allocating the required scratch arrays.
@@ -1589,6 +1822,8 @@ def compute_bnd_error(
         0,  # nit – not used inside get_bnd_error
         max_error,
         constants,
+        coef_data,
+        coef_start,
     )
 
     return bnd_error

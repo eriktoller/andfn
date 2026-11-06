@@ -10,6 +10,7 @@ import numpy as np
 from ..constants import R_COND
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
+from .hpc_coefficients import candidate_view, coefficient_view
 
 
 @nb.njit()
@@ -76,7 +77,15 @@ def discharge_term_error(self_, z, radius):
 
 
 @nb.njit()
-def solve(self_, fracture_struc_array, element_struc_array, work_array):
+def solve(
+    self_,
+    fracture_struc_array,
+    element_struc_array,
+    work_array,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
+):
     """
     Solves the constant head line element.
 
@@ -95,8 +104,11 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     -------
     Edits the self_ array and works_array in place.
     """
+    candidate = candidate_view(self_, work_array, candidate_coef_data, coef_start)
     frac0 = fracture_struc_array[self_["frac0"]]
-    work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    work_array["old_coef"][: self_["ncoef"]] = coefficient_view(
+        self_, coef_data, coef_start
+    )
     mf.cauchy_integral_real(
         self_["nint"],
         self_["ncoef"],
@@ -106,22 +118,23 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
         element_struc_array,
         self_["endpoints0"],
         work_array,
-        work_array["coef"][: self_["ncoef"]],
+        candidate[: self_["ncoef"]],
+        coef_data=coef_data,
+        coef_start=coef_start,
     )
 
     for i in range(self_["ncoef"]):
-        work_array["coef"][i] = -np.real(work_array["coef"][i])
-    work_array["coef"][0] = (
-        0.0  # Set the first coefficient to zero (constant embedded in discharge matrix)
-    )
+        candidate[i] = -np.real(candidate[i])
+    if candidate.size:
+        candidate[0] = 0.0
     # self_['error'] = np.max(np.abs(work_array['coef'][:self_['ncoef']] - work_array['old_coef'][:self_['ncoef']]))
     self_["error_old2"] = self_["error_old"]
     self_["error_old"] = self_["error"]
     self_["error"] = mf.calc_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
     self_["error_coef"] = mf.calc_coef_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
 
 
@@ -177,7 +190,7 @@ def solve_error(
 
 
 @nb.njit(inline="always")
-def calc_omega(self_, z, radius, mirror=False):
+def calc_omega(self_, z, radius, mirror=False, coef_data=None, coef_start=None):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -209,7 +222,7 @@ def calc_omega(self_, z, radius, mirror=False):
         return 0.0 + 0.0j
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
     omega = mf.well_chi(chi, self_["q"])
-    omega += mf.asym_expansion(chi, self_["coef"][: self_["ncoef"]])
+    omega += mf.asym_expansion(chi, coefficient_view(self_, coef_data, coef_start))
     cond0 = (
         np.abs((self_["endpoints0"][0] + self_["endpoints0"][1]) / 2.0)
         > radius * R_COND
@@ -289,7 +302,7 @@ def calc_omega_error_org(self_, z):
 
 
 @nb.njit()
-def calc_omega_array(self_, omega, z):
+def calc_omega_array(self_, omega, z, coef_data=None, coef_start=None):
     """
     Function that calculates the omega function for a given point z and fracture.
 
@@ -309,11 +322,11 @@ def calc_omega_array(self_, omega, z):
     """
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
     mf.well_chi_array(omega, chi, self_["q"])
-    mf.asym_expansion_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    mf.asym_expansion_array(omega, chi, coefficient_view(self_, coef_data, coef_start))
 
 
 @nb.njit()
-def calc_w(self_, z, radius):
+def calc_w(self_, z, radius, coef_data=None, coef_start=None):
     """
     Calculate the complex discharge vector for the constant head line.
 
@@ -334,7 +347,7 @@ def calc_w(self_, z, radius):
     # Map the z point to the chi plane
     chi = gf.map_z_line_to_chi(z, self_["endpoints0"])
     # Calculate w
-    w = -mf.asym_expansion_d1(chi, self_["coef"][: self_["ncoef"]])
+    w = -mf.asym_expansion_d1(chi, coefficient_view(self_, coef_data, coef_start))
     w -= self_["q"] / (2 * np.pi * chi)
     w *= (
         2

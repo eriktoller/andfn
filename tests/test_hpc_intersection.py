@@ -74,7 +74,16 @@ def test_solve_pyfunc_updates_error(monkeypatch):
     )
 
     def fake_cauchy(
-        nint, ncoef, thetas, frac, element_id, element_arr, endpoints, work_arr, out
+        nint,
+        ncoef,
+        thetas,
+        frac,
+        element_id,
+        element_arr,
+        endpoints,
+        work_arr,
+        out,
+        **kwargs,
     ):
         if frac["t"] == 2.0:
             out[:2] = np.array([2 + 0j, 4 + 0j])

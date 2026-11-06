@@ -4,6 +4,7 @@ import numpy as np
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
+from .hpc_coefficients import candidate_view, coefficient_view
 
 
 @nb.njit(inline="always")
@@ -51,7 +52,7 @@ def z_array(self_, n):
 
 
 @nb.njit(inline="always")
-def calc_omega(self_, z):
+def calc_omega(self_, z, coef_data=None, coef_start=None):
     """
     Calculates the omega for the bounding circle.
 
@@ -68,7 +69,7 @@ def calc_omega(self_, z):
         The complex potential for the bounding circle.
     """
     chi = get_chi(self_, z)
-    omega = mf.taylor_series(chi, self_["coef"][: self_["ncoef"]])
+    omega = mf.taylor_series(chi, coefficient_view(self_, coef_data, coef_start))
     return omega
 
 
@@ -95,7 +96,7 @@ def calc_omega_error(self_, z):
 
 
 @nb.njit()
-def calc_omega_array(self_, omega, z):
+def calc_omega_array(self_, omega, z, coef_data=None, coef_start=None):
     """
     Calculates the omega for the bounding circle.
 
@@ -113,11 +114,11 @@ def calc_omega_array(self_, omega, z):
     None
     """
     chi = gf.map_z_circle_to_chi(z, self_["radius"])
-    mf.taylor_series_array(omega, chi, self_["coef"][: self_["ncoef"]])
+    mf.taylor_series_array(omega, chi, coefficient_view(self_, coef_data, coef_start))
 
 
 @nb.njit()
-def calc_w(self_, z):
+def calc_w(self_, z, coef_data=None, coef_start=None):
     """
     Calculates the omega for the bounding circle.
 
@@ -134,13 +135,21 @@ def calc_w(self_, z):
         The complex potential for the bounding circle.
     """
     chi = get_chi(self_, z)
-    w = -mf.taylor_series_d1(chi, self_["coef"][: self_["ncoef"]])
+    w = -mf.taylor_series_d1(chi, coefficient_view(self_, coef_data, coef_start))
     w /= self_["radius"]
     return w
 
 
 @nb.njit()
-def solve(self_, fracture_struc_array, element_struc_array, work_array):
+def solve(
+    self_,
+    fracture_struc_array,
+    element_struc_array,
+    work_array,
+    coef_data=None,
+    coef_start=None,
+    candidate_coef_data=None,
+):
     """
     Solves the bounding circle element.
 
@@ -160,9 +169,12 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
     Edits the self_ array and works_array in place.
     """
 
+    candidate = candidate_view(self_, work_array, candidate_coef_data, coef_start)
     mf.get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array)
     frac0 = fracture_struc_array[self_["frac0"]]
-    work_array["old_coef"][: self_["ncoef"]] = self_["coef"][: self_["ncoef"]]
+    work_array["old_coef"][: self_["ncoef"]] = coefficient_view(
+        self_, coef_data, coef_start
+    )
     mf.cauchy_integral_domega(
         self_["nint"],
         self_["ncoef"],
@@ -173,17 +185,19 @@ def solve(self_, fracture_struc_array, element_struc_array, work_array):
         self_["radius"],
         self_["center"],
         work_array,
-        work_array["coef"][: self_["ncoef"]],
+        candidate[: self_["ncoef"]],
+        coef_data=coef_data,
+        coef_start=coef_start,
     )
-    work_array["coef"][: self_["ncoef"]] = -work_array["coef"][: self_["ncoef"]]
+    candidate[: self_["ncoef"]] = -candidate[: self_["ncoef"]]
     # self_['error'] = np.max(np.abs(work_array['coef'][:self_['ncoef']] - work_array['old_coef'][:self_['ncoef']]))
     self_["error_old2"] = self_["error_old"]
     self_["error_old"] = self_["error"]
     self_["error"] = mf.calc_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
     self_["error_coef"] = mf.calc_coef_error(
-        work_array["coef"][: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
+        candidate[: self_["ncoef"]], work_array["old_coef"][: self_["ncoef"]]
     )
 
 

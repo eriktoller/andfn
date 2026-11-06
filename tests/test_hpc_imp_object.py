@@ -88,7 +88,7 @@ def test_solve_circle_and_line_pyfunc_update_error(monkeypatch):
 
     monkeypatch.setattr(himp.mf, "get_dpsi_corr", lambda *a, **k: None)
 
-    def fake_cauchy(*args):
+    def fake_cauchy(*args, **kwargs):
         args[-1][:2] = np.array([1 + 2j, 3 + 4j])
 
     monkeypatch.setattr(himp.mf, "cauchy_integral_domega", fake_cauchy)
