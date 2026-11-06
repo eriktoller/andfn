@@ -24,6 +24,9 @@ from andfn.hpc import (
 from andfn.hpc import hpc_geometry_functions as gf
 from andfn.hpc import hpc_math_functions as mf
 
+from .hpc_error import error_work_record, selected_element
+from .hpc_quadrature import quadrature_row
+
 dtype_work = np.dtype(
     [
         ("phi", np.float64, MAX_NCOEF * 2),
@@ -62,6 +65,10 @@ def solve_error(
     discharge_int,
     constants,
     ntype_elements,
+    *,
+    compact_state=None,
+    iteration_callback=None,
+    timings=None,
 ):
     """
     Solves the DFN.
@@ -87,6 +94,7 @@ def solve_error(
         The array of elements
 
     """
+    preparation_start = time.perf_counter()
     # Get the constants, this is necessary for Numba parallelization to work
     max_error = constants["MAX_ERROR"]
     max_iterations = constants["MAX_ITERATIONS"] * 0 + 20
@@ -96,10 +104,24 @@ def solve_error(
     logger.info("Compiling HPC code...")
 
     # Allocate memory for the work array
-    discharge_elements = get_discharge_elements(error_struc_array)
-    num_elements = len(error_struc_array)
-    work_array = np.zeros(num_elements, dtype=dtype_work)
-    work_array_org = np.zeros(num_elements, dtype=dtype_work)
+    from . import hpc_solve as main
+    from .hpc_quadrature import allocate_quadrature
+
+    compact = compact_state is not None
+    discharge_elements = (
+        main.get_discharge_indices(compact_state.state.storage.elements)
+        if compact
+        else get_discharge_elements(error_struc_array)
+    )
+    num_elements = error_struc_array.size
+    work_array = (
+        compact_state.state.work
+        if compact
+        else np.zeros(num_elements, dtype=dtype_work)
+    )
+    work_array_org = None if compact else np.zeros(num_elements, dtype=dtype_work)
+    candidates = compact_state.state.storage.candidate_coef_data if compact else None
+    starts = compact_state.state.storage.coef_start if compact else None
     # head matrix
     size = discharge_elements.size + fracture_struc_array.size
     head_matrix = np.zeros(size)
@@ -107,26 +129,53 @@ def solve_error(
         error_struc_array, fracture_struc_array, discharge_elements
     )
     discharges_old = np.zeros(size)
-    z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
-    get_z_int_array(z_int, discharge_elements, discharge_int)
-    z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
-    get_z_int_array(z_int_error, error_struc_array, discharge_int)
+    quadrature_start = time.perf_counter()
+    if compact:
+        z_int = allocate_quadrature(discharge_elements.size, discharge_int)
+        main.get_z_int_array(
+            z_int,
+            compact_state.state.storage.elements,
+            discharge_int,
+            discharge_elements,
+        )
+    else:
+        z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
+        get_z_int_array(z_int, discharge_elements, discharge_int)
+        z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
+        get_z_int_array(z_int_error, error_struc_array, discharge_int)
+    if timings is not None:
+        timings["quadrature_seconds"] = time.perf_counter() - quadrature_start
 
     # Discharge matrix
     logger.info("Building discharge matrix...")
     startdm = time.time()
-    discharge_matrix = build_discharge_matrix(
-        fracture_struc_array,
-        error_struc_array,
-        discharge_elements,
-        discharge_int,
-        z_int,
+    matrix_start = time.perf_counter()
+    discharge_matrix = (
+        main.build_discharge_matrix_csr(
+            fracture_struc_array,
+            compact_state.state.storage.elements,
+            fracture_struc_array.ids,
+            fracture_struc_array.indptr,
+            discharge_elements,
+            discharge_int,
+            z_int,
+        )
+        if compact
+        else build_discharge_matrix(
+            fracture_struc_array,
+            error_struc_array,
+            discharge_elements,
+            discharge_int,
+            z_int,
+        )
     )
     logger.debug(f"Discharge matrix build time: {time.time() - startdm}")
 
     # LU-factorization
     startlu = time.time()
     lu_matrix = sp.sparse.linalg.splu(discharge_matrix)
+    if timings is not None:
+        timings["matrix_and_factorization_seconds"] = time.perf_counter() - matrix_start
     logger.debug(f"LU factorization time: {time.time() - startlu}")
 
     # Set old error
@@ -136,14 +185,16 @@ def solve_error(
         e["error"] = 1e30
 
     # fill work array ex_array
-    for i, e in enumerate(error_struc_array):
+    for i in range(0 if compact else num_elements):
+        e = error_struc_array[i]
         n = e["nint"]
         mf.calc_thetas(n, e["_type"], e["thetas"][:n])
         thetas = e["thetas"]
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_m"], -1)
         mf.fill_exp_array(n, thetas, work_array[i]["exp_array_p"], 1)
         mf.fill_z_integral(e, work_array[i])
-    for i, e in enumerate(element_struc_array):
+    for i in range(0 if compact else num_elements):
+        e = element_struc_array[i]
         n = e["nint"]
         mf.calc_thetas(n, e["_type"], e["thetas"][:n])
         thetas = e["thetas"]
@@ -151,8 +202,10 @@ def solve_error(
         mf.fill_exp_array(n, thetas, work_array_org[i]["exp_array_p"], 1)
         mf.fill_z_integral(e, work_array_org[i])
 
-    logger.info(f"Number of elements: {len(error_struc_array)}")
-    logger.info(f"Number of fractures: {len(fracture_struc_array)}")
+    logger.info(f"Number of elements: {error_struc_array.size}")
+    logger.info(f"Number of fractures: {fracture_struc_array.size}")
+    if timings is not None:
+        timings["preparation_seconds"] = time.perf_counter() - preparation_start
 
     error = np.float64(1.0)
     nit = 0
@@ -197,7 +250,21 @@ def solve_error(
             nit,
             cnt_error,
             damping,
+            candidates,
+            starts,
+            iteration_callback is None,
         )
+        if iteration_callback is not None:
+            iteration_callback(
+                "candidates",
+                nit,
+                error_struc_array,
+                work_array,
+                fracture_struc_array,
+                candidates,
+                (cnt_error, error_q),
+            )
+            commit_error(error_struc_array, work_array, damping, candidates, starts)
         timee = time.time() - starte
         sum_timee += timee
 
@@ -218,6 +285,22 @@ def solve_error(
             cnt_error += 1
             error_q = 1e30
             # error = 1.0
+        if (
+            not np.isfinite(error)
+            or not np.isfinite(error_coef)
+            or not np.isfinite(error_q)
+        ):
+            raise ValueError("Nonfinite error-solver convergence state")
+        if iteration_callback is not None:
+            iteration_callback(
+                "committed",
+                nit,
+                error_struc_array,
+                work_array,
+                fracture_struc_array,
+                candidates,
+                (cnt_error, error_q),
+            )
 
     # Print the solver results
     logger.info("---------------------------------------")
@@ -234,7 +317,26 @@ def solve_error(
         f"Solve time: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds\n"
     )
 
-    num_elements = len(element_struc_array)
+    if compact:
+        for array in (
+            compact_state.state.storage.coef_data,
+            compact_state.state.storage.candidate_coef_data,
+            compact_state.state.storage.old_coef_data,
+            work_array.dpsi_corr,
+            compact_state.fractures.constants,
+            *(
+                error_struc_array.scalars[name]
+                for name in error_struc_array.scalars.dtype.names
+            ),
+        ):
+            if not np.all(np.isfinite(array)):
+                raise ValueError("Nonfinite compact error state")
+        if timings is not None:
+            timings["iterations"] = nit
+            timings["iteration_seconds"] = time.time() - start
+            timings["element_seconds"] = sum_timee
+        return error_struc_array, work_array
+    num_elements = element_struc_array.size
 
     # Scratch arrays – work_array is zero-initialised;
     # find_branch_cuts resets len_discharge_element itself.
@@ -259,6 +361,10 @@ def solve_error(
         z_int,
     )"""
 
+    if timings is not None:
+        timings["iterations"] = nit
+        timings["iteration_seconds"] = solve_time
+        timings["element_seconds"] = sum_timee
     return error_struc_array, work_array
 
 
@@ -373,11 +479,11 @@ def pre_matrix_solve(
     """
 
     # Set the discharges equal to zero
-    for i in nb.prange(len(error_struc_array)):
+    for i in nb.prange(error_struc_array.size):
         error_struc_array[i]["q"] = 0.0
 
     # Set the constants equal to zero
-    for i in nb.prange(len(fractures_struc_array)):
+    for i in nb.prange(fractures_struc_array.size):
         fractures_struc_array[i]["error_constant"] = 0.0
 
     # Get the head matrix
@@ -425,27 +531,27 @@ def post_matrix_solve(
     """
     # TODO: Should I use damping here too?
     # Set the discharges for each element
-    for i in nb.prange(len(discharge_elements)):
-        e = discharge_elements[i]
+    for i in nb.prange(discharge_elements.size):
+        e = selected_element(error_struc_array, discharge_elements, i)
         error_struc_array[e["_id"]]["q"] = discharges[i]
 
     # Set the constants for each fracture
-    for i in nb.prange(len(fractures_struc_array)):
+    for i in nb.prange(fractures_struc_array.size):
         fractures_struc_array[i]["error_constant"] = discharges[
-            len(discharge_elements) + i
+            discharge_elements.size + i
         ]
 
 
 @nb.njit(parallel=PARALLEL, cache=CACHE)
 def get_old_discharges(error_struc_array, fractures_struc_array, discharge_elements):
     discharges_old = np.zeros(
-        len(discharge_elements) + np.max(error_struc_array["frac0"]) + 1
+        discharge_elements.size + np.max(error_struc_array["frac0"]) + 1
     )
-    for i in nb.prange(len(discharge_elements)):
-        e = discharge_elements[i]
+    for i in nb.prange(discharge_elements.size):
+        e = selected_element(error_struc_array, discharge_elements, i)
         discharges_old[i] = error_struc_array[e["_id"]]["q"]
-    for i in nb.prange(len(fractures_struc_array)):
-        pos = len(discharge_elements) + i
+    for i in nb.prange(fractures_struc_array.size):
+        pos = discharge_elements.size + i
         discharges_old[pos] = fractures_struc_array[i]["error_constant"]
     return discharges_old
 
@@ -488,9 +594,9 @@ def build_head_matrix(
 
     # Add the head for each discharge element
     for j in nb.prange(discharge_elements.size):
-        e = discharge_elements[j]
+        e = selected_element(error_struc_array, discharge_elements, j)
         frac0 = fractures_struc_array[e["frac0"]]
-        z0 = z_int["z0"][j][:discharge_int]
+        z0 = quadrature_row(z_int, 0, j, discharge_int)
         omega = 0.0 + 0.0j
         er = 0.0 + 0.0j
         diff = 0.0
@@ -509,7 +615,7 @@ def build_head_matrix(
         diff = (e["phi"] - omega) + er
         if e["_type"] == 0:  # Intersection
             frac1 = fractures_struc_array[e["frac1"]]
-            z1 = z_int["z1"][j][:discharge_int]
+            z1 = quadrature_row(z_int, 1, j, discharge_int)
             omega1 = 0.0 + 0.0j
             er1 = 0.0 + 0.0j
             diff1 = 0.0
@@ -828,6 +934,9 @@ def element_solver_error(
     nit,
     cnt_error,
     damping,
+    candidates=None,
+    starts=None,
+    commit=True,
 ):
     """
     Solves the elements and updates the coefficients in the work array.
@@ -865,6 +974,7 @@ def element_solver_error(
     # Solve the elements
     for i in nb.prange(num_elements):
         e = error_struc_array[i]
+        record = error_work_record(work_array, i, candidates, starts)
         if e["error"] < max_error * 0 and nit > 30 and cnt_error == 0:
             cnt += 1
             continue
@@ -874,7 +984,7 @@ def element_solver_error(
                 fracture_struc_array,
                 element_struc_array,
                 error_struc_array,
-                work_array[i],
+                record,
             )
         elif e["_type"] == 1:  # Bounding circle
             hpc_bounding_circle.solve_error(
@@ -882,7 +992,7 @@ def element_solver_error(
                 fracture_struc_array,
                 element_struc_array,
                 error_struc_array,
-                work_array[i],
+                record,
             )
         elif e["_type"] == 2:  # Well
             e["error"] = 0.0
@@ -893,7 +1003,7 @@ def element_solver_error(
                 fracture_struc_array,
                 element_struc_array,
                 error_struc_array,
-                work_array[i],
+                record,
             )
         elif e["_type"] == 4:  # Impermeable circle
             print("Warning: Impermeable circle not implemented yet. Skipping.")
@@ -901,14 +1011,21 @@ def element_solver_error(
             print("Warning: Impermeable line not implemented yet. Skipping.")
 
     # Get the coefficients from the work array
-    for i in nb.prange(num_elements):
-        e = error_struc_array[i]
-        e["coef"][: e["ncoef"]] = (
-            damping * work_array[i]["coef"][: e["ncoef"]]
-            + (1 - damping) * e["coef"][: e["ncoef"]]
-        )
+    if commit:
+        commit_error(error_struc_array, work_array, damping, candidates, starts)
 
     return cnt
+
+
+@nb.njit(parallel=PARALLEL, cache=CACHE)
+def commit_error(error_struc_array, work_array, damping, candidates=None, starts=None):
+    for i in nb.prange(error_struc_array.size):
+        e = error_struc_array[i]
+        record = error_work_record(work_array, i, candidates, starts)
+        e["coef"][: e["ncoef"]] = (
+            damping * record["coef"][: e["ncoef"]]
+            + (1 - damping) * e["coef"][: e["ncoef"]]
+        )
 
 
 @nb.njit(cache=CACHE)

@@ -373,6 +373,7 @@ class DFN(Constants, IO):
         self.fractures_struc_array_hpc = None
         self._compact_owner = None
         self._compact_fractures = None
+        self._compact_error = None
 
         # Initialize the cell tree
         self._tree = None
@@ -989,6 +990,9 @@ class DFN(Constants, IO):
         """
         Gets the elements from the fractures and add store them in the DFN.
         """
+        if self._compact_error is not None:
+            self.error_structured_array = None
+        self._compact_error = None
         self._compact_owner = None
         self._compact_fractures = None
         # reset the discharge matrix and elements
@@ -1037,6 +1041,9 @@ class DFN(Constants, IO):
         Gets the elements from the fractures and stores them in the DFN.
         """
 
+        if self._compact_error is not None:
+            self.error_structured_array = None
+        self._compact_error = None
         self._compact_owner = None
         self._compact_fractures = None
         # reset
@@ -1160,6 +1167,8 @@ class DFN(Constants, IO):
         self.lup = None
         self._compact_owner = None
         self._compact_fractures = None
+        self._compact_error = None
+        self.error_structured_array = None
 
         for i, f in enumerate(self.fractures):
             f.set_id(i)
@@ -1181,6 +1190,8 @@ class DFN(Constants, IO):
 
         for f in fracture:
             f.delete_all_elements()
+        self._compact_error = None
+        self.error_structured_array = None
         self._compact_owner = None
         self._compact_fractures = None
 
@@ -1237,6 +1248,11 @@ class DFN(Constants, IO):
         self.discharge_matrix = None
         self.discharge_elements = None
         self.lup = None
+
+        self._compact_owner = None
+        self._compact_fractures = None
+        self._compact_error = None
+        self.error_structured_array = None
 
         logger.info("DFN reset complete.")
 
@@ -1763,11 +1779,16 @@ class DFN(Constants, IO):
             owner, fractures = consolidate(self.elements, self.fractures)
             solve_adaptive(owner, fractures, self.discharge_int, self.constants)
             self._compact_owner, self._compact_fractures = owner, fractures
+            self._compact_error = None
+            self.error_structured_array = None
             if unconsolidate:
                 self.unconsolidate_dfn(hpc=True)
             return
         self._compact_owner = None
         self._compact_fractures = None
+        if self._compact_error is not None:
+            self.error_structured_array = None
+        self._compact_error = None
         logger.info("\n")
         logger.info("---------------------------------------")
         logger.info("Starting HPC solve...")
@@ -1803,15 +1824,35 @@ class DFN(Constants, IO):
 
     def solve_error(self, unconsolidate=False):
         """
-        Solves the DFN on a HPC.
+        Solve the separate error problem using the active normal storage.
 
         To change the solver constants, use the set_kwargs method.
+        After ``solve(compact=True)``, error state is compact and isolated from
+        the normal solved coefficients, constants, caches and convergence state.
 
         Parameters
         ----------
         unconsolidate : bool
             If True, the DFN is unconsolidated after the solve. Default is False.
         """
+        if self._compact_owner is not None:
+            from .hpc.hpc_error import prepare
+
+            error = prepare(self._compact_owner, self._compact_fractures)
+            hpc_solve_error(
+                error.fractures,
+                error.normal,
+                error.elements,
+                self.discharge_int,
+                self.constants,
+                self.ntype_element,
+                compact_state=error,
+            )
+            self._compact_error = error
+            self.error_structured_array = error.elements
+            if unconsolidate:
+                self.unconsolidate_dfn(hpc=True)
+            return
         logger.info("\n")
         logger.info("---------------------------------------")
         logger.info("Starting HPC error solve...")
@@ -2018,6 +2059,17 @@ class DFN(Constants, IO):
         velocity : np.ndarray
             The velocity at the given point in the fracture.
         """
+        if self._compact_owner is not None and self._compact_error is None:
+            logger.warning(
+                "DFN error has not been solved yet. Call dfn.solve_error() first."
+            )
+            return None
+        if self._compact_owner is not None and self._compact_error is not None:
+            return hpc_calc_omega_error(
+                self._compact_error.fractures[fracture._id],
+                z,
+                self._compact_error.elements,
+            )
         if (
             self.error_structured_array is None
             or self.fractures_struc_array_hpc is None
@@ -2693,11 +2745,18 @@ class DFN(Constants, IO):
             limits = None
 
         # --- Ensure consolidation ---
-        if self.fractures_struc_array_hpc is None:
+        if self._compact_owner is None and self.fractures_struc_array_hpc is None:
             self.consolidate_dfn(hpc=True)
 
         # --- Select fractures efficiently ---
-        fracs_arr = self.fractures_struc_array_hpc
+        if self._compact_owner is not None and self._compact_error is None:
+            raise ValueError("Call dfn.solve_error() before plotting compact errors")
+        fracs_arr = (
+            self._compact_error.fractures
+            if self._compact_owner is not None and self._compact_error is not None
+            else self.fractures_struc_array_hpc
+        )
+        error_indices = None
         if fractures is not None:
             fracture_index = {f: i for i, f in enumerate(self.fractures)}
             idx = np.fromiter(
@@ -2705,7 +2764,10 @@ class DFN(Constants, IO):
                 dtype=np.int64,
                 count=len(fractures),
             )
-            fracs_arr = fracs_arr[idx]
+            if self._compact_owner is not None and self._compact_error is not None:
+                error_indices = idx
+            else:
+                fracs_arr = fracs_arr[idx]
 
         # --- Compute heads & points ---
         time_heads = time.time()
@@ -2714,11 +2776,18 @@ class DFN(Constants, IO):
         z_array, base_faces = generate_disk(partitions, n_layers)
         if term == "head":
             heads, pnts_3d = hpc_get_errors(
-                fracs_arr, self.error_structured_array, z_array, heads=True
+                fracs_arr,
+                self.error_structured_array,
+                z_array,
+                heads=True,
+                fracture_indices=error_indices,
             )
         elif term == "complex":
             heads, pnts_3d = hpc_get_errors(
-                fracs_arr, self.error_structured_array, z_array
+                fracs_arr,
+                self.error_structured_array,
+                z_array,
+                fracture_indices=error_indices,
             )
         else:
             raise ValueError(f"Unknown term '{term}' for error plotting.")

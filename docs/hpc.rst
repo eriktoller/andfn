@@ -3547,6 +3547,625 @@ coexistence and clarify export boundaries. Error-solver migration should be
 separately approved for error-solve workloads; it still has padded work and
 quadrature. Phase 6 does not start either migration.
 
+Phase 7: compact separate error solver
+-------------------------------------
+
+``DFN.solve_error()`` now follows the active normal storage. The public
+compact sequence is::
+
+    dfn.solve(compact=True)
+    dfn.solve_error()
+    value = dfn.calc_error(z, fracture)
+    head = dfn.calc_head(z, fracture)  # still the normal solution
+    boundary_errors, worst = dfn.check_boundary_conditions()
+
+Error sampling and error plots also use compact state, including ordered
+fracture subsets. No padded consolidation/export is needed. The legacy
+default, explicit compact opt-in, padded dtypes, constants and persistence
+remain unchanged. The Phase 6 error-solver limitations above describe that
+earlier phase and are superseded by this section.
+
+Legacy flow and allocation/lifetime map
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The public entry point copies the **complete** padded HPC element array,
+zeros its coefficient field, and preserves its other fields. It calls
+``hpc_error_solve.solve_error``, which selects discharge elements, constructs
+quadrature and the sparse matrix/LU, initializes caches, and iterates the
+error problem. Each iteration resets error discharges/constants, evaluates
+the RHS from the normal and error potentials, solves/publishes discharges
+and error fracture constants, computes element candidates, then commits
+damped coefficients at a separate parallel barrier. It reduces convergence
+metrics and stops after two successful checks or 20 iterations. The success
+counter is not reset between checks; that existing rule is unchanged.
+
+**There is no adaptive coefficient growth in this error algorithm.** Orders
+and integration lengths remain those of the normal solution. There are no
+error growth requests, capacity transactions, eligibility changes or
+coefficient-order repacks. The normal adaptive architecture remains intact.
+
+Let N/F/S be element/fracture/selected-discharge counts, M/E the padded
+coefficient/element maxima, q the operation's quadrature count, m_i/n_i the
+logical element orders/integration lengths, C/I the sums of coefficient/
+integration capacities, K the sparse nonzero count and T the maximum worker
+count. Bytes below describe actual NumPy payload, not object overhead.
+The benchmark environment has M=200 and E=800 from local configuration.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 26 20 24 30
+
+   * - Allocation / producer
+     - Dtype and physical shape
+     - Lifetime / logical requirement
+     - Maximum dependence / compact replacement
+   * - ``DFN.solve_error`` error records
+     - Complete ``element_dtype_hpc[N]``; 12,992N bytes
+     - Retained output; fixed geometry plus m_i coefficients and n_i cache entries
+     - M padding and redundant inherited old coefficients; shared geometry/layout plus 40N error scalars, capacity coefficients and private correction cache
+   * - ``get_discharge_elements`` selection
+     - Boolean mask N; **complete structured-record copy** of S rows
+     - Mask during selection, copied records throughout solve; only ordered IDs are required
+     - M-sized record copy; reuse ordered int64 discharge indices (8S bytes)
+   * - ``solve_error`` work
+     - Two zeroed ``dtype_work[N]`` arrays; 70,433N bytes each
+     - Error work throughout iterations; original work initialized but never actively consumed
+     - M/E padding; existing capacity work, worker scratch and private ragged events; omit original work only in compact execution
+   * - ``solve_error`` head/discharge/history
+     - Three float64 vectors, S+F entries each (legacy discharge initialization uses S+max(frac0)+1)
+     - Throughout solve; RHS, current discharge and previous discharge
+     - No storage maximum; same numerical vectors retained
+   * - ``solve_error/get_z_int_array`` selected grid
+     - ``dtype_z_arrays[N]``; two complex128 sides, 2M entries/side
+     - Throughout solve; only S*q points per side are read
+     - 128MN bytes; existing runtime dense complex128[2,S,q], 32Sq bytes
+   * - ``solve_error/get_z_int_array`` error grid
+     - Second ``dtype_z_arrays[N]``
+     - Throughout solve; populated but never actively read
+     - M padding; omitted only in compact path
+   * - Legacy grid/branch coordinate producers
+     - float64[n_i] or complex128[n_i]; line producers use q+2
+     - Element-local coordinate generation
+     - Logical sizes already; direct compact branch staging/runtime dense grid reuse the same arithmetic and order
+   * - ``build_discharge_matrix`` lookup/count/offset
+     - int32[max_id+1], int64[S+F] counts and offsets
+     - Matrix construction; ID lookup and row layout
+     - No M/E padding; existing indexed CSR-connectivity matrix preparation
+   * - ``build_discharge_matrix`` triplets
+     - int64[K] rows/columns, float64[K] values
+     - Matrix construction, released after CSC construction
+     - Actual nonzeros; unchanged matrix formulation and existing compact producer
+   * - SciPy CSC / SuperLU
+     - Sparse index/value arrays and native factorization storage
+     - Matrix/factorization throughout solve
+     - Actual sparsity/fill; unchanged, excluded from payload tables below
+   * - Error Cauchy real/intersection routines
+     - complex128[m_i] integral; two float64[n_i] arrays
+     - One element invocation; two intersection calculations run successively
+     - Already logical sizes; numerical expression allocations retained
+   * - Error imaginary Cauchy routine
+     - Two float64[n_i] and complex128[n_i] arrays
+     - One bounding-circle invocation
+     - Already logical sizes; unchanged
+   * - Coefficient metrics and damped commit expressions
+     - Complex/real arrays proportional to m_i; fixed scalar metrics
+     - Element-local reduction/commit
+     - Already logical sizes; same expressions and summation order
+   * - Final ``solve_error`` replacement work
+     - Fresh zeroed ``dtype_work[N]``
+     - Allocated after iterations and returned; not used by an active error diagnostic
+     - M/E padding; omitted compact-only
+   * - Final ``solve_error`` replacement grid
+     - Fresh ``dtype_z_arrays[N]``, populated
+     - After iterations; only consumer is a commented-out diagnostic
+     - M padding; omitted compact-only
+   * - ``get_errors`` post-processing
+     - complex128[F_selected,P] errors/working coordinates; float64[F_selected,P,3] mapped points
+     - One sampling/plot operation; P requested sample points
+     - Actual output shape; numeric fracture views and ordered subset indices, no structured-record gather
+   * - Optional public unconsolidation
+     - Logical object coefficient/cache arrays
+     - Publication back to normal Python objects only when requested
+     - Direct compact logical copies, not a padded error-state bridge
+
+The legacy fracture array is not copied by ``solve_error``: its
+``error_constant`` is overwritten in place. Normal HPC theta caches are
+recomputed in place. The normal DFN ``work_array`` is replaced on return
+by the fresh, unused error work. In contrast, the compact path leaves all
+normal arrays, normal scratch and the public normal work reference intact.
+Both legacy work arrays and the old grids coexist during the solve.
+Allocating the final replacement work briefly makes **three** work arrays
+live; allocating its replacement grid can briefly make three grid arrays
+live. It would be incorrect to add every allocation site as four concurrent
+work arrays plus three grids.
+
+Repository-wide consumer searches confirmed that ``work_array_org``,
+``z_int_error`` and the final diagnostic grid have no active numerical
+reader in error execution: the final ``get_bnd_error`` invocation is inside
+a triple-quoted block. Their legacy allocations are retained. The similarly
+named ``z_integral`` cache still has diagnostic/export consumers and is
+retained/shared, not removed.
+
+Reused architecture and state isolation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``hpc_error.ErrorState`` owns an existing ``AdaptiveState/AdaptiveStorage``
+and numeric element/fracture views; it is not another ragged storage format.
+The views allow the **same error numerical routines** to consume compact
+arrays. No second implementations of coefficient layout, connectivity,
+quadrature, cache storage, worker ownership or branch construction are added.
+The shared error host solver has storage-specific preparation, selection and
+view dispatch, not different numerical algorithms.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Normal state / error state
+     - Ownership and reason
+   * - Fixed element metadata
+     - Shared read-only: IDs/types, fracture indices, geometry/endpoints, radius/center, head/phi, ncoef/nint and all other fixed fields
+   * - Error q/error/error_old/error_old2/error_coef
+     - Separate five-field float64 structured array (40N); initialized from the corresponding normal values, with the original error initialization applied afterward
+   * - Normal coefficients
+     - Shared read-only numeric view for normal potential evaluation; never reused as error output
+   * - Error current/candidate
+     - Separate zeroed complex128[C] buffers using the existing starts/capacities; staged updates preserve neighbor reads before commit
+   * - Error history
+     - One complex128[C] buffer: ``storage.old_coef_data`` aliases ``work.old_coef``; stores pre-candidate coefficients for metrics
+   * - Inherited padded element old_coef
+     - No separate copy: not an active error-algorithm input
+   * - Coefficient metric
+     - Actual metric is scalar error_coef; unused work.coef_error has zero entries in the compact error path, without first allocating a capacity array
+   * - Coefficient/integration starts and capacities
+     - Shared read-only; integration layout preserves the normal owner's exact spare capacity and offsets after adaptive growth
+   * - Theta, exp_array_m/exp_array_p, z_integral
+     - Shared read-only initialized normal caches; no repeated cache population
+   * - dpsi_corr
+     - Private copy at integration capacity; initially copies normal corrections, including unsupported rows that the error algorithm never updates
+   * - Fracture geometry, normal constants and CSR
+     - Shared read-only, exact connectivity order; no full fracture metadata copy or element-record gather
+   * - Fracture error_constant
+     - Separate float64[F], copied initial values, mutated by error matrix publication
+   * - Branch topology
+     - Separate existing ragged event arrays/counts/validity/layout; error preparation cannot replace or mutate normal topology
+   * - Worker scratch
+     - Separate established worker-owned buffers, sized by actual maximum capacities and T; preserves even normal scratch contents
+   * - Normal convergence/history/discharge
+     - No shared mutable state; every normal buffer remains unchanged after error solving
+
+The error-work lifetime classification is:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Field(s)
+     - Classification / compact treatment
+   * - coef
+     - Candidate state; slice of existing separate candidate flat array
+   * - old_coef
+     - Persistent convergence history, aliased to the one error history family
+   * - coef0 / coef1
+     - Element-local scratch; existing worker slices, both coexist for intersection assembly
+   * - integral
+     - Element-local scratch in the standard work view; error Cauchy routines also retain their existing logical local integral expressions
+   * - phi / psi / dpsi
+     - Worker scratch through existing work-record ownership; no per-element padded rows
+   * - exp_array_m / exp_array_p / z_integral
+     - Integration cache; shared read-only at integration capacity
+   * - thetas
+     - Integration cache exposed through compact work/element views; shared read-only
+   * - dpsi_corr
+     - Persistent error integration correction, private at integration capacity
+   * - sign_array / discharge_element / element_pos / len_discharge_element
+     - Private branch-event state, existing capacity representation
+   * - coef_error
+     - Unused compatibility field; empty compact array (element scalar metric retained)
+   * - a0_error / work.error / set_zero
+     - Compatibility/scalar work slots retained in the shared work representation, not padded coefficient histories
+
+Error branch preparation calls the Phase 4D ``prepare_direct`` producer
+once on bounding-circle error rows and publishes only after preparation.
+It preserves interval-major, connectivity-major, direct-before-mirror order.
+Insufficient capacities are detected by the producer and recovered together
+using affected-private staging and a batch repack; no count-only preliminary
+pass or MAX_ELEMENTS dimension is introduced. Error topology is private:
+although the geometry/grid can match normal topology, correction values
+consume normal and error discharges. Valid empty topology remains valid;
+the shared validity helper preserves the legacy zero-count behavior for
+legacy records.
+
+The selected discharge grid is uniform, operation-local, C-contiguous
+complex128[2,S,q]. Positive/negative sides and summation order are unchanged.
+Theta/exponential caches remain variable-capacity persistent integration
+data, not forced into uniform dense quadrature. Matrix assembly/factorization
+reuse existing indexed/CSR normal producers; sparse layout is not redesigned.
+
+All error state stays private until ``DFN.solve_error`` returns successfully.
+Failure preserves a previously published error result as well as normal
+state. Normal re-solving, reset and model invalidation clear stale compact
+error results. ``unconsolidate=True`` retains the existing meaning: publish
+the normal solution to Python objects, not a newly invented error export.
+No compact coefficient, cache or metadata is temporarily overwritten and
+then "restored." Unsupported impermeable circle/line paths still print the
+original warning and skip candidate computation; wells retain their original
+error behavior. No missing numerical algorithm was implemented.
+
+Measured memory and peak accounting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``tests\benchmark_error.py`` deduplicates NumPy array identities, excluding
+normal arrays when reporting incremental error state. The heterogeneous
+fixture has S=N/2, F=N/4, q=8, T=28 and fixed logical orders/capacities at all
+sizes. These are seeded-cache storage/performance fixtures, not a claim that
+a 10,000-element physical model was converged. The separate public-model
+regression exercises actual normal solve -> error solve -> post-processing.
+All units below are bytes; 100,000 is an affine storage-only projection,
+not executed or timed.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Category
+     - 128
+     - 1,024
+     - 10,000
+     - 100,000 projected
+   * - Retained normal compact state
+     - 425,896
+     - 2,955,304
+     - 28,294,552
+     - 282,364,552
+   * - Additional fixed/error scalars + fracture constants
+     - 5,376
+     - 43,008
+     - 420,000
+     - 4,200,000
+   * - Error current/candidate/history (history included once)
+     - 70,656
+     - 565,248
+     - 5,520,000
+     - 55,200,000
+   * - Error integration correction (other caches shared)
+     - 24,576
+     - 196,608
+     - 1,920,000
+     - 19,200,000
+   * - Error worker scratch
+     - 64,512
+     - 64,512
+     - 64,512
+     - 64,512
+   * - Error branches/layout/validity
+     - 9,344
+     - 74,752
+     - 730,000
+     - 7,300,000
+   * - Retained shared-work compatibility scalars/layout
+     - 3,232
+     - 25,632
+     - 250,032
+     - 2,500,032
+   * - Additional steady error total
+     - 177,696
+     - 969,760
+     - 8,904,544
+     - 88,464,544
+   * - Error operation-local quadrature
+     - 16,384
+     - 131,072
+     - 1,280,000
+     - 12,800,000
+   * - Matrix inputs/selection (not CSC/LU)
+     - 11,904
+     - 95,232
+     - 930,000
+     - 9,300,000
+   * - RHS/discharge/history vectors
+     - 2,304
+     - 18,432
+     - 180,000
+     - 1,800,000
+   * - Branch preparation temporary envelope
+     - 5,120
+     - 40,960
+     - 400,000
+     - 4,000,000
+   * - Host finite-check temporary envelope
+     - 3,072
+     - 24,576
+     - 240,000
+     - 2,400,000
+   * - Normal + error conservative tracked envelope
+     - 642,376
+     - 4,235,336
+     - 40,229,096
+     - 401,129,096
+   * - Legacy error-record full copy
+     - 1,662,976
+     - 13,303,808
+     - 129,920,000
+     - 1,299,200,000
+   * - Legacy selected-record full copy
+     - 831,488
+     - 6,651,904
+     - 64,960,000
+     - 649,600,000
+   * - Legacy two initial work arrays
+     - 18,030,848
+     - 144,246,784
+     - 1,408,660,000
+     - 14,086,600,000
+   * - Legacy two initial padded quadrature arrays
+     - 3,276,800
+     - 26,214,400
+     - 256,000,000
+     - 2,560,000,000
+   * - Legacy final dead work + grid allocation sites
+     - 10,653,824
+     - 85,230,592
+     - 832,330,000
+     - 8,323,300,000
+   * - Retained legacy normal elements + fractures
+     - 1,872,384
+     - 14,979,072
+     - 146,280,000
+     - 1,462,800,000
+   * - Retained legacy normal work during error call
+     - 9,015,424
+     - 72,123,392
+     - 704,330,000
+     - 7,043,300,000
+   * - Legacy normal + error tracked peak envelope
+     - 43,719,552
+     - 349,756,416
+     - 3,415,590,000
+     - 34,155,900,000
+
+At 10,000 elements normal plus steady error state is **37,199,096 bytes**;
+adding quadrature gives 38,479,096. The 40,229,096-byte conservative envelope
+also adds all matrix inputs/vectors and preparation/validation temporaries,
+even though their lifetimes need not overlap. Error orders never grow, so
+there is no coefficient transaction peak. Event-overflow replacements use
+the existing affected staging/repack; the table's preparation envelope is
+for this measured no-overflow fixture, not a universal bound on arbitrary
+event counts.
+
+These are tracked NumPy envelopes, not allocator-complete process peaks.
+Native element-local Cauchy/geometry/metric/commit expression arrays scale
+with actual m_i/n_i and concurrent workers; CSC/SuperLU arrays/fill, NRT,
+Python objects and runtime/compiler overhead are not included. The legacy
+envelope includes the retained normal work and the third simultaneous work
+allocation, not a sum of every replacement allocation. One independent
+Windows ``GetProcessMemoryInfo`` run (8 threads, 10,000 elements, paired
+warm-up plus one measured sample) reported **1,045,803,008 bytes peak working
+set**. That is a whole paired-process RSS measurement, including imports,
+JIT/cache loading and both modes, not a compact-only peak. Demand-zero pages
+and disjoint lifetimes explain why it is not equal to the sum of payload
+allocation sites. No additional dependency was installed.
+
+Storage-independence tests vary runtime legacy maxima through 200/500/1,000
+coefficients and 500/5,000 elements with fixed numerical controls/logical
+orders. Incremental compact error payload and results are exactly unchanged.
+Combined with no-maxima compact constructors and explicit padded-allocation/
+legacy-consolidation guards, this checks the actual compact path rather
+than claiming monkeypatching changes import-time legacy dtype definitions.
+
+Performance, profiling and thread behavior
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The benchmark alternates modes, excludes warm-up, and reports three-sample
+medians. Preparation includes the legacy complete error copy or compact
+private state/branch preparation; matrix/grid/iteration timings are inside
+the shared host solver. Python model construction and explicit legacy test
+fixtures are outside timing. Legacy final unused allocations are inside
+legacy total because they remain part of the existing public operation.
+Final coefficient extraction is outside timing. All 18 comparisons are
+finite and exactly equal; all benchmark solves take 19 iterations.
+Legacy/compact total seconds and compact/legacy ratios:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - 128
+     - 1,024
+     - 10,000
+   * - 1
+     - 0.0475 / 0.0651 (1.371)
+     - 0.3634 / 0.4672 (1.285)
+     - 3.6459 / 4.5094 (1.237)
+   * - 2
+     - 0.0309 / 0.0358 (1.157)
+     - 0.2148 / 0.2604 (1.212)
+     - 2.1831 / 2.6169 (1.199)
+   * - 4
+     - 0.0219 / 0.0247 (1.127)
+     - 0.1497 / 0.1649 (1.101)
+     - 1.3995 / 1.4877 (1.063)
+   * - 8
+     - 0.0210 / 0.0212 (1.011)
+     - 0.1418 / 0.1304 (0.919)
+     - 1.3077 / 1.0670 (0.816)
+   * - 16
+     - 0.0312 / 0.0319 (1.022)
+     - 0.1726 / 0.1521 (0.882)
+     - 1.5165 / 1.4766 (0.974)
+   * - 28 (normal maximum)
+     - 0.0493 / 0.0417 (0.847)
+     - 0.2326 / 0.2056 (0.884)
+     - 1.7471 / 1.5810 (0.905)
+
+The following breakdown is compact, 10,000 elements, seconds. State
+preparation includes branch preparation (the branch column is a subset);
+host preparation additionally includes quadrature, matrix and setup.
+Independent medians do not necessarily add to median total.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - State prep / branch
+     - Grid / matrix+LU
+     - Iterations / mean per iteration
+     - Post-processing
+   * - 1
+     - 0.089360 / 0.084615
+     - 0.000793 / 0.005387
+     - 4.406909 / 0.231943
+     - 0.001400
+   * - 2
+     - 0.048980 / 0.044436
+     - 0.000800 / 0.003839
+     - 2.554770 / 0.134462
+     - 0.000739
+   * - 4
+     - 0.029765 / 0.024385
+     - 0.000826 / 0.003125
+     - 1.446811 / 0.076148
+     - 0.000429
+   * - 8
+     - 0.021112 / 0.016163
+     - 0.000957 / 0.003242
+     - 1.033192 / 0.054379
+     - 0.000367
+   * - 16
+     - 0.019508 / 0.013760
+     - 0.001535 / 0.003858
+     - 1.435983 / 0.075578
+     - 0.000298
+   * - 28
+     - 0.016959 / 0.009476
+     - 0.001627 / 0.003980
+     - 1.537718 / 0.080933
+     - 0.000411
+
+Full legacy/compact phase breakdowns at all sizes/settings are emitted by
+the benchmark command. At one thread/10,000 elements compact element work
+accounts for 3.398 seconds of the 4.407-second iteration total. The initial
+eager-slice numeric views had a 1.529 large-model ratio. Profiling identified
+host per-element validation and native element/RHS evaluation as the
+overhead; vectorized finite validation and deferred numeric-view slicing
+reduced it to 1.237. A final cProfile run at 1,024/one thread confirmed that
+error iteration/element/RHS evaluation, rather than matrix or quadrature
+construction, remains dominant. cProfile attributes native kernels to their
+host call sites; it is not an instruction-level proof of one accessor's cost.
+No unrelated normal-solver optimization or changed formula was used.
+
+**The remaining low-thread regression is not resolved.** At 10,000 elements
+compact is 23.7% slower at one thread and 19.9% slower at two; at four threads
+it is 6.3% slower, and at 8/16/28 it is faster. Thus the >10% cases were
+profiled, not waived or hidden. Default migration should wait for resolution
+or explicit acceptance of this tradeoff. Best compact scaling here is at
+eight threads (4.23x versus one); increasing to maximum threads is not
+monotonic. This is measured behavior, not a bandwidth/cache claim.
+
+Numerical validation and remaining conversion/constant audit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Twelve new regressions exercise candidate and committed barriers at
+1/2/4/8/16/28 threads, repeat execution, the actual public normal/error
+workflow, forced error-event overflow, source integration spare capacity,
+nonfinite rejection, failed publication and storage-limit independence.
+Snapshots compare every iteration's IDs/orders, current/candidate/history
+coefficients, error scalars, convergence counter/discharge error, error
+fracture constants, integration caches/corrections, ordered events and
+sampled error potentials. Normal arrays, CSR, coefficients/orders,
+fracture metadata/constants, discharge, history, branch topology, caches
+and even worker scratch are snapshotted and remain unchanged. Actual public
+models also compare error potentials and normal heads/discharge/boundary
+diagnostics after error solving. Unsupported warning/skip behavior remains.
+**Maximum absolute and relative differences are zero** in these comparisons;
+IDs, lengths, event order and deterministic iteration counts are exact.
+Nonfinite inputs/results are explicitly rejected; no tolerance was relaxed.
+There is no active separate error-boundary diagnostic in the legacy flow;
+the commented-out diagnostic was not revived as a new algorithm.
+
+There are **no compact -> padded -> compact execution round trips**.
+Remaining conversion symbols and reasons are:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Location
+     - Remaining reason
+   * - ``storage.fixed_order_from_hpc/fixed_order_to_hpc/from_hpc/to_hpc``
+     - Explicit older compatibility import/export; not called by direct compact normal/error execution
+   * - ``hpc_adaptive.adaptive_from_hpc/to_hpc``
+     - Explicit reference/import/export helpers, used by tests/benchmarks
+   * - ``hpc_fracture.get_heads_from_hpc``
+     - Existing name for a dispatcher that extracts metadata/CSR for legacy inputs and references them directly for numeric compact views; not a padded reconstruction
+   * - ``storage.connectivity_from_hpc/fracture_metadata_from_hpc`` and ``hpc_solve`` callers
+     - Legacy metadata/connectivity extraction or direct numeric-view pass-through; compact error matrix directly consumes CSR
+   * - ``Element/Fracture.consolidate_into_hpc`` and legacy ``DFN.consolidate_dfn``
+     - Retained per-object/default legacy compatibility conversion; bypassed by compact public solving
+   * - Persistence/consolidation load/save paths
+     - Existing padded schema and legacy lifecycle, deliberately unchanged
+
+The repository-wide maximum audit remains as in Phase 6 except that
+``hpc_error_solve`` allocation references now belong **only to legacy
+execution**, not the compact error path:
+
+.. list-table::
+   :header-rows: 1
+
+   * - References
+     - Classification / Phase 7 result
+   * - ``element.py`` maxima, padded dtypes, per-object converters
+     - Legacy execution / compatibility export / persistence; retained
+   * - ``dfn.py`` padded consolidation dimensions
+     - Legacy execution / persistence / explicit compatibility; compact bypasses them
+   * - ``hpc_solve`` and ``hpc_error_solve`` work/grid dtypes and legacy allocations
+     - Legacy execution; compact normal/error/post-processing allocate none of these records
+   * - ``constants.py`` scalar definitions/logging/validation and normal solver scalar MAX_NCOEF
+     - Actual numerical stopping control plus legacy physical validation; no maximum-sized compact allocation
+   * - Dtype-derived storage length guards and adaptive maximum-request increment
+     - Legacy physical compatibility / overflow guard, not a compact allocation dimension; removal/unbinding still needs a deliberate compatibility decision
+   * - MAX_DISCHARGE_INT definition/config read
+     - Obsolete/dormant storage setting, no active allocation consumer; retained
+   * - Tests, benchmarks, examples, documentation and local user scripts
+     - Reference/configuration/numerical controls and deliberate padding comparisons; local user files untouched
+   * - MAX_ITERATIONS / MAX_ERROR / damping / other numerical controls
+     - Actual algorithmic controls; unchanged (including error solver's existing 20-iteration rule)
+
+Validation executed: ``uv run pytest tests`` passed **410 tests**.
+``uv run ruff check .`` and ``uv run ruff format --check .`` were attempted
+and failed to start because project Ruff is unavailable. Pinned
+``uvx ruff@0.16.2`` lint and format checks passed on all nine Phase 7 Python
+files. The repository's existing explicit-file pre-commit Ruff lint/format
+hooks passed. ``git diff --check`` passed. No dependencies or persistence
+formats were changed.
+
+Files changed: ``src\andfn\dfn.py``, ``src\andfn\hpc\hpc_connectivity.py``,
+new ``src\andfn\hpc\hpc_error.py``, ``hpc_error_solve.py``,
+``hpc_fracture.py``, ``hpc_math_functions.py``, ``hpc_work.py``,
+new ``tests\test_compact_error.py``, new ``tests\benchmark_error.py`` and
+this documentation. Existing normal numerical algorithms and default paths
+remain.
+
+Phase 8 readiness
+~~~~~~~~~~~~~~~~~
+
+**Not unconditionally ready to make compact execution the default.**
+The blocking measured behavior is the unresolved 1/2-thread error-solver
+slowdown above 10%; it needs a focused fix or explicit acceptance before
+default migration. Storage/correctness migration itself no longer requires
+padded normal or error execution.
+
+The following are outstanding Phase 8 implementation work, not work silently
+performed here: replace the legacy default and remove the compact flag;
+remove both legacy padded execution branches and dtypes; remove or explicitly
+retain compatibility exports/diagnostic staging; update persistence to
+logical compact state; separate the genuine adaptive stopping control from
+storage MAX_NCOEF and its dtype-derived guards; remove storage MAX_ELEMENTS
+and dormant MAX_DISCHARGE_INT after deciding their compatibility surface;
+update configuration/docs/tests for those changed contracts. These schema/
+API/limit decisions are not authorized by Phase 7. Do not remove numerical
+stopping/overflow safeguards merely because allocation padding is gone.
+Previously unsupported error element types remain unsupported and are not
+a requirement to broaden numerical scope in Phase 8.
+
+Phase 7 stops here. Phase 8 requires separate approval.
+
 Solver functions
 ----------------
 

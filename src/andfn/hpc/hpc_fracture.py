@@ -772,7 +772,9 @@ def get_heads(fracture_struc_array, element_struc_array, z_array):
 
 
 @nb.njit(cache=CACHE, parallel=True)
-def get_errors(fracture_struc_array, error_struc_array, z_array, heads=False):
+def get_errors(
+    fracture_struc_array, error_struc_array, z_array, heads=False, fracture_indices=None
+):
     """
     Get the heads for all fractures.
 
@@ -791,38 +793,49 @@ def get_errors(fracture_struc_array, error_struc_array, z_array, heads=False):
         List of heads for each fracture.
     """
     n = len(z_array)
+    count = (
+        fracture_struc_array.size if fracture_indices is None else fracture_indices.size
+    )
 
     # Create the heads arrays
-    errors = np.zeros((len(fracture_struc_array), n), dtype=np.complex128)
+    errors = np.zeros((count, n), dtype=np.complex128)
 
     # Create the 3D points arrays and its working z arrays
-    pnts_3d = np.zeros((len(fracture_struc_array), n, 3), dtype=np.float64)
-    z_arrays = np.zeros((len(fracture_struc_array), n), dtype=np.complex128)
+    pnts_3d = np.zeros((count, n, 3), dtype=np.float64)
+    z_arrays = np.zeros((count, n), dtype=np.complex128)
 
     # Calculate the errors
     if heads:
-        for i in nb.prange(len(fracture_struc_array)):
-            z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
+        for i in nb.prange(count):
+            index = np.int64(i)
+            f = fracture_struc_array[
+                index if fracture_indices is None else fracture_indices[index]
+            ]
+            z_arrays[i] = z_array * f["radius"]
             calc_error_heads(
-                fracture_struc_array[i],
+                f,
                 errors[i],
                 n,
                 z_arrays[i],
                 error_struc_array,
             )
             # Map the 2D points to 3D
-            gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
+            gf.map_2d_to_3d(f, z_arrays[i], pnts_3d[i])
     else:
-        for i in nb.prange(len(fracture_struc_array)):
-            z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
+        for i in nb.prange(count):
+            index = np.int64(i)
+            f = fracture_struc_array[
+                index if fracture_indices is None else fracture_indices[index]
+            ]
+            z_arrays[i] = z_array * f["radius"]
             calc_errors(
-                fracture_struc_array[i],
+                f,
                 errors[i],
                 n,
                 z_arrays[i],
                 error_struc_array,
             )
             # Map the 2D points to 3D
-            gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
+            gf.map_2d_to_3d(f, z_arrays[i], pnts_3d[i])
 
     return errors, pnts_3d

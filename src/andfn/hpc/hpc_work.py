@@ -51,6 +51,9 @@ class WorkRecord(_Record):
         getattr(self, key)[0] = value
 
 
+ErrorWorkRecord = namedtuple("ErrorWorkRecord", FIELDS + ("coef",))
+
+
 BranchRecord = namedtuple("BranchRecord", BRANCH_FIELDS + ("len_discharge_element",))
 
 
@@ -73,11 +76,11 @@ WorkArrays = namedtuple(
 def _record_getitem(record, key):
     if (
         isinstance(record, (nb.types.NamedTuple, nb.types.NamedUniTuple))
-        and record.instance_class in (WorkRecord, BranchRecord)
+        and record.instance_class in (WorkRecord, ErrorWorkRecord, BranchRecord)
         and isinstance(key, nb.types.StringLiteral)
     ):
         name = key.literal_value
-        fields = FIELDS if record.instance_class is WorkRecord else BranchRecord._fields
+        fields = record.fields
         index = fields.index(name)
         if name in SCALAR_FIELDS:
 
@@ -96,11 +99,11 @@ def _record_getitem(record, key):
 def _record_setitem(record, key, value):
     if (
         isinstance(record, (nb.types.NamedTuple, nb.types.NamedUniTuple))
-        and record.instance_class in (WorkRecord, BranchRecord)
+        and record.instance_class in (WorkRecord, ErrorWorkRecord, BranchRecord)
         and isinstance(key, nb.types.StringLiteral)
         and key.literal_value in SCALAR_FIELDS
     ):
-        fields = FIELDS if record.instance_class is WorkRecord else BranchRecord._fields
+        fields = record.fields
         index = fields.index(key.literal_value)
 
         def scalar(record, key, value):
@@ -192,7 +195,10 @@ def invalidate_branch(work):
 
 @overload(invalidate_branch, inline="always")
 def _invalidate_branch(work):
-    if isinstance(work, nb.types.NamedTuple) and work.instance_class is WorkRecord:
+    if isinstance(work, nb.types.NamedTuple) and work.instance_class in (
+        WorkRecord,
+        ErrorWorkRecord,
+    ):
 
         def compact(work):
             work["len_discharge_element"] = 0
@@ -208,7 +214,10 @@ def _invalidate_branch(work):
 
 @overload(branch_topology_valid, inline="always")
 def _branch_topology_valid(work):
-    if isinstance(work, nb.types.NamedTuple) and work.instance_class is WorkRecord:
+    if isinstance(work, nb.types.NamedTuple) and work.instance_class in (
+        WorkRecord,
+        ErrorWorkRecord,
+    ):
 
         def compact(work):
             return work["branch_valid"] or work["len_discharge_element"] != 0
@@ -231,7 +240,10 @@ def integration_view(element, work, name):
 def _integration_view(element, work, name):
     if isinstance(name, nb.types.StringLiteral):
         index = FIELDS.index(name.literal_value)
-        if isinstance(work, nb.types.NamedTuple) and work.instance_class is WorkRecord:
+        if isinstance(work, nb.types.NamedTuple) and work.instance_class in (
+            WorkRecord,
+            ErrorWorkRecord,
+        ):
 
             def compact(element, work, name):
                 return work[index]
@@ -283,11 +295,24 @@ def resize_scratch(work, coef_capacity, integration_capacity, *, groups=None):
     return values
 
 
-def allocate_work(elements, coef_start, coef_capacity, *, scratch_groups=0):
+def allocate_work(
+    elements,
+    coef_start,
+    coef_capacity,
+    *,
+    scratch_groups=0,
+    integration_source=None,
+    coefficient_metrics=True,
+):
     if scratch_groups not in range(8):
         raise ValueError("Scratch group mask must be between zero and seven")
-    capacities = growth_capacities(elements["nint"])
-    starts, size = _layout(capacities)
+    if integration_source is None:
+        capacities = growth_capacities(elements["nint"])
+        starts, size = _layout(capacities)
+    else:
+        capacities = integration_source.integration_capacity
+        starts = integration_source.integration_start
+        size = integration_source.thetas.size
     ncoef = int(coef_capacity.sum())
     slots = nb.config.NUMBA_NUM_THREADS
     cs, ns = int(coef_capacity.max(initial=0)), int(capacities.max(initial=0))
@@ -299,10 +324,17 @@ def allocate_work(elements, coef_start, coef_capacity, *, scratch_groups=0):
     }
     values = {}
     for name in COEFFICIENT_FIELDS + ("integral",):
+        if name == "coef_error" and not coefficient_metrics:
+            values[name] = np.empty(0, dtype=complex)
+            continue
         values[name] = np.zeros(
             slots * cs if name in selected else ncoef, dtype=complex
         )
     for name in INTEGRATION_FIELDS:
+        if integration_source is not None and name in CACHE_FIELDS:
+            array = getattr(integration_source, name)
+            values[name] = array.copy() if name == "dpsi_corr" else array
+            continue
         dtype = (
             complex if name in ("exp_array_m", "exp_array_p", "z_integral") else float
         )
