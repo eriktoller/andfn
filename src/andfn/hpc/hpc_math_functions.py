@@ -1309,13 +1309,18 @@ def fill_exp_array(n, thetas, exp_array, sign):
 
 @nb.njit()
 def fill_z_integral(_self, work_array):
+    fill_z_values(_self, work_array["exp_array_p"], work_array["z_integral"])
+
+
+@nb.njit()
+def fill_z_values(_self, exp_p, z_integral):
     _type = _self["_type"]
     n = _self["nint"]
     if _type == 0:  # If intersection
         endpoints0 = _self["endpoints0"]
         for ii in range(n):
-            chi = work_array["exp_array_p"][ii]
-            work_array["z_integral"][ii] = gf.map_chi_to_z_line(chi, endpoints0)
+            chi = exp_p[ii]
+            z_integral[ii] = gf.map_chi_to_z_line(chi, endpoints0)
 
 
 ########################################################################################################################

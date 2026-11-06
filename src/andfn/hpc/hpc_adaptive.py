@@ -5,6 +5,7 @@ buffers. Construction never mutates active state; publication occurs only at
 the Python barrier, after all allocations and cache rebuilding succeed.
 """
 
+from collections import namedtuple
 from dataclasses import dataclass, field
 from time import perf_counter
 
@@ -64,12 +65,32 @@ class GrowthTransaction:
     requested_nint: np.ndarray
 
 
+CachePatch = namedtuple("CachePatch", CACHE_FIELDS)
+CacheStage = namedtuple(
+    "CacheStage",
+    CACHE_FIELDS
+    + ("integration_start", "integration_capacity", "len_discharge_element"),
+)
+
+
+@dataclass(frozen=True)
+class LogicalGrowth:
+    state: AdaptiveState
+    ids: np.ndarray
+    ncoef: np.ndarray
+    nint: np.ndarray
+    starts: np.ndarray
+    caches: tuple
+
+
 @dataclass
 class AdaptiveSolver:
     state: AdaptiveState
     batches: list = field(default_factory=list)
     transition_callback: object = None
     assessments: list = field(default_factory=list)
+    debug_validation: bool = False
+    before_publication: object = None
 
 
 def adaptive_from_hpc(elements):
@@ -98,7 +119,45 @@ def adaptive_from_hpc(elements):
         storage.coef_start,
         storage.coef_capacity,
     )
-    return AdaptiveSolver(AdaptiveState(storage, work))
+    owner = AdaptiveSolver(AdaptiveState(storage, work))
+    validate_state(owner.state)
+    return owner
+
+
+def validate_state(state, *, finite=False):
+    """Public structural validation; complete finite scans are opt-in."""
+    state.storage.validate()
+    e = state.storage.elements
+    validate_work(state.work, e["ncoef"], e["nint"])
+    if any(not a.flags.writeable for a in state_arrays(state).values()):
+        raise ValueError("Compact published buffers must be writable")
+    if finite:
+        for name in e.dtype.names:
+            if e[name].dtype.kind in "fc" and not np.all(np.isfinite(e[name])):
+                raise ValueError("Nonfinite element metadata")
+        for i, element in enumerate(e):
+            c, n = state.storage.coef_start[i], element["ncoef"]
+            for a in (
+                state.storage.coef_data,
+                state.storage.candidate_coef_data,
+                state.storage.old_coef_data,
+            ):
+                if not np.all(np.isfinite(a[c : c + n])):
+                    raise ValueError("Nonfinite coefficient prefix")
+            for name in COEFFICIENT_FIELDS + ("integral",):
+                if not np.all(np.isfinite(getattr(state.work, name)[c : c + n])):
+                    raise ValueError("Nonfinite coefficient work prefix")
+            for name in INTEGRATION_FIELDS:
+                start = state.work.integration_start[i]
+                if not np.all(
+                    np.isfinite(
+                        getattr(state.work, name)[start : start + element["nint"]]
+                    )
+                ):
+                    raise ValueError("Nonfinite cache prefix")
+        for name in ("a0_error", "error"):
+            if not np.all(np.isfinite(getattr(state.work, name))):
+                raise ValueError("Nonfinite scalar work")
 
 
 def to_hpc(state):
@@ -190,23 +249,306 @@ def validate_requests(state, requested, integrations, required, maximum, increas
 
 
 @nb.njit(cache=CACHE)
+def rebuild_cache_segments(e, thetas, exp_m, exp_p, z_integral):
+    n = e["nint"]
+    mf.calc_thetas(n, e["_type"], thetas[:n])
+    mf.fill_exp_array(n, thetas, exp_m, -1)
+    mf.fill_exp_array(n, thetas, exp_p, 1)
+    mf.fill_z_values(e, exp_p, z_integral)
+
+
+@nb.njit(cache=CACHE)
+def rebuild_cache_values(e, record):
+    thetas = integration_view(e, record, "thetas")
+    rebuild_cache_segments(
+        e, thetas, record["exp_array_m"], record["exp_array_p"], record["z_integral"]
+    )
+
+
+@nb.njit(cache=CACHE)
 def rebuild_growth_caches(elements, work, required):
     for i in range(elements.size):
         if not required[i]:
             continue
         e = elements[i]
+        if hasattr(work, "integration_start") and not hasattr(work, "coef_start"):
+            a, n = work.integration_start[i], e["nint"]
+            rebuild_cache_segments(
+                e,
+                work.thetas[a : a + n],
+                work.exp_array_m[a : a + n],
+                work.exp_array_p[a : a + n],
+                work.z_integral[a : a + n],
+            )
+            work.len_discharge_element[i] = 0
+            continue
         record = work_record(work, i)
-        thetas = integration_view(e, record, "thetas")
-        mf.calc_thetas(e["nint"], e["_type"], thetas[: e["nint"]])
         # Grid changes invalidate event topology, not fracture CSR. Existing
         # circle/line solves rebuild topology and q-dependent corrections.
         record["len_discharge_element"] = 0
-        mf.fill_exp_array(e["nint"], thetas, record["exp_array_m"], -1)
-        mf.fill_exp_array(e["nint"], thetas, record["exp_array_p"], 1)
-        mf.fill_z_integral(e, record)
+        rebuild_cache_values(e, record)
+
+
+@nb.njit(cache=CACHE)
+def validate_affected(
+    elements, work, starts, capacities, ids, nc, ni, maximum, increase
+):
+    """Only affected metadata/layout endpoints; never scan active values."""
+    if increase <= 0 or increase > _MAX_REQUEST_INCREMENT:
+        raise ValueError("Invalid coefficient increment")
+    coefficient_repack, integration_repack = False, False
+    for i in ids:
+        if i < 0 or i >= elements.size or elements[i]["_id"] != i:
+            raise ValueError("Invalid affected element ID")
+        e = elements[i]
+        if e["_type"] == 2 or e["ncoef"] >= maximum:
+            raise ValueError("Ineligible adaptive growth request")
+        if nc[i] != e["ncoef"] + increase or nc[i] < e["ncoef"]:
+            raise ValueError("Invalid requested coefficient length")
+        if ni[i] != 2 * nc[i] or ni[i] < 0:
+            raise ValueError("Invalid requested integration length")
+        if nc[i] > element_dtype_hpc_coef_limit or ni[i] > element_dtype_hpc_int_limit:
+            raise ValueError("Growth exceeds retained integration/work storage")
+        if starts[i] < 0 or starts[i] + capacities[i] > work.old_coef.size:
+            raise ValueError("Invalid affected coefficient segment")
+        if work.integration_start[i] < 0 or (
+            work.integration_start[i] + work.integration_capacity[i] > work.thetas.size
+        ):
+            raise ValueError("Invalid affected integration segment")
+        coefficient_repack |= nc[i] > capacities[i]
+        integration_repack |= ni[i] > work.integration_capacity[i]
+    return coefficient_repack, integration_repack
+
+
+element_dtype_hpc_coef_limit = element_dtype_hpc["coef"].shape[0]
+element_dtype_hpc_int_limit = element_dtype_hpc["thetas"].shape[0]
+
+
+@nb.njit(cache=CACHE)
+def patch_layout(ids, ni):
+    starts = np.empty(ids.size, dtype=np.int64)
+    total = 0
+    for j in range(ids.size):
+        length = ni[ids[j]]
+        if length < 0 or total > np.iinfo(np.int64).max - length:
+            raise ValueError("Invalid affected cache extent")
+        starts[j] = total
+        total += length
+    return starts, total
+
+
+@nb.njit(cache=CACHE)
+def prepare_cache_patch(elements, work, ids, nc, ni, starts, caches, affected):
+    preserved = 0
+    for j in range(ids.size):
+        i = ids[j]
+        affected[j] = elements[i]
+        affected[j]["ncoef"], affected[j]["nint"] = nc[i], ni[i]
+        a, n = starts[j], ni[i]
+        previous = min(elements[i]["nint"], n)
+        preserved += previous * 24
+        before = work.integration_start[i]
+        for k in range(previous):
+            caches.dpsi_corr[a + k] = work.dpsi_corr[before + k]
+            caches.z_integral[a + k] = work.z_integral[before + k]
+        rebuild_cache_segments(
+            affected[j],
+            caches.thetas[a : a + n],
+            caches.exp_array_m[a : a + n],
+            caches.exp_array_p[a : a + n],
+            caches.z_integral[a : a + n],
+        )
+    return preserved
+
+
+@nb.njit(cache=CACHE)
+def validate_patch(caches):
+    for k in range(caches.thetas.size):
+        if not (
+            np.isfinite(caches.thetas[k])
+            and np.isfinite(caches.dpsi_corr[k])
+            and np.isfinite(caches.exp_array_m[k])
+            and np.isfinite(caches.exp_array_p[k])
+            and np.isfinite(caches.z_integral[k])
+        ):
+            raise ValueError("Nonfinite replacement integration cache")
+
+
+@nb.njit(cache=CACHE)
+def publish_logical(
+    elements, current, candidate, old, coef_start, work, ids, nc, ni, starts, caches
+):
+    for j in nb.prange(ids.size):
+        i = ids[j]
+        c = coef_start[i]
+        for k in range(elements[i]["ncoef"], nc[i]):
+            current[c + k] = 0
+            candidate[c + k] = 0
+            old[c + k] = 0
+            work.old_coef[c + k] = 0
+            work.coef_error[c + k] = 0
+        a, b = work.integration_start[i], starts[j]
+        for k in range(ni[i]):
+            work.thetas[a + k] = caches.thetas[b + k]
+            work.dpsi_corr[a + k] = caches.dpsi_corr[b + k]
+            work.exp_array_m[a + k] = caches.exp_array_m[b + k]
+            work.exp_array_p[a + k] = caches.exp_array_p[b + k]
+            work.z_integral[a + k] = caches.z_integral[b + k]
+        work.len_discharge_element[i] = 0
+    for j in nb.prange(ids.size):
+        i = ids[j]
+        elements[i]["ncoef"], elements[i]["nint"] = nc[i], ni[i]
+
+
+def prepare_logical(state, ids, nc, ni, rebuild):
+    s, w = state.storage, state.work
+    destinations = (
+        s.elements,
+        s.coef_data,
+        s.candidate_coef_data,
+        s.old_coef_data,
+        w.old_coef,
+        w.coef_error,
+        w.len_discharge_element,
+        w.thetas,
+        w.dpsi_corr,
+        w.exp_array_m,
+        w.exp_array_p,
+        w.z_integral,
+    )
+    if any(not a.flags.writeable for a in destinations):
+        raise ValueError("Affected publication buffers must be writable")
+    extraction = perf_counter()
+    starts, size = patch_layout(ids, ni)
+    affected = np.empty(ids.size, dtype=state.storage.elements.dtype)
+    caches = CachePatch(
+        np.zeros(size),
+        np.zeros(size),
+        np.zeros(size, dtype=complex),
+        np.zeros(size, dtype=complex),
+        np.zeros(size, dtype=complex),
+    )
+    extracted = perf_counter() - extraction
+    cache_start = perf_counter()
+    preserved = prepare_cache_patch(
+        state.storage.elements, state.work, ids, nc, ni, starts, caches, affected
+    )
+    callback_arrays = ()
+    if rebuild is not rebuild_growth_caches:
+        lengths = ni[ids]
+        event_counts = np.zeros(ids.size, dtype=np.int64)
+        mask = np.ones(ids.size, dtype=bool)
+        callback_arrays = (lengths, event_counts, mask)
+        rebuild(affected, CacheStage(*caches, starts, lengths, event_counts), mask)
+        if np.any(event_counts != 0):
+            raise ValueError("Rebuilt integration grid must invalidate branch events")
+    cache_seconds = perf_counter() - cache_start
+    validation = perf_counter()
+    validate_patch(caches)
+    finite_seconds = perf_counter() - validation
+    cache_bytes = sum(a.nbytes for a in caches)
+    temporary = sum(
+        a.nbytes for a in (*caches, ids, starts, affected, *callback_arrays)
+    )
+    persistent = state_payload(state)
+    stats = {
+        "path": "within_capacity",
+        "expanded_elements": ids.size,
+        "coefficient_repacks": 0,
+        "integration_repacks": 0,
+        "coefficient_bytes_copied": 0,
+        "coefficient_repack_bytes": 0,
+        "coefficient_relocation_bytes": 0,
+        "integration_bytes_copied": preserved + cache_bytes,
+        "cache_rebuild_bytes": cache_bytes,
+        "cache_publication_bytes": cache_bytes,
+        "work_bytes_copied": 0,
+        "branch_event_bytes_copied": 0,
+        "metadata_bytes_copied": affected.nbytes,
+        "total_bytes_copied": preserved + cache_bytes + affected.nbytes,
+        "transaction_temporary_payload": temporary,
+        "temporary_array_count": 8 + len(callback_arrays),
+        "complete_state_scans": 0,
+        "affected_element_scans": 3,
+        "transaction_staging_seconds": extracted,
+        "request_extraction_seconds": extracted,
+        "finite_validation_seconds": finite_seconds,
+        "cache_rebuild_seconds": cache_seconds,
+        "old_payload": persistent,
+        "replacement_payload": persistent,
+        "peak_simultaneous_numpy_payload": persistent + temporary,
+    }
+    return LogicalGrowth(state, ids, nc, ni, starts, caches), stats
 
 
 def build_replacement(
+    state,
+    requested,
+    integrations,
+    required,
+    maximum,
+    increase,
+    *,
+    rebuild=rebuild_growth_caches,
+):
+    """Dispatch no-growth, logical patches and independent physical repacks."""
+    if (
+        any(not isinstance(a, np.ndarray) for a in (required, requested, integrations))
+        or required.dtype != np.bool_
+        or required.shape != (state.storage.elements.size,)
+        or requested.shape != required.shape
+        or integrations.shape != required.shape
+        or requested.dtype != np.int64
+        or integrations.dtype != np.int64
+    ):
+        raise ValueError("Invalid growth request arrays")
+    extraction_started = perf_counter()
+    ids = np.flatnonzero(required)
+    extraction_seconds = perf_counter() - extraction_started
+    if not ids.size:
+        return state, None
+    started = perf_counter()
+    c, integration = validate_affected(
+        state.storage.elements,
+        state.work,
+        state.storage.coef_start,
+        state.storage.coef_capacity,
+        ids,
+        requested,
+        integrations,
+        maximum,
+        increase,
+    )
+    validation_seconds = perf_counter() - started
+    if not c and not integration:
+        transaction, stats = prepare_logical(
+            state, ids, requested, integrations, rebuild
+        )
+        stats["validation_seconds"] = validation_seconds
+        stats["request_extraction_seconds"] += extraction_seconds
+        # Assessment owns these three arrays until the second commit finishes.
+        requests_payload = sum(a.nbytes for a in (requested, integrations, required))
+        stats["builder_temporary_array_count"] = stats["temporary_array_count"]
+        stats["builder_temporary_payload"] = stats["transaction_temporary_payload"]
+        stats["temporary_array_count"] += 3
+        stats["transaction_temporary_payload"] += requests_payload
+        stats["peak_simultaneous_numpy_payload"] += requests_payload
+        return transaction, stats
+    transaction, stats = build_repack(
+        state, requested, integrations, required, maximum, increase, rebuild=rebuild
+    )
+    stats["path"] = (
+        "both_repack"
+        if c and integration
+        else "coefficient_repack"
+        if c
+        else "integration_repack"
+    )
+    stats["complete_state_scans"] = 2
+    return transaction, stats
+
+
+def build_repack(
     state,
     requested,
     integrations,
@@ -361,6 +703,9 @@ def build_replacement(
         + cache_bytes
         + affected.nbytes,
         "transaction_temporary_payload": allocated,
+        "temporary_array_count": sum(
+            key not in old_arrays for key in transaction_arrays
+        ),
         "peak_simultaneous_numpy_payload": old_payload + allocated,
         "transaction_staging_seconds": staging_seconds,
         "cache_rebuild_seconds": cache_seconds,
@@ -374,6 +719,22 @@ def publish(transaction):
     """Only prevalidated, nonallocating array writes occur at this barrier."""
     if isinstance(transaction, AdaptiveState):
         return transaction
+    if isinstance(transaction, LogicalGrowth):
+        s, w = transaction.state.storage, transaction.state.work
+        publish_logical(
+            s.elements,
+            s.coef_data,
+            s.candidate_coef_data,
+            s.old_coef_data,
+            s.coef_start,
+            w,
+            transaction.ids,
+            transaction.ncoef,
+            transaction.nint,
+            transaction.starts,
+            transaction.caches,
+        )
+        return transaction.state
     state, old = transaction.state, transaction.previous
     s, work = state.storage, state.work
     for j, i in enumerate(transaction.ids):
@@ -503,7 +864,23 @@ def adaptive_step(
             "expanded_elements": int(np.count_nonzero(requests[2])),
         }
     )
+    if stats is None and owner.transition_callback is None:
+        # No publication is needed, but the original second commit remains.
+        owner.state.work.set_zero[:] = False
+        hs.commit_coefficients(
+            s.elements,
+            None,
+            damping,
+            s.coef_data,
+            s.coef_start,
+            s.candidate_coef_data,
+        )
+        return
     # Single Python publication after every failure-prone construction step.
+    if owner.debug_validation:
+        validate_state(owner.state, finite=True)
+    if owner.before_publication is not None:
+        owner.before_publication(owner.state)
     publication_start = perf_counter()
     owner.state = publish(replacement)
     if stats is not None:

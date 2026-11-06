@@ -1078,7 +1078,398 @@ claim.
 Project Ruff commands were attempted but unavailable; pinned Ruff 0.16.2
 lint/format checks on changed Python files and ``git diff --check`` passed.
 No dependencies, persistence, numerical algorithms, legacy solver dtype or
-error solver were changed. No Phase 4B implementation is included.
+error solver were changed in the Phase 4A snapshot.
+
+Phase 4B: affected-only adaptive control plane
+--------------------------------------------
+
+``build_replacement`` now explicitly distinguishes no growth, within-capacity
+logical growth, coefficient-only repacking, integration-only repacking and
+both-family repacking. Only physical repacks enter ``build_repack``. The
+production no-growth step skips transaction construction and owner publication
+entirely, while retaining the legacy second commit.
+
+Logical growth prepares eight payload arrays: affected IDs, packed cache
+offsets, affected metadata, and the five cache arrays. It keeps the exact same
+``AdaptiveState``, ``AdaptiveStorage`` and ``WorkArrays`` identities. No complete
+ownership tuple is rebuilt. The three assessment request arrays remain alive
+until the second commit; their bytes are included in transaction peak
+accounting. Offsets and preserved-prefix byte accounting are computed in
+compiled serial loops rather than Python element loops or NumPy expression
+temporaries. A small ``CacheStage`` adapter preserves custom cache-failure
+callbacks without constructing a full work ownership tuple, even on that
+opt-in diagnostic path.
+
+Preparation validates affected IDs, old-order eligibility, requested lengths,
+the approved legacy integration shrink and maximum overshoot, and affected
+segment bounds. It preserves only affected correction/z prefixes, constructs
+theta/exponential/z values privately, and checks all five prepared arrays in
+one compiled finite-value loop. It neither reads nor copies unchanged current,
+candidate, compatibility-old or convergence-history prefixes. Physical repacks
+retain complete structural validation and the previous rollback-by-private-
+replacement behavior.
+
+The compiled serial publication kernel zeros only newly exposed coefficient/
+history slots, copies prepared cache segments, invalidates affected event
+counts, and finally publishes logical lengths. Candidate recalculation
+reacquires owner buffers afterward. Branch topology is still rebuilt by the
+original subsequent numerical operations, not transaction preparation.
+Publication and event invalidation share one dispatch; there is no separate
+parallel launch for either. No detection/publication fusion, numerical-stage
+fusion, synchronization removal or commit-order change is introduced.
+
+Validation levels and failure model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* **Structural:** ``validate_state(state)`` checks complete storage/work layout
+  and writable ownership at import or explicit public calls. Physical repacks
+  retain complete storage/work checks before publication.
+* **Transaction:** ordinary logical growth checks only request shape/dtype,
+  affected metadata/segment endpoints, destination writability and newly
+  prepared cache values. No complete-state or unchanged-prefix finite scan
+  occurs. The three affected metadata passes are validation, offset
+  construction and cache preparation.
+* **Debug:** ``validate_state(state, finite=True)`` additionally scans element
+  numeric metadata, all three persistent coefficient families, coefficient
+  work prefixes, all integration work prefixes and scalar work.
+  ``owner.debug_validation = True`` enables this before every publication.
+  It defaults to false.
+
+All allocations, cache building, finite checks, debug validation and the
+optional ``owner.before_publication`` injection hook run before publication.
+The hook observes the committed pre-growth state; raising there leaves it
+unchanged. Valid publication consists solely of bounded writes in a compiled
+serial kernel: no allocation, user callback or validation remains inside it.
+This assumes an exclusively owned, structurally valid state and no mutation
+of prepared requests/buffers between preparation and publication. Concurrent
+mutation, asynchronous process termination and memory corruption are outside
+that contract; publication is not advertised as recoverable from them.
+No whole-state rollback clone is retained.
+
+The new failure contracts compare every published buffer identity and value
+after preparation failure, nonfinite prepared values, read-only destinations
+and an exception immediately before publication. Successful and failed cases
+run explicit complete structural/debug validation. Existing construction,
+cache, branch-event and numerical trajectory tests remain unchanged.
+
+Call profiles and publication measurements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before editing, 100 warm spare-capacity constructions took 0.230 seconds and
+435,701 profiled calls. Finite-prefix generator checks accounted for 38,400
+calls and 0.086 cumulative seconds; ``np.all`` had 29,300 calls. A final
+instrumented control using the retained Phase 4A replacement builder measured
+0.227 seconds / 440,301 calls, including the additional accounting. Its finite
+generator cost was 0.087 seconds. The optimized path measured 0.011 seconds /
+14,301 calls at 28 threads. Warm unprofiled construction medians were
+80.0/78.0/81.0 microseconds at 1/2/28 threads.
+
+The instrumented 100-construction API inventory is:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Operation
+     - Retained replacement-builder control
+     - Affected-only construction
+   * - Python ``np.zeros`` / ``np.empty`` / ``np.ones``
+     - 1500 / 100 / 100
+     - 500 / 100 / 0
+   * - Python ndarray ``copy`` / ``astype``
+     - 400 / 700
+     - 0 / 0
+   * - ``flatnonzero``
+     - 300
+     - 100
+   * - Python ``_layout`` / complete ``_validate_layout``
+     - 900 / 600
+     - 0 / 0
+   * - Complete storage / work validation
+     - 200 / 200
+     - 0 / 0
+   * - Complete work tuple reconstruction
+     - 200
+     - 0
+
+These are API calls, not an assertion that NumPy ufunc intermediates are
+visible to CProfile. Each optimized transaction additionally allocates one
+offset array inside compiled ``patch_layout`` and the ID payload through
+``flatnonzero``: eight builder payloads in total. Source-level affected-element
+Python loops are eliminated from preparation/publication. There are four
+measured construction dispatcher crossings per transaction: affected
+validation, offset construction, cache preparation and finite validation.
+All four kernels are serial; construction launches no parallel region.
+Publication adds one serial crossing and no ownership-state publication.
+Only the small patch/result objects are reconstructed.
+
+The compiled finite check alone measured 3.2/3.2/3.3 microseconds per
+transaction, or approximately 0.00033 seconds per 100 at 28 threads. This
+checks newly prepared caches only, unlike the old finite-prefix scan.
+Five cache arrays are checked together without concatenating them.
+
+For the 96-affected-element spare fixture, serial publication measured
+9.0/9.5/14.6 microseconds at 1/2/28 threads. A benchmark-only parallel
+compilation of the same kernel measured 5.9/7.1/32.4 microseconds.
+At 28 threads parallel launch overhead outweighed its work reduction.
+The production implementation therefore remains serial; no unmeasured
+element-count threshold was introduced. A trivial serial dispatcher measured
+0.2 microseconds, while a trivial parallel launch measured 0.5/1.1/12.6
+microseconds. These probes are not subtracted from real numerical timings:
+actual kernels have different argument-marshalling and scheduling costs.
+Standalone event-count invalidation, including its dispatcher, measured
+0.3/0.3/0.5 microseconds. In production it is part of publication and adds no
+separate dispatcher.
+
+The 28-thread six-step instrumented element-only profile measured detection
+0.236 ms, construction excluding cache building 0.094 ms, cache preparation
+0.088 ms, publication including event invalidation 0.022 ms, adaptive candidate
+recalculation 0.474 ms, commits 0.331 ms and remaining element work 1.523 ms.
+Construction submeasurements were request extraction/patch allocation
+0.033 ms, affected validation 0.017 ms and finite validation 0.007 ms.
+Submeasurements overlap the aggregate construction category and must not be
+added to it again. Phase 4A's corresponding construction/publication totals
+were 1.799/0.786 ms. The callback-instrumented split-stage diagnostic is not
+substituted for the unchanged comparable benchmark.
+
+Runtime comparison and remaining review gate
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The fixtures, seven alternating paired samples and six-iteration timed
+boundaries remain unchanged. The new logical-growth kernels are explicitly
+warmed before timing. A 24-iteration spare-capacity case now also runs at each
+thread setting. Final legacy/compact median milliseconds were:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - 1 thread
+     - 2 threads
+     - 28 threads
+   * - 128, no growth
+     - 18.754 / 18.979
+     - 9.657 / 9.855
+     - 3.811 / 4.264
+   * - 128, forced repacks
+     - 83.335 / 96.016
+     - 42.469 / 55.011
+     - 12.682 / 34.429
+   * - 128, spare-capacity growth
+     - 11.177 / 10.979
+     - 5.573 / 5.856
+     - 2.844 / 3.204
+   * - 1024, multiple expansions
+     - 678.006 / 765.796
+     - 353.683 / 447.152
+     - 94.399 / 269.469
+   * - 128 spare capacity, 24 iterations
+     - 34.242 / 35.077
+     - 18.828 / 19.932
+     - 9.796 / 11.297
+
+The corresponding 10th--90th percentile intervals, legacy / compact ms:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - 1 thread
+     - 2 threads
+     - 28 threads
+   * - 128, no growth
+     - [18.391, 19.573] / [18.791, 19.489]
+     - [9.495, 10.316] / [9.700, 10.309]
+     - [3.687, 4.385] / [3.981, 4.508]
+   * - 128, forced repacks
+     - [82.732, 84.029] / [95.245, 97.323]
+     - [41.860, 42.929] / [54.369, 55.883]
+     - [11.838, 15.011] / [33.564, 37.498]
+   * - 128, spare capacity
+     - [10.638, 11.788] / [10.906, 11.535]
+     - [5.401, 7.134] / [5.773, 6.235]
+     - [2.602, 3.245] / [3.029, 3.587]
+   * - 1024, multiple expansions
+     - [669.392, 680.729] / [761.554, 771.914]
+     - [344.159, 368.962] / [441.341, 462.534]
+     - [89.212, 101.193] / [251.905, 281.014]
+   * - 128 spare capacity, 24 iterations
+     - [33.539, 35.233] / [34.818, 40.269]
+     - [17.891, 20.077] / [18.984, 22.141]
+     - [9.361, 10.506] / [11.044, 11.945]
+
+Retained compact medians side by side (each cell lists 1/2/28 threads, ms):
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - Phase 3B
+     - Phase 4A
+     - Phase 4B
+   * - 128, no growth
+     - 19.096 / 23.261 / 4.303
+     - 18.805 / 10.005 / 4.177
+     - 18.979 / 9.855 / 4.264
+   * - 128, forced repacks
+     - 142.672 / 97.718 / 39.106
+     - 96.255 / 55.514 / 34.855
+     - 96.016 / 55.011 / 34.429
+   * - 128, spare capacity
+     - 21.919 / 12.750 / 7.442
+     - 12.572 / 7.471 / 5.600
+     - 10.979 / 5.856 / 3.204
+   * - 1024, multiple expansions
+     - 1187.831 / 496.961 / 301.042
+     - 771.762 / 442.390 / 263.548
+     - 765.796 / 447.152 / 269.469
+   * - 128 spare capacity, 24 iterations
+     - not retained / not retained / 15.484
+     - not retained / not retained / 17.893
+     - 35.077 / 19.932 / 11.297
+
+The exact retained Phase 4A critical baseline is legacy 2.603 ms, compact
+5.600 ms at 128 elements / spare growth / 28 threads. The Phase 4B paired
+measurement is legacy 2.8444 ms, compact 3.2035 ms: **1.1262x**, not a pass
+against the requested 1.10 threshold. At 1/2 threads the ratios are
+0.9823/1.0508. The 24-iteration ratios are 1.0244/1.0586/1.1532.
+An earlier run measured 1.1192x for the six-step 28-thread case, so this is not
+reported as a sustained target achievement. Shared-machine dispersion and
+legacy baseline movement remain visible rather than selecting a favorable run.
+
+A separate profile of 200 post-growth element steps took 0.060 seconds;
+0.058 seconds were inside the adaptive entry point's compiled stage calls
+and their dispatch/marshalling, with roughly 0.002 seconds in visible Python
+bookkeeping. Native compute versus scheduling time is not separately
+attributable from CProfile. Adaptive candidate calculation, commit launches,
+retained work views and physical repack validation/copying remain significant.
+No stage fusion was adopted without evidence of a benefit that justifies
+changing stage visibility. Detection, publication and both commits retain
+their synchronization boundaries. Stop at Phase 4B for review; no thread-local
+scratch or Phase 4C migration is included.
+
+Payload and failure accounting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Within-capacity construction has exactly eight new numeric payloads; including
+the three assessment requests gives eleven. At 128 elements / 96 affected,
+the builder allocates 142,848 bytes, requests add 2,176, and simultaneous
+persistent-plus-transaction payload is 2,963,200 bytes. Of the builder bytes,
+122,880 are new caches, 18,432 affected metadata and 1,536 IDs/offsets.
+No current, candidate, compatibility/history coefficient, unrelated work or
+branch payload is copied. Copies comprise 41,472 affected correction/z prefix
+bytes, 122,880 cache publication bytes and 18,432 metadata bytes.
+No full-state scan or ownership replacement occurs.
+
+The heterogeneous eight-element transaction scenarios use the same fixtures
+and growth requests as the Phase 4A ownership tests:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Scenario
+     - Live temporary payload arrays
+     - Temporary bytes
+     - Simultaneous bytes
+     - Coefficient copy
+     - Integration/cache copy
+     - Complete structural passes
+   * - No growth
+     - 0
+     - 0
+     - persistent only
+     - 0
+     - 0
+     - 0
+   * - Within capacity
+     - 11
+     - 1,880
+     - 187,424
+     - 0
+     - 2,016
+     - 0
+   * - Coefficient only
+     - 25
+     - 10,600
+     - 191,536
+     - 4,800
+     - 2,016
+     - 2
+   * - Integration only
+     - 25
+     - 14,120
+     - 193,328
+     - 0
+     - 9,952
+     - 2
+   * - Both
+     - 35
+     - 22,696
+     - 197,296
+     - 4,800
+     - 9,952
+     - 2
+   * - Several, both
+     - 35
+     - 38,856
+     - 213,456
+     - 4,800
+     - 20,032
+     - 2
+
+Unrelated-work and branch copy bytes are zero in every scenario. Logical
+growth has three affected metadata passes plus one combined prepared-cache
+finite pass, followed by two serial affected publication loops. Physical
+repacks retain the prior complete request/layout validation and affected
+finite-prefix checks. No-growth production creates no transaction; its
+compiled growth assessment still creates the original three request arrays.
+
+Across the comparable benchmark, 128 forced-growth transactions retain at
+most 35 new payload arrays / 1,628,288 bytes per transaction, and simultaneous
+state peaks at 5,280,512 bytes. Across five batches, coefficient and
+integration/cache copies total 972,800 and 3,767,296 bytes, respectively.
+For 1024 elements the corresponding temporary/peak payloads are
+13,026,304 / 42,244,096 bytes and copy totals 7,782,400 / 30,138,368 bytes.
+Physical repack accounting is unchanged from Phase 4A.
+
+Array counts describe identity-deduplicated transaction payloads, including
+replacement arrays and requests, not zero-copy view objects. As in the
+retained baseline, physical-repack figures exclude transient validation
+ufunc expressions, Python objects and Numba/NRT bookkeeping; they are not
+allocator-complete cumulative allocation or OS RSS measurements. The logical
+fast path has no such NumPy expression temporaries: its eight builder
+payloads and the three assessment payloads are explicitly accounted for.
+The separate API inventory exposes constructor/copy calls rather than hiding
+this measurement limitation.
+
+Exact transition/iteration comparisons retain current/candidate/history,
+requests and lengths, coefficient/element errors, all retained caches,
+corrections and branch state, fracture constants, discharge/DFN discharge,
+heads, boundary errors and convergence. Recorded maximum absolute and
+relative differences remain zero. Same-thread comparisons and the legacy
+cross-thread reduction deltas remain exact; no tolerance changed.
+All original failure tests remain in place.
+
+Validation uses a fresh, session-local Numba cache after the call-graph
+changes. An initial run reusing the Phase 4A cache hit a native access
+violation; fresh-cache targeted and full runs succeeded. Old compiled caches
+must not be treated as compatible proof after solver/layout changes.
+The project Ruff commands were attempted but the executable was unavailable.
+Pinned Ruff 0.16.2 checks are used on the five changed Python files; no
+dependency or project configuration was changed.
+
+The final ``uv run pytest tests`` passed all **311 tests**, including all
+original failures and fifteen new control-plane/failure cases.
+``uv run ruff check .`` and ``uv run ruff format --check .`` both failed to
+start because Ruff is not installed in the project environment.
+``uvx ruff@0.16.2 check`` and ``uvx ruff@0.16.2 format --check`` passed on all
+five changed Python files. ``git diff --check`` and the corresponding
+``git diff --check HEAD`` check of staged plus unstaged changes passed.
+
+Changed files are ``hpc_adaptive.py``, ``hpc_math_functions.py``,
+``benchmark_adaptive.py``, the new ``benchmark_adaptive_control.py`` and
+``test_adaptive_control.py``, and this documentation. No thread-local scratch,
+error-solver or persistence migration, cache removal, legacy removal,
+capacity-policy change or numerical-limit correction is included.
 
 Solver functions
 ----------------
