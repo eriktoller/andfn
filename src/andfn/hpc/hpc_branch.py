@@ -11,6 +11,7 @@ from andfn.storage import _layout, growth_capacities
 from . import CACHE, PARALLEL
 from . import hpc_geometry_functions as gf
 from . import hpc_math_functions as mf
+from .hpc_quadrature import quadrature_row
 from .hpc_work import BRANCH_FIELDS, BranchRecord, WorkArrays
 
 _count_dtype = np.dtype(
@@ -100,6 +101,7 @@ def construct_events(
     signs,
     event_ids,
     positions,
+    quadrature=None,
 ):
     """Count beyond capacity, but write only private, exclusive segments."""
     for k in nb.prange(selected.size):
@@ -110,14 +112,17 @@ def construct_events(
         if e["_type"] not in (1, 4, 5):
             continue
         n = nint[i]
-        theta = np.empty(n)
-        exp_p = np.empty(n, dtype=np.complex128)
-        mf.calc_thetas(n, e["_type"], theta)
-        mf.fill_exp_array(n, theta, exp_p, 1)
-        if e["_type"] in (1, 4):
-            points = gf.map_chi_to_z_circle(exp_p, e["radius"], e["center"])
+        if quadrature is not None:
+            points = quadrature_row(quadrature, 0, i, n)
         else:
-            points = gf.map_chi_to_z_line(exp_p, e["endpoints0"])
+            theta = np.empty(n)
+            exp_p = np.empty(n, dtype=np.complex128)
+            mf.calc_thetas(n, e["_type"], theta)
+            mf.fill_exp_array(n, theta, exp_p, 1)
+            if e["_type"] in (1, 4):
+                points = gf.map_chi_to_z_circle(exp_p, e["radius"], e["center"])
+            else:
+                points = gf.map_chi_to_z_line(exp_p, e["endpoints0"])
         a, b = starts[j], starts[j] + capacities[j]
         record = BranchRecord(
             signs[a:b], event_ids[a:b], positions[a:b], counts[j : j + 1]
@@ -162,7 +167,7 @@ def allocate_events(size):
     return tuple(np.empty(size, dtype=np.int64) for _ in BRANCH_FIELDS)
 
 
-def prepare_direct(work, elements, fractures, ids, nint):
+def prepare_direct(work, elements, fractures, ids, nint, *, quadrature=None):
     """Prepare affected topology without changing any published buffer."""
     if not isinstance(ids, np.ndarray) or ids.dtype != np.int64 or ids.ndim != 1:
         raise ValueError("Branch IDs must be a one-dimensional int64 array")
@@ -186,9 +191,19 @@ def prepare_direct(work, elements, fractures, ids, nint):
     values = allocate_events(size)
     counts = np.zeros(ids.size, dtype=np.int64)
     selected = np.arange(ids.size, dtype=np.int64)
+    extra = () if quadrature is None else (quadrature,)
     started = perf_counter()
     construct_events(
-        elements, fractures, ids, selected, nint, starts, capacities, counts, *values
+        elements,
+        fractures,
+        ids,
+        selected,
+        nint,
+        starts,
+        capacities,
+        counts,
+        *values,
+        *extra,
     )
     direct_seconds = perf_counter() - started
     overflow = np.flatnonzero(counts > capacities)
@@ -275,6 +290,7 @@ def prepare_direct(work, elements, fractures, ids, nint):
             capacities,
             counts,
             *values,
+            *extra,
         )
         stats["branch_reconstruction_seconds"] = perf_counter() - started
     validate_events(elements, ids, nint, starts, capacities, counts, values)

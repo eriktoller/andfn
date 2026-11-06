@@ -525,7 +525,15 @@ def get_heads_from_hpc(fractures, elements, z_array, fracture_indices=None):
 
 
 @nb.njit(cache=CACHE)
-def calc_flow_net(self_, flow_net, n_points, z_array, element_struc_array):
+def calc_flow_net(
+    self_,
+    flow_net,
+    n_points,
+    z_array,
+    element_struc_array,
+    coef_data=None,
+    coef_start=None,
+):
     """
     Calculates the flow net for the fracture.
 
@@ -548,7 +556,13 @@ def calc_flow_net(self_, flow_net, n_points, z_array, element_struc_array):
         The flow net for the fracture.
     """
     for i in range(n_points):
-        flow_net[i] = calc_omega(self_, z_array[i], element_struc_array)
+        flow_net[i] = calc_omega(
+            self_,
+            z_array[i],
+            element_struc_array,
+            coef_data=coef_data,
+            coef_start=coef_start,
+        )
 
 
 @nb.njit(cache=CACHE)
@@ -659,7 +673,12 @@ def head_from_phi(self_, phi):
 
 @nb.njit(cache=CACHE, parallel=True)
 def get_flow_nets(
-    fracture_struc_array, n_points, n_boundary_points, element_struc_array
+    fracture_struc_array,
+    n_points,
+    n_boundary_points,
+    element_struc_array,
+    coef_data=None,
+    coef_start=None,
 ):
     """
     Get the flow nets for all fractures.
@@ -683,15 +702,15 @@ def get_flow_nets(
     n = n_points + n_boundary_points
 
     # Create the flow nets arrays
-    flow_nets = np.zeros((len(fracture_struc_array), n, n), dtype=np.complex128)
+    flow_nets = np.zeros((fracture_struc_array.size, n, n), dtype=np.complex128)
 
     # Create the 3D points arrays and its working z arrays
-    pnts_3d = np.zeros((len(fracture_struc_array), n, 3), dtype=np.float64)
-    z_arrays = np.zeros((len(fracture_struc_array), n), dtype=np.complex128)
+    pnts_3d = np.zeros((fracture_struc_array.size, n, 3), dtype=np.float64)
+    z_arrays = np.zeros((fracture_struc_array.size, n), dtype=np.complex128)
     z_array = sunflower_spiral(n_points, n_boundary_points)
 
     # Calculate the flow nets for each fracture
-    for i in nb.prange(len(fracture_struc_array)):
+    for i in nb.prange(fracture_struc_array.size):
         z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
         calc_flow_net(
             fracture_struc_array[i],
@@ -699,6 +718,8 @@ def get_flow_nets(
             n,
             z_arrays[i],
             element_struc_array,
+            coef_data,
+            coef_start,
         )
         # Map the 2D points to 3D
         gf.map_2d_to_3d(fracture_struc_array[i], z_arrays[i], pnts_3d[i])
@@ -728,14 +749,14 @@ def get_heads(fracture_struc_array, element_struc_array, z_array):
     n = len(z_array)
 
     # Create the heads arrays
-    heads = np.zeros((len(fracture_struc_array), n), dtype=np.float64)
+    heads = np.zeros((fracture_struc_array.size, n), dtype=np.float64)
 
     # Create the 3D points arrays and its working z arrays
-    pnts_3d = np.zeros((len(fracture_struc_array), n, 3), dtype=np.float64)
-    z_arrays = np.zeros((len(fracture_struc_array), n), dtype=np.complex128)
+    pnts_3d = np.zeros((fracture_struc_array.size, n, 3), dtype=np.float64)
+    z_arrays = np.zeros((fracture_struc_array.size, n), dtype=np.complex128)
 
     # Calculate the heads for each fracture
-    for i in nb.prange(len(fracture_struc_array)):
+    for i in nb.prange(fracture_struc_array.size):
         z_arrays[i] = z_array * fracture_struc_array[i]["radius"]
         calc_heads(
             fracture_struc_array[i],

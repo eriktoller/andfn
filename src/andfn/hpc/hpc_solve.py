@@ -27,7 +27,7 @@ from . import (
 from . import hpc_math_functions as mf
 from .hpc_coefficients import candidate_at, coefficient_view
 from .hpc_quadrature import allocate_quadrature, quadrature_row, validate_quadrature
-from .hpc_work import integration_view, work_record
+from .hpc_work import boundary_work, integration_view, work_record
 
 dtype_work = np.dtype(
     [
@@ -983,7 +983,7 @@ def pre_matrix_solve(
         element_struc_array[i]["q"] = 0.0
 
     # Set the constants equal to zero
-    for i in nb.prange(len(fractures_struc_array)):
+    for i in nb.prange(fractures_struc_array.size):
         fractures_struc_array[i]["constant"] = 0.0
 
     # Get the head matrix
@@ -1049,7 +1049,7 @@ def post_matrix_solve(
         # element_struc_array[e["_id"]]["q"] = (discharges[i] + discharges_old[i]) / 2.0
 
     # Set the constants for each fracture
-    for i in nb.prange(len(fractures_struc_array)):
+    for i in nb.prange(fractures_struc_array.size):
         fractures_struc_array[i]["constant"] = discharges[n_de + i]
         # fractures_struc_array[i]["constant"] = (discharges[len(discharge_elements) + i] + discharges_old[len(discharge_elements) + i]) / 2.0
 
@@ -1072,7 +1072,7 @@ def get_old_discharges(
             else element_struc_array[discharge_indices[i]]
         )
         discharges_old[i] = element_struc_array[e["_id"]]["q"]
-    for i in nb.prange(len(fractures_struc_array)):
+    for i in nb.prange(fractures_struc_array.size):
         pos = n_de + i
         discharges_old[pos] = fractures_struc_array[i]["constant"]
     return discharges_old
@@ -1482,6 +1482,7 @@ def get_bnd_error(
     constants,
     coef_data=None,
     coef_start=None,
+    prepared=False,
 ):
     """
     Builds the head matrix for the DFN and stores it.
@@ -1520,6 +1521,7 @@ def get_bnd_error(
     # Add the head for each discharge element
     for j in range(num_elements):
         e = element_struc_array[j]
+        record = work_record(work_array, j)
         if e["_type"] == 2:  # Well
             bnd_error[j, 0] = 0.0
             bnd_error[j, 1] = e["_type"]
@@ -1583,16 +1585,18 @@ def get_bnd_error(
             z_pos = quadrature_row(z_int, 0, j, nint)
 
             # Locate branch cuts and fill work_array[j] fields
-            mf.find_branch_cuts(
-                e, z_pos, fracture_struc_array, element_struc_array, work_array[j], nint
-            )
+            if not prepared:
+                mf.find_branch_cuts(
+                    e, z_pos, fracture_struc_array, element_struc_array, record, nint
+                )
 
             # Build dpsi_corr vector (length nint-1) from work_array results
-            dpsi_corr = np.zeros(nint)
-            for k in range(work_array[j]["len_discharge_element"]):
-                ek = element_struc_array[work_array[j]["discharge_element"][k]]
-                pos = int(work_array[j]["element_pos"][k])
-                dpsi_corr[pos] += ek["q"] * work_array[j]["sign_array"][k]
+            dpsi_corr = record["dpsi"][:nint]
+            dpsi_corr[:] = 0.0
+            for k in range(record["len_discharge_element"]):
+                ek = element_struc_array[record["discharge_element"][k]]
+                pos = int(record["element_pos"][k])
+                dpsi_corr[pos] += ek["q"] * record["sign_array"][k]
 
             # Evaluate ω at each of the nint points
             omega_pts = np.zeros(nint, dtype=np.complex128)
@@ -1606,7 +1610,8 @@ def get_bnd_error(
                 )
 
             # Reconstruct corrected ψ by integrating branch-cut-corrected increments
-            psi = np.zeros(nint)
+            psi = record["psi"][:nint]
+            psi[:] = 0.0
             psi[0] = np.imag(omega_pts[0])
             for ii in range(nint - 1):
                 raw_dpsi = np.imag(omega_pts[ii + 1]) - np.imag(omega_pts[ii])
@@ -1805,6 +1810,30 @@ def set_new_ncoef(self_, n, nint_mult=2):
         )
 
 
+def prepare_boundary_work(fractures, elements, count, source=None):
+    """Prepare operation-private topology on the actual diagnostic coordinates."""
+    from .hpc_branch import prepare_direct, publish_direct
+
+    z_int = allocate_quadrature(elements.size, count)
+    work = boundary_work(elements, count, source)
+    get_z_int_array(z_int, elements, count)
+    ids = np.flatnonzero(elements["_type"] == 1)
+    lengths = np.full(elements.size, count, dtype=np.int64)
+    prepared, stats = prepare_direct(
+        work,
+        elements,
+        fractures,
+        ids,
+        lengths,
+        quadrature=z_int,
+    )
+    work = prepared.work
+    publish_direct(
+        work, prepared.ids, prepared.starts, prepared.counts, prepared.values
+    )
+    return work, z_int, stats
+
+
 def compute_bnd_error(
     fracture_struc_array,
     element_struc_array,
@@ -1812,6 +1841,8 @@ def compute_bnd_error(
     constants,
     coef_data=None,
     coef_start=None,
+    *,
+    work=None,
 ):
     """
     Wrapper that calls get_bnd_error after allocating the required scratch arrays.
@@ -1839,15 +1870,17 @@ def compute_bnd_error(
 
     # Scratch arrays – work_array is zero-initialised;
     # find_branch_cuts resets len_discharge_element itself.
-    work_array = np.zeros(num_elements, dtype=dtype_work)
-    z_int = (
-        allocate_quadrature(num_elements, discharge_int)
-        if coef_data is not None
-        else np.zeros(num_elements, dtype=dtype_z_arrays)
-    )
-
-    # Boundary evaluation also consumes bounding-circle coordinates.
-    get_z_int_array(z_int, element_struc_array, discharge_int)
+    if coef_data is not None:
+        work_array, z_int, _ = prepare_boundary_work(
+            fracture_struc_array,
+            element_struc_array,
+            discharge_int,
+            work,
+        )
+    else:
+        work_array = np.zeros(num_elements, dtype=dtype_work)
+        z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
+        get_z_int_array(z_int, element_struc_array, discharge_int)
 
     max_error = float(constants["MAX_ERROR"])
     bnd_error = np.zeros([num_elements, 7], dtype=np.float64)
@@ -1865,6 +1898,7 @@ def compute_bnd_error(
         constants,
         coef_data,
         coef_start,
+        coef_data is not None,
     )
 
     return bnd_error

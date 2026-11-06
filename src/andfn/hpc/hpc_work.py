@@ -343,6 +343,50 @@ def payload(work):
     return sum(a.nbytes for a in {id(a): a for a in work}.values())
 
 
+def boundary_work(elements, count, source=None):
+    """Private diagnostic topology; share caches and reusable worker scratch."""
+    if source is None:
+        empty_float = np.empty(0)
+        empty_complex = np.empty(0, dtype=complex)
+        empty_int = np.empty(0, dtype=np.int64)
+        layout = np.zeros(elements.size, dtype=np.int64)
+        values = {
+            name: empty_complex
+            if name in COEFFICIENT_FIELDS + ("integral",)
+            or name in ("exp_array_m", "exp_array_p", "z_integral", "a0_error")
+            else empty_float
+            for name in FIELDS
+        }
+        source = WorkArrays(
+            **values,
+            coef_start=layout,
+            coef_capacity=layout,
+            integration_start=layout,
+            integration_capacity=layout,
+            scratch_layout=np.array([7, nb.config.NUMBA_NUM_THREADS, 0, 0]),
+            branch_start=empty_int,
+            branch_capacity=empty_int,
+        )
+    capacity = np.where(elements["_type"] == 1, 4, 0).astype(np.int64)
+    starts, size = _layout(capacity)
+    values = {name: np.empty(size, dtype=np.int64) for name in BRANCH_FIELDS}
+    values.update(
+        branch_start=starts,
+        branch_capacity=capacity,
+        len_discharge_element=np.zeros(elements.size, dtype=np.int64),
+        branch_valid=np.zeros(elements.size, dtype=bool),
+    )
+    # Diagnostics need only real scratch; do not resize unrelated coefficient work.
+    mask, slots, cs, ns = source.scratch_layout
+    if not mask & 4 or ns < count:
+        ns = max(ns, count)
+        values.update(
+            **{name: np.zeros(slots * ns) for name in ("phi", "psi", "dpsi")},
+            scratch_layout=np.array([mask | 4, slots, cs, ns], dtype=np.int64),
+        )
+    return source._replace(**values)
+
+
 def state_arrays(state):
     return {id(a): a for a in (*vars(state.storage).values(), *state.work)}
 

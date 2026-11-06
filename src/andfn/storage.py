@@ -505,14 +505,26 @@ def to_hpc(storage):
 
 
 def connectivity_from_hpc(fractures, nelements, *, index_dtype=np.int64):
-    """Extract only connectivity; never copy coefficient or fracture records."""
+    """Extract connectivity without copying coefficient or fracture records."""
+    from .hpc.hpc_connectivity import FractureArrays
+
+    index_dtype = np.dtype(index_dtype)
+    if index_dtype not in (np.dtype(np.int32), np.dtype(np.int64)):
+        raise ValueError("index_dtype must be int32 or int64")
+    if isinstance(fractures, FractureArrays):
+        connectivity = Connectivity(fractures.ids, fractures.indptr)
+        connectivity.validate(fractures.size, nelements)
+        if connectivity.ids.dtype != index_dtype:
+            if np.any(connectivity.ids > np.iinfo(index_dtype).max):
+                raise ValueError("Connectivity references an invalid element")
+            return Connectivity(
+                connectivity.ids.astype(index_dtype), connectivity.indptr
+            )
+        return connectivity
     _array(fractures, fracture_dtype_hpc, "legacy fractures")
     degree = _counts(fractures["nelements"], fractures.size, "nelements")
     if np.any(degree > fractures["elements"].shape[1]):
         raise ValueError("nelements exceeds legacy connectivity storage")
-    index_dtype = np.dtype(index_dtype)
-    if index_dtype not in (np.dtype(np.int32), np.dtype(np.int64)):
-        raise ValueError("index_dtype must be int32 or int64")
     starts, total = _layout(degree)
     indptr = np.empty(fractures.size + 1, dtype=np.int64)
     indptr[:-1], indptr[-1] = starts, total

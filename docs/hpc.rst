@@ -3123,6 +3123,430 @@ or migrating the error solver; then legacy-storage removal. Error-solver
 migration becomes first priority only for a workload actually running it.
 This is a recommendation, not an implementation: **stop after Phase 5**.
 
+Normal compact workflow and boundary work (Phase 6)
+--------------------------------------------------
+
+The public opt-in is ``dfn.solve(compact=True)``. The default remains the
+legacy solver. For a construction-time connectivity check use
+``dfn.check_connectivity(compact=True)`` as well. Direct consolidation reads
+logical object coefficients and adjacency into the existing adaptive owner,
+fixed fracture metadata and ordered CSR, without first constructing legacy
+element/fracture records. It preserves object/element/adjacency order.
+The existing adaptive solver performs matrix construction, factorization,
+discharge, Cauchy integration, growth and commits unchanged.
+
+Head, derivative, velocity, total discharge, head samples, head/flow plots,
+flow-fracture selection and post-solve boundary diagnostics use the active
+compact state. Explicit ``unconsolidate_dfn(hpc=True)`` copies logical prefixes
+back to objects; particle tracking already uses this boundary. Explicit
+legacy consolidation remains available and first refreshes logical objects.
+It is a compatibility export, not part of compact execution. Persistence,
+the separate error solver and error plots are not migrated: prepare/use the
+legacy workflow for those operations. Existing compatibility snapshots are
+not automatically kept synchronized with later compact solves; explicitly
+consolidate again before exporting an existing snapshot.
+
+``FractureArrays``/``FractureRecord`` are numeric record views over those
+same metadata/CSR arrays, not another storage owner. Nopython functions
+receive array tuples, never the Python adaptive owner. Fracture record
+``elements`` is an adjacency slice, and ``nelements`` is its actual length.
+Compiled consumers use ``.size``: Numba's tuple ``len`` means tuple arity,
+not the number of fractures. Regression cases cover one, two, four and six
+fractures. This also permits reuse of the original scalar numerical kernels
+without duplicating formulas or exporting padded coefficients.
+
+Boundary representation and lifetimes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``prepare_boundary_work`` uses the existing ``WorkArrays`` representation.
+Fixed metadata, coefficient layouts, coefficient state and integration caches
+are shared, not copied. Worker-owned scratch is reused at a post-solve/barrier
+boundary. If the requested diagnostic grid exceeds the actual integration
+scratch width, only the real ``phi/psi/dpsi`` worker buffers grow for this
+operation, to ``workers * max(existing_width, requested_count)``. Coefficient
+scratch is not resized. This does not make concurrent/reentrant solve and
+diagnostic access safe.
+
+The diagnostic topology cannot share the solver's events: the diagnostic
+grid may have a different count and coordinates. It gets private
+``branch_start/branch_capacity/len_discharge_element/branch_valid`` arrays
+and three int64 event buffers. Bounding-circle rows initially use the
+existing four-event quantum; other rows have zero event capacity.
+Phase 4D's direct builder consumes the already-produced boundary coordinates,
+writes bounded segments, detects overflow and batch-expands only when
+necessary. There is no preliminary crossing-count pass, no coordinate
+reconstruction and no changed capacity policy. In particular, diagnostics
+must not substitute the solver's circle mapping for the original diagnostic
+coordinate mapping. Event order and corrections remain exactly equal.
+
+Quadrature stays C-contiguous complex128 ``(2, N, q)``; row views do not copy.
+``get_bnd_error`` reuses the same numerical formula, with ``work_record`` and
+a prepared-topology flag rather than a second independent implementation.
+Its element evaluation remains serial, as before; coordinate/topology
+preparation can run in parallel. Existing impermeable-object diagnostic
+rows remain zero; Phase 6 does not invent new error formulas.
+Operation-private work and quadrature are released on return. Only the
+float64 ``(N, 7)`` output survives; persistent solver caches/events are
+unchanged. Ordinary q8 calls reuse all worker scratch.
+
+Normal-workflow allocation audit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here N=10,000, F=2,500, legacy M=200, configured E=800, q=8,
+and selected discharge rows S=5,000. MB means decimal bytes.
+Logical ncoef/nint and event distributions use the established heterogeneous
+eight-element repeated fixture. Fixed-size geometry/endpoints are not ragged.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 23 25 25 27
+
+   * - Allocation / site
+     - Physical legacy shape, dtype, bytes
+     - Logical requirement / lifetime
+     - Normal compact replacement
+   * - ``element_dtype_hpc``; legacy ``DFN.consolidate_dfn``
+     - N records; 129,920,000 total, including two complex128[N,M] and two float64[N,2M] fields
+     - Actual per-element ncoef/nint; persistent
+     - Fixed metadata plus existing capacity coefficient/cache buffers; direct object consolidation
+   * - Consolidation gathering arrays in ``dfn.py``
+     - Two complex128[N,M] plus two float64[N,2M]; 128,000,000 temporary
+     - Logical prefixes; construction only
+     - No padded gather/bridge in ``hpc_compact.consolidate``
+   * - ``fracture_dtype_hpc`` and consolidation IDs
+     - int64[F,E], 16,000,000 padding; 16,360,000 records, plus 16,000,000 temporary IDs
+     - Actual adjacency; persistent, gather temporary
+     - Fixed fracture metadata plus ordered CSR: 450,008 total
+   * - ``hpc_solve.dtype_work``; solve and boundary wrapper
+     - N padded records; 704,330,000 for each allocation
+     - Actual coefficients, integration, events, or worker temporary requirements
+     - Existing compact solver work; private boundary work 490,000 with shared state/scratch
+   * - ``hpc_solve.dtype_z_arrays``; solve
+     - Two N-record complex128 padded buffers; 256,000,000
+     - S rows * q * two sides; solve-local
+     - Phase 5 complex128[2,S,q], 1,280,000; unused compact ``z_int_error`` remains absent
+   * - Boundary quadrature; ``prepare_boundary_work``
+     - complex128[N,2M] twice; 128,000,000
+     - N rows * q * two sides; one evaluation
+     - complex128[2,N,q], 2,560,000; never converted back to records
+   * - Cauchy ``thetas/dpsi_corr/exp_array_m/exp_array_p/z_integral``
+     - Previously width 2M per element
+     - Actual nint; persistent between iterations
+     - Existing capacity caches, unchanged: 15,360,000; ``z_integral`` retained
+   * - Scalar/vector potentials and head/flow sampling
+     - Actual requested point/grid sizes
+     - Operation-local numerical outputs and expression temporaries
+     - Same runtime numerical sizes; flat coefficient views and CSR; no global maximum dimension
+   * - CSR matrix input, RHS/discharges/history
+     - Actual nnz, S and F
+     - Matrix construction / solve
+     - Existing design unchanged; no storage-max padding
+
+All normal compact allocation artifacts above are bypassed or replaced;
+the definitions and compatibility allocation sites themselves remain.
+Construction still uses bounded-size geometry (two endpoints, 3D vectors,
+etc.); these are intrinsically fixed, not unused capacity. No additional
+global-maximum-shaped normal compact allocation was found.
+
+Maximum-constant occurrence classification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Repository-wide searches covered ``MAX_NCOEF``, ``MAX_ELEMENTS``,
+``MAX_DISCHARGE_INT``, other ``MAX_*`` names, legacy dtype consumers and
+literal maximum-shaped allocation patterns. Grouped source classification:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 12 58
+
+   * - Location / occurrence
+     - Category
+     - Disposition
+   * - ``element.py`` definitions/config reads and padded dtype fields; per-object converters
+     - C, D
+     - Retained legacy compatibility/persistence schema; direct compact consolidation never calls them
+   * - ``dfn.py`` imported maxima and legacy consolidation gather/output dimensions
+     - C, D
+     - Retained explicit legacy/export paths; not reached by the opted-in normal solve or diagnostics
+   * - ``hpc_solve.py`` imported maxima and ``dtype_work/dtype_z_arrays`` definitions; legacy allocations
+     - C
+     - Retained default solver and boundary reference path; compact branches use runtime work/quadrature
+   * - ``hpc_error_solve.py`` imported maxima, its independent work/quadrature definitions and consumers
+     - B
+     - Entire separate error execution remains padded and unchanged
+   * - ``constants.py`` scalar dtype/settings, logging and ``hpc_solve`` scalar maximum
+     - F, C
+     - Adaptive numerical stopping controls and retained compatibility validation, not allocation dimensions
+   * - ``hpc_adaptive._MAX_REQUEST_INCREMENT`` and dtype-derived length guards in ``storage.py``
+     - F, C
+     - Existing overflow-safety/physical compatibility checks, unchanged; they reject invalid requests but do not allocate maximum-sized compact arrays
+   * - ``MAX_DISCHARGE_INT`` definition/config setting
+     - G
+     - Dormant storage setting, no active dimension use found; retained, not renamed/removed
+   * - Examples, tests, benchmarks, configuration/user/HPC documentation and local user scripts
+     - E
+     - Controls/examples/reference accounting; no execution migration or edits to local user scripts
+   * - ``MAX_ITERATIONS``, ``MAX_ERROR`` and related solver settings
+     - F
+     - Numerical iteration/accuracy controls, not storage dimensions
+
+There are no remaining category-A maximum-sized allocation artifacts in the
+opted-in workflow. The new compact consolidation/connectivity modules and
+the existing compact work/quadrature constructors do not import storage
+maximum constants (checked by AST, including imports and attributes).
+Shared modules still intentionally contain the legacy definitions above.
+``storage.py``'s coefficient-only ``fixed_order_element_dtype`` retains
+padded integration fields for that older compatibility entry point, not the
+public adaptive compact workflow.
+
+The scalar adaptive maximum is still a real *algorithmic* stopping control
+even though it shares the legacy name ``MAX_NCOEF``. It retains the approved
+old-order check/overshoot semantics. Legacy dtype-derived physical limits
+are compatibility guards, not claimed to be mathematical requirements;
+relaxing them is outside this phase. ``MAX_ELEMENTS`` scalar validation also
+remains for legacy compatibility, but does not size compact adjacency/events.
+
+Storage-independence regressions vary runtime legacy maxima through
+200/500/1,000 coefficients and 500/5,000 elements while holding logical state,
+numerical controls and q fixed. Persistent/diagnostic/CSR payload and results
+remain exactly equal. Import-time legacy dtypes do not change under
+monkeypatching, so this is paired with the no-maxima constructor AST check
+and direct allocation guards. No global maximum is renamed or removed.
+
+Measured boundary memory
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+No padded boundary work is allocated in the compact branch. Incremental fixed
+metadata, coefficient references and integration/cache payload are all zero:
+the existing arrays are referenced directly. Incremental q8 worker scratch and
+compatibility allocation are also zero for this fixture. Private work is
+49N bytes: 24N event data plus 25N layout/count/validity metadata.
+Boundary quadrature is exactly ``N * 8 * 16 * 2 = 256N`` bytes; output is
+56N bytes. Thus owned evaluation payload is 361N bytes.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Elements
+     - Legacy work bytes
+     - Compact private work
+     - Quadrature
+     - Output
+     - Owned total
+     - Peak envelope
+   * - 128
+     - 9,015,424
+     - 6,272
+     - 32,768
+     - 7,168
+     - 46,208
+     - 51,584
+   * - 1,024
+     - 72,123,392
+     - 50,176
+     - 262,144
+     - 57,344
+     - 369,664
+     - 412,672
+   * - 10,000
+     - 704,330,000
+     - 490,000
+     - 2,560,000
+     - 560,000
+     - 3,610,000
+     - 4,030,000
+   * - 100,000 (storage-only)
+     - 7,043,300,000
+     - 4,900,000
+     - 25,600,000
+     - 5,600,000
+     - 36,100,000
+     - 40,300,000
+
+The 10,000-element work reduction is **704.33 MB to 0.49 MB (99.93%)**.
+Including old quadrature and the same output, legacy boundary payload was
+832.89 MB versus compact 3.61 MB. Preparation has 320,000 bytes of staged
+events/metadata plus 100,000 bytes of IDs/lengths in this case.
+The reported 4.03 MB peak is a conservative NumPy payload envelope: it
+includes output even though output allocation follows preparation. It is
+not a measured simultaneous allocator/RSS peak. Native per-row expression/
+coordinate temporaries and allocator/runtime overhead are excluded.
+After evaluation only the 0.56 MB returned output remains, not the 3.61 MB.
+Larger q can require private operation-local worker real scratch as described
+above; no such allocation scales with unused legacy maxima.
+
+Boundary performance and thread scaling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``tests\benchmark_boundary.py`` alternates legacy and compact full boundary
+evaluations (allocation, coordinate production, topology and numerical error
+evaluation), discards the warm-up and reports seven-sample medians. References
+use padded source records outside timing; compact evaluation reads flat
+coefficients and numeric CSR fracture records. Every output is exactly equal.
+Reported values are legacy / compact milliseconds, with compact/legacy ratio.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - 128 elements
+     - 1,024 elements
+     - 10,000 elements
+   * - 1
+     - 1.104 / 0.949 (0.860)
+     - 9.181 / 7.040 (0.767)
+     - 94.371 / 71.639 (0.759)
+   * - 2
+     - 1.420 / 1.057 (0.744)
+     - 11.074 / 6.905 (0.624)
+     - 119.327 / 71.970 (0.603)
+   * - 4
+     - 1.904 / 1.243 (0.653)
+     - 14.123 / 8.238 (0.583)
+     - 143.193 / 91.678 (0.640)
+   * - 8
+     - 2.271 / 1.590 (0.700)
+     - 21.733 / 12.627 (0.581)
+     - 209.964 / 120.756 (0.575)
+   * - 16
+     - 4.061 / 2.884 (0.710)
+     - 27.786 / 18.355 (0.661)
+     - 297.744 / 193.589 (0.650)
+   * - 28 (normal maximum)
+     - 5.212 / 4.721 (0.906)
+     - 39.773 / 30.601 (0.769)
+     - 413.064 / 279.962 (0.678)
+
+No sustained >10% large-model slowdown was observed: compact is faster at
+every measured setting. This diagnostic does **not** show useful parallel
+scaling: at 10,000 elements, 28-thread legacy/compact times are 4.38/3.91
+times their one-thread times. The original serial outer diagnostic loop and
+shared scalar numerical dispatch remain; this phase does not redesign their
+parallelism or claim bandwidth/cache-counter improvements.
+
+Complete normal-workflow accounting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The table below is unique NumPy payload, not RSS. Capacities and 28 worker
+slots are held fixed at the actual fixture requirements, with 100,000
+calculated affinely from the 10,000-element layout, not executed.
+No CSC/LU internals, source Python model objects, compiler/runtime allocations,
+native expression temporaries or graphics meshes are included.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Category
+     - 10,000 bytes
+     - 100,000 bytes
+   * - Element fixed metadata, layouts and scalar work (249N + 32)
+     - 2,490,032
+     - 24,900,032
+   * - Current/candidate/old coefficient storage (552N)
+     - 5,520,000
+     - 55,200,000
+   * - Retained compact compatibility work coefficients (368N)
+     - 3,680,000
+     - 36,800,000
+   * - Integration/cache (1,536N)
+     - 15,360,000
+     - 153,600,000
+   * - Worker scratch (28 slots; not proportional to N)
+     - 64,512
+     - 64,512
+   * - Solver branch data/layout (73N)
+     - 730,000
+     - 7,300,000
+   * - Fracture metadata and CSR (45N + 8)
+     - 450,008
+     - 4,500,008
+   * - Compact persistent total
+     - 28,294,552
+     - 282,364,552
+   * - Solve-local discharge quadrature (128N)
+     - 1,280,000
+     - 12,800,000
+   * - Sparse matrix inputs / ordered selected IDs, excluding already-counted CSR (93N)
+     - 930,000
+     - 9,300,000
+   * - RHS, discharges and history vectors (18N)
+     - 180,000
+     - 1,800,000
+   * - Solve tracked total (excludes adaptive repack peaks and CSC/LU)
+     - 30,684,552
+     - 306,264,552
+   * - Boundary quadrature (256N)
+     - 2,560,000
+     - 25,600,000
+   * - Boundary work (49N)
+     - 490,000
+     - 4,900,000
+   * - Boundary output (56N)
+     - 560,000
+     - 5,600,000
+   * - Compact persistent + owned boundary operation
+     - 31,904,552
+     - 318,464,552
+   * - Compact persistent + boundary peak envelope
+     - 32,324,552
+     - 322,664,552
+   * - Optional retained padded elements + fractures (14,628N)
+     - 146,280,000
+     - 1,462,800,000
+   * - Compact + retained padded inputs + boundary owned operation
+     - 178,184,552
+     - 1,781,264,552
+   * - Additionally retained legacy solver work, only if legacy execution ran
+     - 704,330,000
+     - 7,043,300,000
+
+Solve-local and post-solve boundary allocations are separate lifetimes, not
+added as though simultaneously resident. The optional compatibility totals
+show coexistence, not a required compact import step. The new direct public
+workflow allocates **none** of those padded input/work records. For comparison,
+the original padded main solve tracked approximately 1,106.61 MB at 10,000
+elements before sparse/CSC/LU internals (129.92 MB elements + 16.36 MB
+fractures + 704.33 MB work + 256 MB quadrature). Retaining that solver work
+and running a legacy boundary diagnostic costs approximately 1,683.50 MB,
+versus the compact owned-boundary total of 31.90 MB, on the same accounting
+basis. This is payload accounting, not a process-peak claim.
+
+Validation and remaining phase boundary
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``uv run pytest tests`` passed **398 tests**: all 381 previous tests plus
+17 compact-workflow regressions. A fresh-cache full run before the last four
+extent/scratch cases also passed (394 tests). Coverage includes heterogeneous
+ncoef/nint, exact CSR/padded adaptive state and potential/derivative comparisons
+at 1/2/28 threads, actual public model solves, boundary counts 1/8/100/401,
+all element types, repeated evaluation, forced private event overflow,
+scratch sharing/resizing, empty boundary evaluation, direct-allocation guards,
+and storage-maximum independence. The existing quadrature dimension,
+overflow, ordering and dense/padded trajectory tests remain unchanged.
+No tolerance was increased. All numerical comparisons in the new tests and
+the 18 boundary benchmark cases are exactly equal (zero differences).
+
+``uv run ruff check .`` and ``uv run ruff format --check .`` were attempted;
+both could not start because project Ruff is unavailable. Pinned Ruff 0.16.2
+lint/format checks passed on all ten changed Python files. Staged and unstaged
+``git diff --check`` checks passed.
+
+Changed files: ``src\andfn\dfn.py``, ``src\andfn\storage.py``,
+``src\andfn\hpc\hpc_branch.py``, new ``hpc_compact.py`` and
+``hpc_connectivity.py`` in that directory, ``hpc_fracture.py``,
+``hpc_solve.py``, ``hpc_work.py``, new ``tests\test_compact_workflow.py``,
+new ``tests\benchmark_boundary.py``, and ``docs\hpc.rst``.
+The benchmark script reproduces the tables, including storage-only 100,000
+projection; it adds no dependency.
+
+The largest compact persistent family is now actual integration/cache data,
+then logical coefficient/compatibility state. No measured main allocation
+justifies another layout redesign here. Phase 7 should prioritize explicit
+legacy-storage lifecycle/removal to eliminate optional 146.28 MB source
+coexistence and clarify export boundaries. Error-solver migration should be
+separately approved for error-solve workloads; it still has padded work and
+quadrature. Phase 6 does not start either migration.
+
 Solver functions
 ----------------
 
