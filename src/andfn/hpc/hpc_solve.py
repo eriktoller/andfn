@@ -26,6 +26,7 @@ from . import (
 )
 from . import hpc_math_functions as mf
 from .hpc_coefficients import candidate_at, coefficient_view
+from .hpc_quadrature import allocate_quadrature, quadrature_row, validate_quadrature
 from .hpc_work import integration_view, work_record
 
 dtype_work = np.dtype(
@@ -135,10 +136,14 @@ def solve(
         discharge_indices,
     )
     discharges_old = np.zeros(size)
-    z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
-    get_z_int_array(z_int, element_struc_array, discharge_int, discharge_indices)
-    z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
-    get_z_int_array(z_int_error, element_struc_array, discharge_int)
+    if coef_data is not None:
+        z_int = allocate_quadrature(discharge_indices.size, discharge_int)
+        get_z_int_array(z_int, element_struc_array, discharge_int, discharge_indices)
+    else:
+        z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
+        get_z_int_array(z_int, element_struc_array, discharge_int, discharge_indices)
+        z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
+        get_z_int_array(z_int_error, element_struc_array, discharge_int)
 
     # Discharge matrix
     logger.info("Building discharge matrix...")
@@ -885,8 +890,8 @@ def solve_discharge_matrix(
         The discharges to be solved
     discharges_old : np.ndarray
         The old discharges
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        Selected-row quadrature, dense (2, selected, count) or padded legacy.
     lu_matrix : scipy.sparse.linalg.splu
         The LU factorization of the discharge matrix
 
@@ -962,8 +967,8 @@ def pre_matrix_solve(
         The number of integration points
     head_matrix : np.ndarray[dtype_head_matrix]
         The head matrix
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        Selected-row quadrature, dense (2, selected, count) or padded legacy.
 
     Returns
     -------
@@ -1102,8 +1107,8 @@ def build_head_matrix(
         The number of integration points
     head_matrix : np.ndarray[dtype_head_matrix]
         The head matrix
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        Selected-row quadrature, dense (2, selected, count) or padded legacy.
 
     Returns
     -------
@@ -1125,7 +1130,7 @@ def build_head_matrix(
         ids0 = hpc_fracture.fracture_element_ids(
             frac0, connectivity_ids, connectivity_indptr
         )
-        z0 = z_int["z0"][j][:discharge_int]
+        z0 = quadrature_row(z_int, 0, j, discharge_int)
         omega = 0.0 + 0.0j
         for i in range(discharge_int):
             omega += hpc_fracture.calc_omega(
@@ -1143,7 +1148,7 @@ def build_head_matrix(
             ids1 = hpc_fracture.fracture_element_ids(
                 frac1, connectivity_ids, connectivity_indptr
             )
-            z1 = z_int["z1"][j][:discharge_int]
+            z1 = quadrature_row(z_int, 1, j, discharge_int)
             omega1 = 0.0 + 0.0j
             for i in range(discharge_int):
                 omega1 += hpc_fracture.calc_omega(
@@ -1214,10 +1219,7 @@ def build_discharge_matrix_csr(
         raise ValueError(
             "Discharge indices must contain all discharge elements in order"
         )
-    if discharge_int <= 0 or discharge_int > z_int.dtype["z0"].shape[0]:
-        raise ValueError("Invalid discharge integration count")
-    if z_int.size < discharge_indices.size:
-        raise ValueError("Insufficient discharge quadrature rows")
+    validate_quadrature(z_int, discharge_indices.size, discharge_int)
     for name in ("frac0", "frac1"):
         references = element_struc_array[name]
         if np.any(references < -1) or np.any(references >= fractures_struc_array.size):
@@ -1383,8 +1385,8 @@ def fill_discharge_matrix(
         ptr = row_offsets[j]
 
         if e["_type"] == 0:
-            z0 = z_int["z0"][j][:discharge_int]
-            z1 = z_int["z1"][j][:discharge_int]
+            z0 = quadrature_row(z_int, 0, j, discharge_int)
+            z1 = quadrature_row(z_int, 1, j, discharge_int)
 
             for f_id, sign in ((e["frac0"], 1.0), (e["frac1"], -1.0)):
                 f = fractures[f_id]
@@ -1421,7 +1423,7 @@ def fill_discharge_matrix(
 
         else:
             f = fractures[e["frac0"]]
-            z0 = z_int["z0"][j][:discharge_int]
+            z0 = quadrature_row(z_int, 0, j, discharge_int)
 
             element_ids = hpc_fracture.fracture_element_ids(
                 f, connectivity_ids, connectivity_indptr
@@ -1498,8 +1500,8 @@ def get_bnd_error(
         The number of integration points
     bnd_error : np.ndarray[dtype_head_matrix]
         The error matrix for the boundary conditions
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        All-element quadrature, dense (2, elements, count) or padded legacy.
     nit : int
         The number of iterations
     max_error : float
@@ -1525,7 +1527,7 @@ def get_bnd_error(
             continue
         if e["_type"] in [0, 3]:  # Intersection, Constant head line
             frac0 = fracture_struc_array[e["frac0"]]
-            z0 = z_int["z0"][j][:discharge_int]
+            z0 = quadrature_row(z_int, 0, j, discharge_int)
             omega_vec = np.zeros(discharge_int, dtype=np.complex128)
             for i in range(discharge_int):
                 omega_vec[i] = hpc_fracture.calc_omega(
@@ -1539,7 +1541,7 @@ def get_bnd_error(
             # omega = np.sum(omega_vec) / discharge_int
             if e["_type"] == 0:  # Intersection
                 frac1 = fracture_struc_array[e["frac1"]]
-                z1 = z_int["z1"][j][:discharge_int]
+                z1 = quadrature_row(z_int, 1, j, discharge_int)
                 omega1_vec = np.zeros(discharge_int, dtype=np.complex128)
                 for i in range(discharge_int):
                     omega1_vec[i] = hpc_fracture.calc_omega(
@@ -1578,7 +1580,7 @@ def get_bnd_error(
             #    np.exp(1j * theta), e["radius"], e["center"]
             # )
             # theta = np.arange(nint) * (2.0 * np.pi / nint)
-            z_pos = z_int["z0"][j][:nint]
+            z_pos = quadrature_row(z_int, 0, j, nint)
 
             # Locate branch cuts and fill work_array[j] fields
             mf.find_branch_cuts(
@@ -1736,20 +1738,22 @@ def get_z_int_array(z_int, elements, discharge_int, element_indices=None):
     for j in range(size):
         e = elements[j] if element_indices is None else elements[element_indices[j]]
         if e["_type"] == 0:  # Intersection
-            z_int["z0"][j][:discharge_int] = hpc_intersection.z_array(
+            quadrature_row(z_int, 0, j, discharge_int)[:] = hpc_intersection.z_array(
                 e, discharge_int, e["frac0"]
             )
-            z_int["z1"][j][:discharge_int] = hpc_intersection.z_array(
+            quadrature_row(z_int, 1, j, discharge_int)[:] = hpc_intersection.z_array(
                 e, discharge_int, e["frac1"]
             )
         elif e["_type"] == 1:  # Bounding circle
-            z_int["z0"][j][:discharge_int] = hpc_bounding_circle.z_array(
+            quadrature_row(z_int, 0, j, discharge_int)[:] = hpc_bounding_circle.z_array(
                 e, discharge_int
             )
         elif e["_type"] == 2:  # Well
-            z_int["z0"][j][:discharge_int] = hpc_well.z_array(e, discharge_int)
+            quadrature_row(z_int, 0, j, discharge_int)[:] = hpc_well.z_array(
+                e, discharge_int
+            )
         elif e["_type"] == 3:  # Constant head line
-            z_int["z0"][j][:discharge_int] = hpc_const_head_line.z_array(
+            quadrature_row(z_int, 0, j, discharge_int)[:] = hpc_const_head_line.z_array(
                 e, discharge_int
             )
 
@@ -1836,9 +1840,13 @@ def compute_bnd_error(
     # Scratch arrays – work_array is zero-initialised;
     # find_branch_cuts resets len_discharge_element itself.
     work_array = np.zeros(num_elements, dtype=dtype_work)
-    z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
+    z_int = (
+        allocate_quadrature(num_elements, discharge_int)
+        if coef_data is not None
+        else np.zeros(num_elements, dtype=dtype_z_arrays)
+    )
 
-    # z_int is only used for intersection / well / const-head rows
+    # Boundary evaluation also consumes bounding-circle coordinates.
     get_z_int_array(z_int, element_struc_array, discharge_int)
 
     max_error = float(constants["MAX_ERROR"])

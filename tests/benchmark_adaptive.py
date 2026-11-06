@@ -42,7 +42,16 @@ def prepare(copies, spare=False):
     return fractures, elements, work, owner
 
 
-def run_case(copies, ratio, increase, maximum, iterations=6, spare=False):
+def run_case(
+    copies,
+    ratio,
+    increase,
+    maximum,
+    iterations=6,
+    spare=False,
+    *,
+    compact_quadrature=False,
+):
     _f0, e0, _w0, owner0 = prepare(copies, spare)
     initial_capacity = int(owner0.state.storage.coef_capacity.sum())
     elapsed = [[], []]
@@ -54,7 +63,11 @@ def run_case(copies, ratio, increase, maximum, iterations=6, spare=False):
             active = owner.state.storage.elements if compact else elements
             connectivity = connectivity_from_hpc(fractures, elements.size)
             indices = hs.get_discharge_indices(active)
-            z = np.zeros(elements.size, dtype=hs.dtype_z_arrays)
+            z = (
+                hs.allocate_quadrature(indices.size, 8)
+                if compact and compact_quadrature
+                else np.zeros(elements.size, dtype=hs.dtype_z_arrays)
+            )
             hs.get_z_int_array(z, active, 8, indices)
             lu = splu(
                 hs.build_discharge_matrix_csr(

@@ -2690,6 +2690,439 @@ storage, coefficient/integration capacity policy, worker-scratch layout,
 adaptive eligibility/maximum behavior or damping/commit order changed.
 Stop at Phase 4D; no subsequent migration is included.
 
+Phase 5: runtime-sized main-solver quadrature
+--------------------------------------------
+
+Compact fixed-order/adaptive main solving now allocates a plain C-contiguous
+``complex128`` array with shape ``(2, selected_elements, discharge_int)``.
+Each side contains contiguous selected-element rows. Row ``j`` still means
+``get_discharge_indices(elements)[j]``; no extra element-to-quadrature lookup
+or copied discharge records are introduced. Two planes preserve the
+intersection's two fracture coordinate systems. Single-sided elements leave
+their second row zero. Mirrored discharge terms use the same coordinates and
+the existing arithmetic, not an additional mirrored-coordinate allocation.
+
+Allocation/consumer audit
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here ``N`` is total elements, ``S`` ordered discharge elements, ``q`` requested
+quadrature count, ``M`` storage MAX_NCOEF, and ``c_i`` integration capacity.
+Bytes below are NumPy payload, excluding array headers and allocator overhead.
+Runtime quadrature is uniform in q; integration-cache lengths vary with nint.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 23 30 29
+
+   * - Allocation / site
+     - Type, shape, physical/logical bytes
+     - Producer -> active consumers
+     - Lifetime, parallel use, diagnostics
+   * - Main solve discharge ``z_int``
+     - complex128 (2,S,q), 32q per selected row; formerly structured
+       z0/z1[N,2M], 64M per total element
+     - ``get_z_int_array`` -> ``fill_discharge_matrix``,
+       ``build_head_matrix`` through ``solve_discharge_matrix``
+     - Once per solve; reused across iterations; serial population,
+       parallel matrix/RHS readers; not returned or retained by DFN
+   * - Main solve ``z_int_error``
+     - Former second structured z0/z1[N,2M], 64M per total element
+     - ``get_z_int_array`` -> no active consumer
+     - Removed only from compact main solve; legacy still allocates/populates
+       it. No repository diagnostic/test reader; allocation guard regresses
+       accidental reintroduction
+   * - Boundary wrapper ``z_int``
+     - complex128 (2,N,q), 32q per element; formerly structured z0/z1[N,2M]
+     - ``compute_bnd_error`` / ``get_z_int_array`` -> ``get_bnd_error``
+     - Once per boundary operation; positional all-element rows, including
+       bounding circles; currently serial evaluation; only error output
+       retained. Wells/impermeable rows may be unused
+   * - Intersection / head-line ``z_array`` results
+     - complex128 linspace(q+2), returned interior q-point view;
+       16(q+2) backing bytes per construction
+     - ``hpc_intersection.z_array`` / ``hpc_const_head_line.z_array`` ->
+       corresponding z0/z1 row copy
+     - Serial operation-local vectors; intersection constructs two sides
+       sequentially; no retained duplicate. Endpoint/interior order unchanged
+   * - Well ``z_array`` result and angles
+     - float64 angles[q], complex128 z[q], logical q points
+     - ``hpc_well.z_array`` -> side zero row
+     - Operation-local linspace/exponential expression temporaries; serial
+       preparation; no retained angle or mirrored cache
+   * - Bounding-circle ``z_array`` angles, chi, z
+     - float64 theta[q], complex128 chi[q] and z[q]
+     - ``calc_thetas`` / ``hpc_bounding_circle.z_array`` -> boundary side zero
+     - Operation-local; existing radius mapping unchanged; not a persistent
+       integration grid
+   * - Boundary evaluation vectors
+     - complex128 omega[q] (two sides at intersections), float64 head[q];
+       circle correction/psi[q] and omega[q]
+     - ``get_bnd_error`` -> existing means/maxima/branch correction reduction
+     - Element-local, serial; q uniform, no MAX_NCOEF padding; retained
+       boundary output is float64[N,7], not quadrature
+   * - Cauchy theta / correction / exp caches / ``z_integral``
+     - float64 theta/correction, complex128 exp_array_m/exp_array_p/z_integral;
+       64c_i allocated bytes per element, 64*nint logical bytes
+     - Existing cache rebuilders -> type solves / Cauchy recurrence;
+       ``z_integral`` -> diagnostic export (numeric read commented out)
+     - Persistent across iterations; element-owned integration capacity,
+       parallel element access; untouched. No ``z_array_m`` or
+       ``z_array_p`` allocation exists in current source
+   * - Cauchy temporary coordinates and worker buffers
+     - Scalar mapped z/chi; existing worker phi/psi/dpsi and integral/coef0/coef1
+     - Existing element kernels / ``hpc_math_functions`` -> Cauchy reduction
+     - Unchanged worker ownership and capacity, no discharge quadrature
+       dependency; not converted to CSR or thread-local quadrature
+   * - Legacy/error quadrature and diagnostics
+     - Independent padded ``dtype_z_arrays`` definitions; complex128
+       z0/z1[N,2M], 64M bytes per element per array
+     - Legacy main solve, ``hpc_error_solve.solve_error`` and boundary wrapper;
+       legacy ``get_max_min_phi`` retains positional structured interface
+     - Legacy/error behavior retained, including unused error-solver
+       ``z_int_error``. Plotting/head sunflower/runtime-point arrays are not
+       main-solver quadrature and are unchanged
+
+The boundary wrapper retains its original all-element padded ``dtype_work``.
+It is a separate diagnostic allocation, not compact adaptive worker scratch,
+and migrating its branch/scratch ownership is outside Phase 5. The public DFN
+legacy boundary wrapper still selects legacy execution unless flat
+coefficients are supplied. Fixed-order compatibility execution without an
+adaptive owner also retains its original padded main ``dtype_work``; the
+compact category accounting below describes adaptive ownership, not that
+compatibility allocation. Error-solver arrays have not been migrated or
+removed. Persistence and all numerical/capacity policies are unchanged.
+
+Ordinary Numba overload lowering chooses dense versus legacy row views.
+Forced inlining is deliberately avoided: the legacy no-index ``prange``
+specialization fails Numba parfor rewriting with a loop-index overwrite when
+that adapter is forcibly inlined. Row views do not copy point data.
+
+``allocate_quadrature`` validates integral, nonnegative rows and positive
+counts, rejects booleans, and checks addressable dimensions/payload using
+Python integer arithmetic before allocation. Public dense matrix validation
+also checks dimensions, dtype and C-contiguity. The existing producer does
+not reject nonfinite geometry; matching propagation is tested rather than
+introducing a new numerical contract. Allocation and coordinate tests cover
+zero/one/many rows, q=1/8/1024, both sides, duplicate/reordered selected IDs,
+reuse, changed shapes and fixed-q independence from MAX_NCOEF=200/500.
+
+Phase 5 payload and lifetime accounting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The repeated heterogeneous fixture selects exactly half its elements.
+At q=8, the payload is explicitly ``S * 8 * 16 * 2``: **256 bytes per
+selected element**, or 128 bytes per total fixture element. The two original
+main-driver grids cost 25,600 bytes per total element at configured M=200.
+Decimal MB is used, not MiB.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Total elements / selected
+     - Original two padded grids
+     - Compact discharge grid
+     - Separate compact boundary grid
+   * - 128 / 64
+     - 3,276,800
+     - 16,384
+     - 32,768
+   * - 1,024 / 512
+     - 26,214,400
+     - 131,072
+     - 262,144
+   * - 10,000 / 5,000
+     - 256,000,000
+     - 1,280,000
+     - 2,560,000
+   * - 100,000 / 50,000
+     - 2,560,000,000
+     - 12,800,000
+     - 25,600,000
+
+The 10,000-element comparison is **256 MB -> 1.28 MB**, a 200-fold payload
+reduction (99.5%). Even the separate all-element boundary grid is 2.56 MB.
+The 100,000 case is storage-only: the dense payload was allocated and its
+actual nbytes checked, not a 100,000-element solve.
+
+Owned discharge quadrature peak is one dense grid, reused for matrix
+construction and every RHS. There is no second compact error grid and no
+size-discovery construction pass. Coordinate producers retain their existing
+short native vectors; a conservative source-expression payload allowance is
+``80*(q+2)`` bytes (800 bytes at q=8), independent of N/S. Thus the
+10,000-element discharge coordinate payload upper estimate is 1,280,800
+bytes, and a separate boundary operation 2,560,800 bytes. These are NumPy/
+native coordinate payload estimates, **not measured process RSS or a bound
+on all solver temporaries**. Boundary omega/head/correction reduction vectors,
+Numba runtime bookkeeping, sparse conversion and LU storage are separate.
+
+Both grids retain **zero bytes after their operation returns**. A diagnostic
+boundary call inside a solve callback can coexist with the solve grid:
+3,840,000 owned coordinate bytes at 10,000 elements, plus the active
+producer's short temporaries. It also incurs the unchanged boundary
+``dtype_work`` payload of 704,330,000 bytes. Such diagnostic work is not
+silently counted as compact worker scratch.
+
+The following allocated-byte breakdown reuses the Phase 4D heterogeneous
+memory fixture (including its seven scratch groups); those categories were
+not changed in Phase 5. Scratch group count is an independent setting, not a
+claim that every benchmark uses seven threads. ``Sparse inputs`` includes
+triplets, counts/offsets, existing element-to-discharge positions, selected
+indices and connectivity. It is not a CSC/LU or process-peak measurement.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Category
+     - 128
+     - 1,024
+     - 10,000
+     - 100,000
+   * - Fixed element metadata/layout (225N+32)
+     - 28,832
+     - 230,432
+     - 2,250,032
+     - 22,500,032
+   * - Coefficient state/history (736/element)
+     - 94,208
+     - 753,664
+     - 7,360,000
+     - 73,600,000
+   * - Integration caches (1,536/element)
+     - 196,608
+     - 1,572,864
+     - 15,360,000
+     - 153,600,000
+   * - Worker scratch (fixed for these orders/groups)
+     - 64,512
+     - 64,512
+     - 64,512
+     - 64,512
+   * - Branch events/layout (73/element)
+     - 9,344
+     - 74,752
+     - 730,000
+     - 7,300,000
+   * - Compatibility state (208/element)
+     - 26,624
+     - 212,992
+     - 2,080,000
+     - 20,800,000
+   * - Active discharge quadrature (128/total element here)
+     - 16,384
+     - 131,072
+     - 1,280,000
+     - 12,800,000
+   * - Sparse inputs (104N+8, temporary construction envelope)
+     - 13,320
+     - 106,504
+     - 1,040,008
+     - 10,400,008
+   * - Compact core plus quadrature/inputs
+     - 449,832
+     - 3,146,792
+     - 30,164,552
+     - 301,064,552
+   * - Shared padded fracture input (1,636/total element)
+     - 209,408
+     - 1,675,264
+     - 16,360,000
+     - 163,600,000
+   * - Three discharge/RHS/history vectors (18/element)
+     - 2,304
+     - 18,432
+     - 180,000
+     - 1,800,000
+   * - Tracked compact execution envelope
+     - 661,544
+     - 4,840,488
+     - 46,704,552
+     - 466,464,552
+   * - Above plus retained legacy element records
+     - 2,324,520
+     - 18,144,296
+     - 176,624,552
+     - 1,765,664,552
+   * - Above plus optional retained legacy work
+     - 11,339,944
+     - 90,267,688
+     - 880,954,552
+     - 8,808,964,552
+   * - Original padded elements/work/grids plus same inputs
+     - 14,180,232
+     - 113,441,800
+     - 1,107,830,008
+     - 11,078,300,008
+
+The compact core alone does not include original fracture records: they remain
+a shared padded input to existing interfaces, explicitly added above instead
+of being hidden in a "compact-only" total. At 10,000 elements, retained legacy
+elements add 129.92 MB, and optional retained legacy work adds 704.33 MB.
+Compact persistent categories total 27,844,544 bytes before quadrature/inputs.
+Largest compact persistent categories remain integration caches (15.36 MB)
+and coefficients/history (7.36 MB); quadrature is no longer dominant.
+The original padded fracture input's elements field also remains unchanged.
+Matrix outputs/LU, validation expression temporaries, Python objects, compiled
+code and allocator overhead are excluded from both tracked architecture
+comparisons. These are category envelopes, not falsely simultaneous
+all-allocation or OS high-water measurements.
+
+Phase 5 numerical/performance results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``tests\benchmark_quadrature.py --adaptive`` compares padded and dense
+quadrature with identical compact coefficient metadata, arithmetic and orders.
+Preparation/matrix/RHS samples alternate layout order; compilation and the
+first sample are excluded. It measures 128/1,024/10,000 elements at
+1/2/4/8/16/28 threads. Preparation itself is serial; its variation across
+thread settings reflects runtime conditions, not parallel speedup.
+
+The 10,000-element warm median milliseconds below are **padded / dense**.
+Allocation/preparation's padded control contains only the actively used grid;
+it conservatively excludes the additional obsolete error-grid work.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - Preparation, reused grid
+     - Allocate + prepare
+     - Discharge matrix
+     - Head RHS
+   * - 1
+     - 0.691 / 0.679
+     - 6.152 / 0.863
+     - 5.134 / 4.484
+     - 16.413 / 16.237
+   * - 2
+     - 0.679 / 0.677
+     - 6.261 / 0.854
+     - 2.655 / 2.389
+     - 7.865 / 7.555
+   * - 4
+     - 0.707 / 0.693
+     - 6.490 / 0.814
+     - 1.846 / 1.679
+     - 3.893 / 4.043
+   * - 8
+     - 0.692 / 0.665
+     - 6.849 / 0.883
+     - 1.704 / 1.688
+     - 3.900 / 3.987
+   * - 16
+     - 0.672 / 0.659
+     - 7.886 / 1.375
+     - 1.546 / 1.446
+     - 2.130 / 2.117
+   * - 28 (normal maximum)
+     - 1.764 / 1.672
+     - 13.360 / 1.957
+     - 1.639 / 1.529
+     - 2.525 / 2.563
+
+At 1,024 elements, allocation+preparation was 0.645/0.073 ms at one thread;
+matrix 0.477/0.470 ms and RHS 1.572/1.570 ms. At 128 it was
+0.092/0.010 ms; no implementation was tuned for this small fixture.
+The first 1,024-element eight-thread matrix sample reported a 15.0% slowdown;
+three separate alternating reruns yielded dense/padded ratios
+1.039, 1.004 and 0.921, with overlapping p10/p90 intervals. It was not a
+sustained >10% large-model regression.
+
+Unchanged six-iteration adaptive cases, with only compact quadrature layout
+switched outside the existing timed loop, gave:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - 1,024-element expansions, padded / dense ms
+     - 128 no-growth dense ms
+     - 128 spare-capacity dense ms
+     - 128 forced-growth dense ms
+   * - 1
+     - 741.596 / 754.682
+     - 13.396
+     - 9.290
+     - 103.005
+   * - 2
+     - 430.534 / 452.342
+     - 6.786
+     - 5.384
+     - 55.265
+   * - 4
+     - 349.458 / 335.205
+     - 4.252
+     - 3.989
+     - 45.882
+   * - 8
+     - 344.851 / 311.549
+     - 4.147
+     - 3.504
+     - 46.583
+   * - 16
+     - 290.209 / 299.300
+     - 2.891
+     - 2.813
+     - 39.113
+   * - 28
+     - 371.276 / 322.506
+     - 4.386
+     - 4.757
+     - 63.259
+
+All six 1,024-element dense/padded adaptive ratios are within 0.869--1.051.
+Small spare-capacity cases fluctuated by more than 10% at 2/4 threads;
+they were not optimized. Independent unchanged padded controls also slowed
+versus the retained Phase 4D session baseline: the subsequent 1,024-element
+control measured 896.985/559.644/401.835 ms at 1/2/28 threads. Therefore
+cross-session absolute timings do not establish a quadrature-caused
+regression or justify adaptive/branch micro-optimization.
+
+The unchanged ``benchmark_working_set.py --solver`` Cauchy/candidate control
+was rerun at all six thread settings. Compact 10,000-element medians were
+293.518/218.039/126.835/86.355/45.923/44.226 ms; corresponding legacy controls
+were 291.014/234.949/122.561/88.493/45.818/43.064 ms. These kernels do not
+consume migrated quadrature. Shared-machine timing dispersion is substantial;
+no cache/bandwidth hardware counters were measured and no causal bandwidth
+claim is made. The measured layout comparison shows material allocation
+savings and no sustained >10% representative large-kernel regression.
+
+Every benchmark coordinate/order, matrix data/indices/indptr and head RHS
+comparison is exactly equal. All 48 adaptive layout/thread/case final
+coefficient comparisons have absolute/relative differences zero. The unchanged
+adaptive control's 12 trajectories match, and all 132 recorded numerical
+field comparisons have zero absolute/relative difference. Full adaptive
+history tests compare dense and padded quadrature exactly at 1/2/28 threads,
+including candidates, coefficients, discharges, fracture constants, heads,
+boundary errors, caches and branch events. Existing legacy/compact and
+convergence tests remain unchanged; no tolerance was increased.
+
+Validation and next-phase boundary
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``uv run pytest tests`` passed **381 tests** (39 new quadrature cases).
+``uv run ruff check .`` and ``uv run ruff format --check .`` were attempted
+and could not start because project Ruff is unavailable. Pinned Ruff 0.16.2
+lint/format checks passed on all five changed Python files;
+``git diff --check`` passed.
+
+Changed files: ``src\andfn\hpc\hpc_solve.py``, new
+``src\andfn\hpc\hpc_quadrature.py``, ``tests\benchmark_adaptive.py``, new
+``tests\benchmark_quadrature.py`` and ``tests\test_quadrature.py``, and this
+documentation. No error-solver, persistence, numerical algorithm, coefficient
+or integration/branch capacity policy, worker ownership, damping, publication,
+commit or event order change is included.
+
+For a solve-only resident-memory goal, legacy-storage removal is the next
+large opportunity: 129.92 MB of source element records plus 16.36 MB of
+shared padded fracture inputs at 10,000 elements, versus 1.28 MB of compact
+quadrature. For end-to-end peak memory including boundary diagnostics, the
+largest measured remaining main-path allocation is instead the **704.33 MB
+boundary ``dtype_work``**. Prioritize a separately approved migration of that
+diagnostic work allocation (option 3), without changing boundary arithmetic
+or migrating the error solver; then legacy-storage removal. Error-solver
+migration becomes first priority only for a workload actually running it.
+This is a recommendation, not an implementation: **stop after Phase 5**.
+
 Solver functions
 ----------------
 
