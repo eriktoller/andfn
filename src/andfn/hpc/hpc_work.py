@@ -24,7 +24,13 @@ CACHE_FIELDS = INTEGRATION_FIELDS[:5]
 SCRATCH_GROUPS = (("coef0", "coef1"), ("integral",), ("phi", "psi", "dpsi"))
 SCRATCH_FIELDS = sum(SCRATCH_GROUPS, ())
 BRANCH_FIELDS = ("sign_array", "discharge_element", "element_pos")
-SCALAR_FIELDS = ("len_discharge_element", "a0_error", "error", "set_zero")
+SCALAR_FIELDS = (
+    "len_discharge_element",
+    "a0_error",
+    "error",
+    "set_zero",
+    "branch_valid",
+)
 ARRAY_FIELDS = COEFFICIENT_FIELDS + ("integral",) + INTEGRATION_FIELDS + BRANCH_FIELDS
 FIELDS = ARRAY_FIELDS + SCALAR_FIELDS
 _Record = namedtuple("_Record", FIELDS)
@@ -45,6 +51,9 @@ class WorkRecord(_Record):
         getattr(self, key)[0] = value
 
 
+BranchRecord = namedtuple("BranchRecord", BRANCH_FIELDS + ("len_discharge_element",))
+
+
 WorkArrays = namedtuple(
     "WorkArrays",
     FIELDS
@@ -63,12 +72,13 @@ WorkArrays = namedtuple(
 @overload(operator.getitem)
 def _record_getitem(record, key):
     if (
-        isinstance(record, nb.types.NamedTuple)
-        and record.instance_class is WorkRecord
+        isinstance(record, (nb.types.NamedTuple, nb.types.NamedUniTuple))
+        and record.instance_class in (WorkRecord, BranchRecord)
         and isinstance(key, nb.types.StringLiteral)
     ):
         name = key.literal_value
-        index = FIELDS.index(name)
+        fields = FIELDS if record.instance_class is WorkRecord else BranchRecord._fields
+        index = fields.index(name)
         if name in SCALAR_FIELDS:
 
             def scalar(record, key):
@@ -85,12 +95,13 @@ def _record_getitem(record, key):
 @overload(operator.setitem)
 def _record_setitem(record, key, value):
     if (
-        isinstance(record, nb.types.NamedTuple)
-        and record.instance_class is WorkRecord
+        isinstance(record, (nb.types.NamedTuple, nb.types.NamedUniTuple))
+        and record.instance_class in (WorkRecord, BranchRecord)
         and isinstance(key, nb.types.StringLiteral)
         and key.literal_value in SCALAR_FIELDS
     ):
-        index = FIELDS.index(key.literal_value)
+        fields = FIELDS if record.instance_class is WorkRecord else BranchRecord._fields
+        index = fields.index(key.literal_value)
 
         def scalar(record, key, value):
             record[index][0] = value
@@ -156,12 +167,56 @@ def _work_record(work, i):
                 work.a0_error[i : i + 1],
                 work.error[i : i + 1],
                 work.set_zero[i : i + 1],
+                work.branch_valid[i : i + 1],
             )
 
         return compact
 
     def legacy(work, i):
         return work[i]
+
+    return legacy
+
+
+def branch_topology_valid(work):
+    if isinstance(work, WorkRecord):
+        return work["branch_valid"] or work["len_discharge_element"] != 0
+    return work["len_discharge_element"] != 0
+
+
+def invalidate_branch(work):
+    work["len_discharge_element"] = 0
+    if isinstance(work, WorkRecord):
+        work["branch_valid"] = False
+
+
+@overload(invalidate_branch, inline="always")
+def _invalidate_branch(work):
+    if isinstance(work, nb.types.NamedTuple) and work.instance_class is WorkRecord:
+
+        def compact(work):
+            work["len_discharge_element"] = 0
+            work["branch_valid"] = False
+
+        return compact
+
+    def legacy(work):
+        work["len_discharge_element"] = 0
+
+    return legacy
+
+
+@overload(branch_topology_valid, inline="always")
+def _branch_topology_valid(work):
+    if isinstance(work, nb.types.NamedTuple) and work.instance_class is WorkRecord:
+
+        def compact(work):
+            return work["branch_valid"] or work["len_discharge_element"] != 0
+
+        return compact
+
+    def legacy(work):
+        return work["len_discharge_element"] != 0
 
     return legacy
 
@@ -263,7 +318,11 @@ def allocate_work(elements, coef_start, coef_capacity, *, scratch_groups=0):
             np.int64
             if name == "len_discharge_element"
             else (
-                bool if name == "set_zero" else complex if name == "a0_error" else float
+                bool
+                if name in ("set_zero", "branch_valid")
+                else complex
+                if name == "a0_error"
+                else float
             )
         )
         values[name] = np.zeros(elements.size, dtype=dtype)
@@ -293,6 +352,8 @@ def state_payload(state):
 
 
 def validate_work(work, ncoef, nint):
+    if work.branch_valid.dtype != np.bool_ or work.branch_valid.shape != ncoef.shape:
+        raise ValueError("Invalid branch validity metadata")
     if work.scratch_layout.dtype != np.int64 or work.scratch_layout.shape != (4,):
         raise ValueError("Invalid scratch ownership metadata")
     _validate_layout(
@@ -366,6 +427,9 @@ def import_work(work, legacy, elements):
     for i, e in enumerate(elements):
         target = work_record(work, i)
         for name in FIELDS:
+            if name == "branch_valid":
+                target[name] = legacy["len_discharge_element"][i] != 0
+                continue
             if name in scratch_fields(work):
                 if np.any(legacy[name][i] != 0):
                     raise ValueError(

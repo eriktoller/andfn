@@ -297,8 +297,8 @@ def memory_probe():
                 sum(getattr(work, name).nbytes for name in cw.SCRATCH_FIELDS),
             ),
             "branch_events": (
-                int(branch_counts.sum()) * 24 + count * 24,
-                branch_size * 24 + count * 24,
+                int(branch_counts.sum()) * 24 + count * 25,
+                branch_size * 24 + count * 25,
             ),
             "compatibility": (nc * 16 + count * 24, size * 16 + count * 24),
             "quadrature_in_kernel_probe": (0, 0),

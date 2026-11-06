@@ -26,7 +26,8 @@ from andfn.storage import (
 from . import CACHE, PARALLEL
 from . import hpc_math_functions as mf
 from . import hpc_solve as hs
-from .hpc_branch import prepare_branches
+from .hpc_branch import prepare_direct as prepare_branches
+from .hpc_branch import publish_direct
 from .hpc_coefficients import coefficient_view
 from .hpc_work import (
     CACHE_FIELDS,
@@ -35,6 +36,7 @@ from .hpc_work import (
     WorkArrays,
     allocate_work,
     integration_view,
+    invalidate_branch,
     resize_scratch,
     scratch_fields,
     state_arrays,
@@ -315,7 +317,7 @@ def rebuild_growth_caches(elements, work, required):
         record = work_record(work, i)
         # Grid changes invalidate event topology, not fracture CSR. Existing
         # circle/line solves rebuild topology and q-dependent corrections.
-        record["len_discharge_element"] = 0
+        invalidate_branch(record)
         rebuild_cache_values(e, record)
 
 
@@ -425,6 +427,7 @@ def publish_logical(
             work.exp_array_p[a + k] = caches.exp_array_p[b + k]
             work.z_integral[a + k] = caches.z_integral[b + k]
         work.len_discharge_element[i] = 0
+        work.branch_valid[i] = False
     for j in nb.prange(ids.size):
         i = ids[j]
         elements[i]["ncoef"], elements[i]["nint"] = nc[i], ni[i]
@@ -440,6 +443,7 @@ def prepare_logical(state, ids, nc, ni, rebuild):
         w.old_coef,
         w.coef_error,
         w.len_discharge_element,
+        w.branch_valid,
         w.thetas,
         w.dpsi_corr,
         w.exp_array_m,
@@ -688,6 +692,7 @@ def build_repack(
         integration_start=cache_start,
         integration_capacity=cache_capacity,
         len_discharge_element=np.zeros(ids.size, dtype=np.int64),
+        branch_valid=np.zeros(ids.size, dtype=np.bool_),
     )
     staging_seconds = perf_counter() - start_time
     cache_start = perf_counter()
@@ -793,6 +798,7 @@ def publish(transaction):
                 b : b + n
             ]
         work.len_discharge_element[i] = 0
+        work.branch_valid[i] = False
     for i in transaction.ids:
         s.elements["ncoef"][i] = transaction.requested_ncoef[i]
         s.elements["nint"][i] = transaction.requested_nint[i]
@@ -842,13 +848,22 @@ def adaptive_step(
     if not 1.0 > max_error:
         return
     if not owner.branch_initialized:
-        work, branch_stats = prepare_branches(
+        branch_preparation, branch_stats = prepare_branches(
             state.work,
             s.elements,
             fractures,
-            np.arange(s.elements.size, dtype=np.int64),
+            np.flatnonzero(~state.work.branch_valid),
             s.elements["nint"],
         )
+        work = branch_preparation.work
+        publish_direct(
+            work,
+            branch_preparation.ids,
+            branch_preparation.starts,
+            branch_preparation.counts,
+            branch_preparation.values,
+        )
+        del branch_preparation
         if work is not state.work:
             owner.state = AdaptiveState(s, work)
             state = owner.state
@@ -900,13 +915,14 @@ def adaptive_step(
     if np.any(requests[2]):
         transaction_start = perf_counter()
         replacement, stats = build_replacement(state, *requests, maximum, increase)
-        branch_work, branch_stats = prepare_branches(
+        branch_preparation, branch_stats = prepare_branches(
             replacement.state.work,
             s.elements,
             fractures,
             replacement.ids,
             requests[1],
         )
+        branch_work = branch_preparation.work
         stats.update(branch_stats)
         stats["transaction_temporary_payload"] += branch_stats[
             "branch_count_temporary_numpy_payload"
@@ -915,13 +931,12 @@ def adaptive_step(
             "branch_count_temporary_numpy_payload"
         ]
         stats["temporary_array_count"] += branch_stats["branch_count_temporary_arrays"]
+        stats["total_bytes_copied"] += (
+            branch_stats["branch_event_bytes_copied"]
+            + branch_stats["branch_publication_bytes"]
+        )
         if branch_work is not replacement.state.work:
             branch_state = AdaptiveState(replacement.state.storage, branch_work)
-            extra = branch_stats["branch_replacement_bytes"]
-            stats["transaction_temporary_payload"] += extra
-            stats["peak_simultaneous_numpy_payload"] += extra
-            stats["temporary_array_count"] += 5
-            stats["total_bytes_copied"] += branch_stats["branch_event_bytes_copied"]
         else:
             branch_state = None
         stats["transaction_seconds"] = perf_counter() - transaction_start
@@ -963,6 +978,14 @@ def adaptive_step(
     s = owner.state.storage
     recalc_start = perf_counter()
     if stats is not None:
+        publish_direct(
+            owner.state.work,
+            branch_preparation.ids,
+            branch_preparation.starts,
+            branch_preparation.counts,
+            branch_preparation.values,
+        )
+        del branch_preparation
         recalculate_candidates(
             s.elements,
             fractures,

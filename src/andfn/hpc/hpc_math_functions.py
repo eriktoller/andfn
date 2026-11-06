@@ -14,7 +14,7 @@ from andfn.hpc import CACHE
 from ..constants import R_COND
 from . import hpc_fracture
 from . import hpc_geometry_functions as gf
-from .hpc_work import integration_view
+from .hpc_work import branch_topology_valid, integration_view
 
 
 @nb.njit(inline="always")
@@ -772,7 +772,7 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
     None
         Edits the self_ array in place.
     """
-    if work_array["len_discharge_element"] == 0:
+    if not branch_topology_valid(work_array):
         if self_["_type"] in [1, 4]:  # If bounding circle or impermeable circle
             z_pos = gf.map_chi_to_z_circle(
                 work_array["exp_array_p"][: self_["nint"]],

@@ -2144,6 +2144,552 @@ Changed files: ``hpc_work.py``, ``hpc_adaptive.py``, the new ``hpc_branch.py``,
 persistence, quadrature, retained compatibility fields and numerical order/
 damping/commit policies are unchanged. No later migration has begun.
 
+Phase 4D: single-pass transactional branch construction
+------------------------------------------------------
+
+Phase 4C's memory/numerical implementation is retained, including all six
+worker-owned scratch fields. Phase 4D changes only branch construction,
+publication and associated validity metadata. Private pre-candidate topology
+construction and transactional publication were explicitly approved for this
+phase. Numerical crossing tests and their arithmetic are unchanged.
+
+Duplicate-work map and measured baseline
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Phase 4C path is:
+
+1. Initial activation, or adaptive cache preparation, calls
+   ``hpc_branch.prepare_branches``.
+2. Its parallel ``count_events`` computes theta, exponentials and circle/line
+   sample positions, then calls ``find_branch_cuts`` with one storage slot.
+   The complete count is retained even after that slot fills.
+3. Only overflow triggers ``growth_capacities``, ``_layout`` prefix sums,
+   allocation of three event buffers and copying existing live prefixes.
+   Within capacity there is no prefix sum, allocation or repack here.
+4. Candidate Cauchy integration calls ``get_dpsi_corr``. When length is zero
+   it maps the grid again and calls ``find_branch_cuts`` again, now filling
+   events. Subsequent correction updates traverse events in order and add
+   discharge times sign; they do not need geometry again.
+5. Adaptive grid publication resets affected lengths; affected candidate
+   recalculation repeats step 4. Genuine empty topologies are indistinguishable
+   from invalid ones in Phase 4C and consequently repeat geometry on later
+   candidates too.
+
+Both crossing passes repeat interval/neighbor traversal, endpoint mapping,
+the direct branch phase-jump test (including its 32-point arc test when
+required), mirror eligibility/mirror endpoints and mirror crossing tests,
+and well logarithm phase tests. They use geometry, fracture radius, ordered
+fracture connectivity, element type and the integration grid. Coefficients,
+candidate values, discharge and fracture constants are not topology inputs.
+Outputs are an ordered multiset of interval index, discharge-element ID and
+integer sign; a well/neighbor can appear repeatedly.
+
+The order remains interval-major, connectivity-major, direct-before-mirror.
+No sorting, deduplication, atomic append or arithmetic reordering is used.
+The numerical correction's sequential summation order is unchanged.
+
+Before editing, instrumenting the eight-element numerical bodies measured
+**four find calls and 225 line-crossing tests in counting, then the same four
+find calls and 225 tests in filling**. Well phase tests are additional, not
+included in that 225. This body-level instrumentation is separate from native
+timing; it does not pretend CProfile can observe every compiled inner call.
+One hundred warm 128-element exact preparations at 28 threads took 0.043 s
+and 701 visible Python calls: 100 preparation calls, 100 NumPy ``any`` calls,
+100 reductions and dispatcher bookkeeping. Each invokes one count dispatcher;
+the within-capacity case invokes no prefix-sum/repack operation.
+
+Unmodified Phase 4C 10,000-element count / fill medians before editing, ms:
+1 thread 199.581 / 198.975; 2 threads 103.456 / 102.738;
+4 threads 53.478 / 55.232; 8 threads 32.151 / 33.673;
+16 threads 32.773 / 33.728; 28 threads 20.156 / 20.690.
+Counting plus filling is two geometry passes, not one slow dispatcher.
+
+Direct construction, overflow and publication
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The default adaptive import now binds its existing preparation entry point to
+``prepare_direct``. The original ``count_events`` and ``prepare_branches``
+remain callable reference/diagnostic implementations and are not called by
+default compact execution. A regression replaces ``count_events`` with a
+function that fails if invoked and runs initial construction and adaptation.
+
+``construct_events`` takes compact numeric element/fracture arrays, affected
+IDs, selected row indices, requested nint, starts/capacities and output arrays.
+It passes a four-array ``BranchRecord`` to the unchanged crossing routine.
+Each parallel iteration owns an exclusive staging segment, starts its local
+count at zero, checks capacity before every write, and continues counting
+after overflow without writing outside that segment. Counts and overflow-row
+IDs are separate int64 arrays. Overflow is normal control flow, never a
+parallel-loop exception.
+
+The safety choice is **affected-only private staging**, with the same capacity
+as each affected published segment. It avoids overwriting old events before
+overflow is known. Staging is per preparation, not a second persistent copy
+of all branch storage; unrelated live events are not copied on the normal
+path. It is reused for every event in that construction and released after
+publication; there is no retained workspace owner or scratch-ownership change.
+
+When counts fit, the single construction pass is followed by compiled serial
+validation of only new live prefixes. Validation rejects invalid lengths,
+signs other than +/-1, IDs outside the element range and interval positions
+outside ``[0, nint-1)``. Positions are intrinsically integer interval indices,
+not floating coordinates. A deliberately floating NaN injected into private
+position storage is also rejected; no position tolerance is used.
+Bounded serial publication copies live prefixes and publishes lengths and
+validity. Existing starts, capacities and all three event-buffer identities
+remain unchanged.
+
+Overflow recovery gathers only overflowing rows, grows their capacities
+using the retained quantum-4 / 1.25 helper, preserves fitting staged results,
+and reconstructs **only overflowing rows**. A batch replacement branch family
+is allocated privately; unaffected live event prefixes are copied in original
+order. There is one full branch-family repack when required, not one per
+overflowing element. All reconstructed live prefixes are validated before
+publication. The replacement shares unrelated solver buffers; no complete
+solver-state clone is made.
+
+All allocations, reconstruction, validation and the existing growth
+``before_publication`` failure hook precede publication. Grid/cache publication
+retains the original ``after_growth_publication`` observation boundary with
+invalidated event lengths. Prepared topology is then published immediately
+before candidate recalculation. Thus all original transition comparisons
+remain intact rather than masking changed branch observations in tests.
+There is no coefficient-commit or numerical barrier fusion.
+Publication contains prevalidated, bounded compiled writes, with no callbacks,
+allocation or expected input errors. Exclusive owner access and no mutation
+of prepared arrays between preparation and publication remain required.
+Concurrent mutation, asynchronous termination and memory corruption are not
+recoverable transactional exceptions.
+
+An explicit bool ``branch_valid`` costs one byte per element and distinguishes
+valid empty topology from invalid topology. Grid changes reset both validity
+and logical length at the same adaptive boundary as before. Discharge changes
+update correction values only and never trigger reconstruction. Initial
+activation also respects already imported valid topology. Geometry/connectivity
+are fixed during solving, as in Phase 4C; external changes require invalidation
+or a new owner. Unchanged connectivity alone does not establish validity if
+the grid or geometry changed. Capacity changes affect storage layout, not
+event order or topology semantics. Legacy/error validity behavior and storage
+are unchanged.
+
+Capacity-policy measurements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The heterogeneous seed and five subsequent forced-growth grids all have
+counts ``[3,0,0,0,1,0,2,0]``. Across those 48 observations the mean is 0.75,
+median 0, p90/p95/p99 are 3/3/3 and maximum is 3. This is measured on tiled
+small DFNs, not evidence that a globally connected model has that distribution.
+The retained adversarial test requires 1,600 ordered events from repeated
+direct crossings and exercises real overflow/reconstruction.
+
+The policy probe compares these alternatives per eight-element seed:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Policy
+     - Initial/final event bytes
+     - Utilization
+     - Growth overflows / repacks / copy bytes
+   * - Exact initial capacity
+     - 144 / 144
+     - 100%
+     - 0 / 0 / 0
+   * - Previous count plus quantum 4, event-producing types
+     - 528 / 528
+     - 27.3%
+     - 0 / 0 / 0
+   * - Previous count with approximately 25% slack, quantum-rounded
+     - 288 / 288
+     - 50%
+     - 0 / 0 / 0
+   * - Type-specific minimum 4 for types 1/4/5, zero otherwise
+     - 384 / 384
+     - 37.5%
+     - 0 / 0 / 0
+
+Exact and previous-count policies assume known counts at initialization; an
+exact preliminary pass to obtain them would reintroduce the removed cost.
+The selected policy therefore retains the simple type-specific four-slot
+minimum with no preliminary count, reuses capacity thereafter, and expands
+only on measured overflow. Quantum rounding is significant at these tiny
+counts; the slack policy is not represented as exactly 25% utilization.
+The benchmark now computes ``ceil(previous * 1.25)`` before quantum rounding.
+
+The tiled 128/1,024/10,000 cases have zero natural overflows. Tiling the same
+distribution at 100,000 (storage-only) does not increase overflow frequency.
+This is not a forecast for other network geometries. A sparse forced-overflow
+probe removes capacity from every 128th row, producing 1/8/79 overflowed
+elements at those three runtime sizes: 0.78125% / 0.78125% / 0.79%.
+Only those rows undergo a second crossing pass; all other affected rows
+cross once. It requires one batch repack per sample.
+
+Branch construction benchmarks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Run ``uv run python tests\benchmark_branch.py --adaptive``. The original
+adaptive fixture helper and timing boundaries are imported unchanged.
+Branch probes alternate count, original topology fill, direct transaction
+and sparse-overflow transaction in forward/reverse order; eight samples are
+taken, first discarded. Direct totals include preparation, validation and
+publication. Fill includes numerical correction updates; count plus fill is
+the reference geometry path, not a separately measured summed median.
+The fixtures remain heterogeneous tiled eight-element DFNs, not large
+globally connected solves.
+
+First 10,000-element measurement, milliseconds:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - Exact count
+     - Original fill alone
+     - Direct total
+     - Overflow detection pass
+     - Repack
+     - Overflow reconstruction
+     - Overflow total
+   * - 1
+     - 195.464
+     - 199.009
+     - 197.616
+     - 197.632
+     - 1.254
+     - 2.628
+     - 202.364
+   * - 2
+     - 120.051
+     - 121.076
+     - 120.169
+     - 119.302
+     - 1.323
+     - 1.362
+     - 122.830
+   * - 4
+     - 54.335
+     - 61.592
+     - 70.995
+     - 61.365
+     - 1.358
+     - 1.202
+     - 64.633
+   * - 8
+     - 54.806
+     - 58.327
+     - 58.574
+     - 56.989
+     - 1.834
+     - 0.762
+     - 60.652
+   * - 16
+     - 32.865
+     - 35.046
+     - 37.256
+     - 35.125
+     - 1.935
+     - 0.434
+     - 38.494
+   * - 28
+     - 20.798
+     - 21.320
+     - 22.936
+     - 20.543
+     - 2.085
+     - 0.386
+     - 24.125
+
+Stage medians need not sum to total medians. Detection above is the first
+construction pass that discovers overflow, not a separate count kernel.
+No-overflow direct geometry itself measured 196.797 / 119.232 / 70.017 /
+57.442 / 36.228 / 21.715 ms at the six thread settings.
+
+Direct total medians at smaller sizes, 1/2/4/8/16/28 threads:
+128: 2.487 / 1.572 / 0.709 / 0.732 / 0.422 / 0.453 ms;
+1,024: 20.265 / 12.262 / 5.585 / 6.097 / 3.724 / 3.272 ms.
+Corresponding reference fill medians are
+2.546 / 1.516 / 0.719 / 0.722 / 0.377 / 0.362 and
+20.515 / 12.229 / 5.398 / 6.131 / 3.503 / 3.566 ms.
+The direct path pays small fixed host/validation/publication costs, but
+does not pay a second crossing pass.
+
+A complete repeat gave the following 10,000-element count / fill / direct
+medians and direct p10--p90 intervals, ms:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - Count
+     - Fill
+     - Direct [p10, p90]
+   * - 1
+     - 228.612
+     - 236.327
+     - 229.439 [227.507, 231.858]
+   * - 2
+     - 120.260
+     - 121.424
+     - 123.479 [119.095, 160.691]
+   * - 4
+     - 70.033
+     - 74.688
+     - 90.793 [69.248, 102.657]
+   * - 8
+     - 56.434
+     - 55.042
+     - 62.117 [56.968, 64.064]
+   * - 16
+     - 37.408
+     - 37.883
+     - 37.589 [36.710, 38.617]
+   * - 28
+     - 25.738
+     - 25.311
+     - 23.496 [22.942, 32.117]
+
+The unfavorable four/eight-thread ratios were investigated rather than
+discarded. A further 32-sample rotated-order probe compared preallocated
+direct kernel, exact count, original fill and complete direct preparation.
+At four threads their medians were 65.477 / 63.501 / 69.822 / 66.255 ms;
+direct-kernel p10--p90 was [52.801, 97.173], fill [57.086, 102.217].
+At eight threads medians were 55.048 / 59.152 / 57.572 / 59.343 ms.
+This does not show a sustained native direct-kernel regression above 10%.
+It does show substantial shared-machine dispersion; no hardware bandwidth
+or cache-miss explanation is claimed.
+
+Adaptive acceptance and retained baselines
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The unchanged ``uv run python tests\benchmark_adaptive.py --profile`` reports
+these compact medians, milliseconds; columns are 1/2/28 threads:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - Retained Phase 4B
+     - Retained Phase 4C
+     - Phase 4D
+   * - 128, no growth
+     - 18.979 / 9.855 / 4.264
+     - 25.121 / 11.670 / 4.183
+     - 12.176 / 6.379 / 2.384
+   * - 128, spare growth
+     - 10.979 / 5.856 / 3.204
+     - 16.590 / 8.518 / 3.456
+     - 8.933 / 4.600 / 2.435
+   * - 128, forced repacks
+     - 96.016 / 55.011 / 34.429
+     - 132.944 / 71.302 / 39.153
+     - 89.812 / 52.123 / 33.888
+   * - 1,024, expansions
+     - 765.796 / 447.152 / 269.469
+     - 1039.683 / 544.431 / 265.557
+     - 709.000 / 411.105 / 230.574
+   * - 128, spare growth, 24 iterations
+     - 35.077 / 19.932 / 11.297
+     - 43.458 / 21.900 / 9.758
+     - 22.147 / 12.101 / 7.246
+
+The Phase 4D compact p10--p90 intervals, 1/2/28 threads, ms:
+no-growth [12.044,12.361] / [6.250,6.467] / [2.300,2.718];
+spare [8.760,10.363] / [4.575,4.652] / [2.252,3.071];
+forced [89.076,91.307] / [50.854,52.590] / [32.976,35.171];
+1,024 expansions [702.117,719.695] / [402.258,440.765] / [219.855,248.603].
+Legacy medians in that run were respectively
+19.812/9.660/3.297, 11.624/5.693/2.058,
+86.689/42.536/11.777 and 695.967/351.244/67.485 ms.
+High-thread forced-repack compact execution is still slower than legacy;
+that predates this phase and is not reported as fixed.
+
+For all six thread counts, Phase 4B sources at ``c865fa7`` were additionally
+extracted into session-only storage and executed with the same unmodified
+benchmark helper and a separate compiled cache. The repository worktree was
+not switched or rewritten. Phase 4C was measured before editing. The following
+cells show Phase 4B / Phase 4C / repeated Phase 4D compact medians, ms:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - 128 no growth
+     - 128 spare growth
+     - 128 forced repacks
+     - 1,024 expansions
+   * - 1
+     - 19.464 / 23.512 / 12.636
+     - 11.424 / 14.483 / 8.544
+     - 99.638 / 121.051 / 89.916
+     - 794.749 / 943.315 / 706.526
+   * - 2
+     - 10.064 / 11.323 / 8.089
+     - 6.073 / 7.810 / 4.715
+     - 56.958 / 68.135 / 52.863
+     - 444.040 / 531.162 / 421.603
+   * - 4
+     - 5.472 / 6.440 / 3.825
+     - 3.501 / 4.264 / 4.609
+     - 36.843 / 43.226 / 35.644
+     - 295.218 / 327.264 / 291.534
+   * - 8
+     - 5.732 / 5.509 / 3.642
+     - 3.577 / 4.131 / 2.958
+     - 39.108 / 40.282 / 40.027
+     - 303.231 / 243.746 / 298.800
+   * - 16
+     - 3.426 / 4.147 / 2.498
+     - 2.645 / 3.402 / 2.390
+     - 41.628 / 41.637 / 36.032
+     - 258.476 / 289.749 / 238.197
+   * - 28
+     - 3.970 / 4.564 / 2.563
+     - 2.813 / 3.434 / 3.080
+     - 34.796 / 40.001 / 35.105
+     - 243.103 / 275.338 / 234.015
+
+Each run still uses seven alternating legacy/compact samples. Different
+phase executions are not simultaneous interleaved phase comparisons; baseline
+movement remains a limitation. At four threads, for example, the repeated
+spare legacy median moved from 3.195 ms in Phase 4B to 5.413 ms in Phase 4D.
+The first Phase 4D spare result there was 2.999 ms, not 4.609 ms.
+The repeat's one-thread no-growth interval [12.352,65.939] also records an
+outlier rather than discarding it. Eight-thread expansions were slower than
+the before-edit Phase 4C snapshot, but 0.985x the freshly measured Phase 4B
+baseline. Forced-growth Phase 4D/4B ratios were
+0.902/0.928/0.967/1.023/0.866/1.009; expansions were
+0.889/0.949/0.988/0.985/0.922/0.963.
+No sustained forced/expansion regression above 10% versus Phase 4B was found.
+
+The six-step element-only instrumented 28-thread profile measured detection
+0.112 ms, construction excluding cache 0.418 ms, cache 0.090 ms,
+cache/grid publication 0.022 ms, adaptive candidate plus branch publication
+0.100 ms, commits 0.131 ms and remaining work 0.890 ms. The latter includes
+initial branch preparation. CProfile's 200 post-growth steps took 0.028 s,
+including 0.027 s in the adaptive entry point/compiled stages. Physical
+coefficient/cache repacks, complete structural validation on those repacks,
+dispatch/parallel launch costs and the unchanged numerical kernels remain.
+No further Phase 4B transaction optimization or barrier fusion was performed.
+
+Memory, copying and failure accounting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Event payload excludes starts, capacities, lengths and bool validity in the
+following table. Event-capacity utilization is 37.5%; including metadata it
+is 58.9%. Staging is allocated only for affected capacities.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Elements
+     - Logical events bytes
+     - Event-capacity bytes
+     - Persistent branch metadata
+     - Full affected staging bytes
+     - Count/overflow metadata, no overflow
+     - Branch peak payload bound
+   * - 128
+     - 2,304
+     - 6,144
+     - 3,200
+     - 6,144
+     - 1,024
+     - 19,584
+   * - 1,024
+     - 18,432
+     - 49,152
+     - 25,600
+     - 49,152
+     - 8,192
+     - 156,672
+   * - 10,000
+     - 180,000
+     - 480,000
+     - 250,000
+     - 480,000
+     - 80,000
+     - 1,530,000
+   * - 100,000 storage-only
+     - 1,800,000
+     - 4,800,000
+     - 2,500,000
+     - 4,800,000 (formula)
+     - 800,000 (formula)
+     - 15,300,000 (formula)
+
+The peak bound includes persistent branch state, staging and compact stage
+capacity/start/count/selected arrays (32 bytes per affected element).
+Caller-owned IDs, transient validation/selection expressions and native
+Numba/NRT theta/exponential/sample-position allocations are separate; this
+is not allocator-complete RSS. No 100,000-element full solve or legacy work
+allocation was attempted.
+
+The sparse-overflow probe's additional int64 overflow-ID arrays cost 8/64/632
+bytes at 128/1,024/10,000 elements. Private replacement branch families cost
+8,192 / 65,536 / 640,000 bytes. Conservative preparation-payload bounds
+(including both staging generations and the replacement) are
+27,680 / 221,440 / 2,162,416 bytes. With old branch storage still alive,
+branch peak bounds are 36,928 / 295,424 / 2,884,832 bytes.
+Fitting-staging/unaffected live-prefix copies total
+2,232 / 17,856 / 174,312 bytes; publication adds
+2,304 / 18,432 / 180,000 bytes. Standard fixtures repack zero times and
+copy only their newly constructed live events at publication.
+There is no current/candidate/history or unrelated-work copy.
+The existing accounting keys prefixed ``branch_count_temporary`` now describe
+direct-preparation payload bounds for benchmark compatibility, not a hidden
+preliminary count call.
+
+Whole compact persistent payload is now
+420,128 / 2,909,216 / 27,844,544 / 277,864,544 bytes at
+128/1,024/10,000/100,000, exactly one byte per element above Phase 4C.
+The separate retained padded quadrature and optional legacy payloads are
+unchanged. No event family scales with MAX_ELEMENTS.
+
+Failure regressions cover direct construction, injected NaN interval storage,
+invalid event IDs, safe capacity overflow, replacement allocation,
+overflow-only reconstruction and prepublication validation. Complete published
+array identities and contents, lengths, caches, histories, convergence data
+and validity are checked unchanged after failure. Successful publication
+retains buffer identities within capacity and preserves unaffected event
+prefixes during replacement. Read-only publication targets are rejected
+before construction. Existing adaptive prepublication failure tests and
+exact 1,600-event order tests remain in place.
+
+All prior event/numerical transition comparisons are retained without
+tolerance changes, including current/candidate/history state, adaptive requests,
+caches/corrections, fracture constants, discharge/DFN discharge, heads,
+boundary errors, convergence/iterations and legacy cross-thread deltas.
+The unchanged adaptive benchmark records zero numerical differences.
+Three-way integer event comparisons cover legacy padded, Phase 4C reference,
+and direct construction at 1/2/28 threads. Discharge-only updates are tested
+not to invoke topology preparation.
+
+Phase 4D eliminates the exact preliminary crossing pass in sufficient
+capacity, preserves the major memory reduction and recovers adaptive runtime.
+The next priority should be a separately approved measured bottleneck:
+padded quadrature for memory, or physical-repack validation/dispatch for
+high-thread adaptive runtime. Error-solver migration and legacy removal have
+not begun.
+
+Validation and changed files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The full ``uv run pytest tests`` passed **342 tests**, including eighteen new
+direct-construction cases. Project ``uv run ruff check .`` and
+``uv run ruff format --check .`` were attempted but could not start because
+Ruff is unavailable in the environment. Pinned Ruff 0.16.2 lint and format
+checks passed on all seven changed Python files. ``git diff --check`` passed.
+
+Changed files are ``src\andfn\hpc\hpc_adaptive.py``,
+``src\andfn\hpc\hpc_branch.py``, ``src\andfn\hpc\hpc_work.py``,
+``src\andfn\hpc\hpc_math_functions.py``, the new
+``tests\test_direct_branch.py`` and ``tests\benchmark_branch.py``,
+``tests\benchmark_working_set.py`` (one-byte validity accounting), and
+``docs\hpc.rst``. No dependencies, persistence, z_integral, legacy/error
+storage, coefficient/integration capacity policy, worker-scratch layout,
+adaptive eligibility/maximum behavior or damping/commit order changed.
+Stop at Phase 4D; no subsequent migration is included.
+
 Solver functions
 ----------------
 
