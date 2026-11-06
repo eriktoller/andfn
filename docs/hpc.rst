@@ -1471,6 +1471,679 @@ Changed files are ``hpc_adaptive.py``, ``hpc_math_functions.py``,
 error-solver or persistence migration, cache removal, legacy removal,
 capacity-policy change or numerical-limit correction is included.
 
+Phase 4C: worker scratch and ragged branch events
+------------------------------------------------
+
+The Phase 4B reference remains commit ``c865fa7`` and the existing adaptive
+benchmark retains its fixtures, seven alternating paired samples and timing
+boundaries. The retained 28-thread medians are no-growth compact 4.264 ms and
+spare growth legacy/compact 2.8444/3.2035 ms (1.1262x). Phase 4C does not further
+optimize transactions in isolation.
+
+Scratch lifetime and ownership
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+
+   * - Field
+     - Logical size
+     - Producer / consumers
+     - Minimum lifetime
+   * - coef0 / coef1
+     - ncoef complex values each
+     - intersection's two real Cauchy calculations / weighted candidate
+     - both must coexist until that intersection's candidate is assembled
+   * - integral
+     - ncoef complex values
+     - real/imaginary Cauchy reductions / coefficient output
+     - one Cauchy calculation; reset before reuse
+   * - phi
+     - nint real values
+     - real potentials / real Cauchy reduction
+     - one Cauchy calculation
+   * - psi
+     - nint real values
+     - imaginary potentials, then corrected cumulative stream function /
+       imaginary Cauchy reduction
+     - one Cauchy calculation
+   * - dpsi
+     - nint real values
+     - adjacent psi differences and branch corrections / cumulative psi
+     - same imaginary Cauchy calculation
+
+None of these six fields crosses the candidate parallel barrier, survives a
+commit numerically, or is a neighbor-element input. All consumers finish in
+the same element invocation. The candidate/current arrays and local
+``old_coef`` convergence snapshots remain separately element-owned. The latter
+are deliberately **not** migrated to scratch, preserving diagnostic histories.
+No helper below the candidate loop opens another parallel region.
+
+Per-element temporary histories were observable through ``work_record`` and
+``export_work``. Worker reuse cannot preserve those histories. Explicit
+``adaptive_from_hpc(elements, scratch_groups=0)`` therefore retains the old
+capacity-sized element-owned scratch for diagnostics. Default production mode
+uses group mask 7; masks 1 and 3 allow separately reproducing the coefficient
+and integral migration measurements. ``export_work(..., include_scratch=False)``
+explicitly exports persistent state only. Asking for temporary histories in
+worker mode raises a descriptive error instead of returning another element's
+last worker values. Importing nonzero element scratch into worker mode is also
+rejected. The element-owned diagnostic mode has an exact six-field regression
+against the legacy solver.
+
+The isolated ``benchmark_working_set.py`` prototype compares capacity-sized
+element buffers, public-worker buffers, and explicit chunk buffers. It writes
+heterogeneous orders 8/12/16/24/32/48/64 with independent integration lengths,
+checks exact per-element results and untouched guard columns after repeated
+parallel execution, and requires nopython signatures. It never uses
+``element_id % thread_count``. Chunk mode explicitly partitions element ranges.
+Worker mode uses the documented public ``numba.get_thread_id()``:
+https://numba.readthedocs.io/en/stable/user/threading-layer.html#numba.get_thread_id
+
+Each worker's buffers are exclusive during the single candidate region.
+Rows are sized from observed coefficient/integration **capacities**, not
+``MAX_NCOEF``. Slot count is the configured maximum
+``numba.config.NUMBA_NUM_THREADS``, so later changes to the active thread mask
+do not outgrow ownership. One solver owner must not be used by concurrent
+invocations or reentrant candidate regions. Allocation and resizing occur
+outside parallel kernels. A physical order/grid repack may enlarge worker
+strides, but scratch values are never copied. Logical growth within existing
+capacity does not replace scratch.
+
+At 10,000 elements, isolated element/worker/chunk medians were:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Threads
+     - Element ms
+     - Worker ms
+     - Chunk ms
+   * - 1
+     - 3.355
+     - 1.246
+     - 1.222
+   * - 2
+     - 1.957
+     - 0.688
+     - 0.767
+   * - 4
+     - 1.329
+     - 0.363
+     - 0.406
+   * - 8
+     - 1.009
+     - 0.328
+     - 0.332
+   * - 16
+     - 0.580
+     - 0.212
+     - 0.198
+   * - 28
+     - 0.470
+     - 0.146
+     - 0.135
+
+These are isolation/locality probes, not solver speedup claims. Public worker
+ownership was chosen because it preserves the existing prange scheduling and
+barriers without imposing fixed chunks. The six probe arrays use complex
+values to check exact writes; production phi/psi/dpsi remain real arrays.
+
+Migration was gated separately: coef0/coef1, then integral, then phi/psi/dpsi.
+Exact numerical suites ran after each group, followed by actual candidate
+kernels at 128/1,024/10,000 elements. A noisy initial 1,024-element 28-thread
+comparison prompted a new alternating element-owned/worker-owned control
+inside the same process, rather than accepting a comparison across runs.
+At 10,000 elements, worker/element ratios across 1/2/4/8/16/28 threads were
+1.000/0.991/1.106/0.995/0.998/0.991 for coef0/coef1,
+0.986/0.998/0.980/0.993/1.013/0.990 after integral, and
+1.008/0.996/0.990/1.090/0.993/0.896 after phi/psi/dpsi.
+The isolated 1.106 result did not persist at the next gate; no sustained
+large-kernel slowdown above 10 percent was observed. Group payloads at 10,000
+elements before branch migration were 226,751,536, 224,922,288 and
+219,194,544 bytes, respectively, versus 230,410,000 bytes before migration.
+
+Branch semantics and storage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``find_branch_cuts`` visits integration intervals first, then fracture
+connectivity order. For an intersection or constant-head line it emits direct
+events before optional mirrored events. A well can be crossed repeatedly on
+a non-monotone path; mirrored intersection crossings can carry opposite signs.
+Events therefore form an **ordered multiset**, not a neighbor set or fracture
+CSR. Each event stores integration interval, discharge-element ID and sign.
+``get_dpsi_corr`` accumulates ``q * sign`` in precisely that event order; this
+order affects floating-point summation and is preserved exactly.
+
+Topology depends on geometry, fracture connectivity and the integration
+grid, not discharge. Discharge changes update correction values by traversing
+the existing events. Adaptive nint changes invalidate only affected event
+counts. Zero count retains the old meaning: either invalid or a genuinely
+empty topology, so empty cases still rebuild when the legacy code would.
+Geometry/connectivity are assumed fixed during a solve.
+
+The compact representation uses flat int64 ``sign_array``,
+``discharge_element`` and ``element_pos`` with ``branch_start`` and
+``branch_capacity``. The existing per-element ``len_discharge_element`` is
+the logical length. Event-producing types initially reserve four slots;
+other types reserve none. An exact count-only pass uses the **same crossing
+routine** and interval/neighbor order, with bounded writes into a private
+single-slot record. It does not construct published topology early.
+Counts exceeding capacity are collected and repacked together at a host
+barrier using the existing quantum-4 / 1.25 growth helper for this independent
+event family. Coefficient/integration growth policies are unchanged.
+Only live branch segments are copied when a branch repack is necessary.
+Candidate calculations still construct topology at the original numerical
+point. Shared helper arithmetic, direct/mirror signs and correction order
+are unchanged; a missing preparation now raises before consuming overflowed
+main-solver event arrays.
+
+Initial preparation runs once per owner, before the first candidate region.
+For adaptive growth, branch capacity preparation runs after cache preparation
+but **before** the failure hook or publication. Replacement branch buffers
+remain private until publication. Other work families are shared, not cloned.
+A branch allocation failure leaves every pre-growth buffer identity, length,
+cache, event and convergence value unchanged. Tests inject this failure after
+the first commit/assessment and compare the complete state at that boundary.
+
+The heterogeneous eight-element seed has event counts
+``[3, 0, 0, 0, 1, 0, 2, 0]``: maximum 3, mean 0.75 over all elements
+(1.5 over its four event-producing elements). Histogram is
+``0:5, 1:1, 2:1, 3:1``. Tiled large fixtures retain this distribution.
+No duplicate IDs or position/ID pairs occur in this seed, which is not
+evidence that duplicates are impossible. A separate adversarial circle/well
+test crosses the same well branch twice and repeats the neighbor 800 times,
+requiring 1,600 ordered events. It checks every event against the repeated
+small padded reference, beyond the legacy 800-slot capacity. Legacy storage
+is unchanged; diagnostic export explicitly rejects compact live event counts
+that cannot fit its legacy dtype.
+
+z_integral audit
+~~~~~~~~~~~~~~~~
+
+A repository-wide audit covered kernels, tests, diagnostics, plotting,
+persistence, examples and local Python scripts. The only potential numerical
+reader is commented out in real Cauchy integration. Active writers remain
+in cache initialization, adaptive preparation and the error/legacy solvers.
+However, ``export_work`` is an active diagnostic consumer and exact cache
+transition tests read this field. Accordingly **z_integral is retained**,
+not silently deleted. A regression changes all compact z values to different
+finite values and requires identical candidates, coefficients and numerical
+metadata while demonstrating that the diagnostic cache values differ.
+Removal would be a separate diagnostic-API/cache-contract change; it is not
+bundled with scratch or branch migration.
+
+Owned payload and remaining padding
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The no-growth heterogeneous fixture's category allocation, bytes:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Category
+     - 128
+     - 1,024
+     - 10,000
+     - 100,000 storage-only
+   * - Fixed element metadata/layout
+     - 28,832
+     - 230,432
+     - 2,250,032
+     - 22,500,032
+   * - Coefficient state including convergence history
+     - 94,208
+     - 753,664
+     - 7,360,000
+     - 73,600,000
+   * - Integration/cache
+     - 196,608
+     - 1,572,864
+     - 15,360,000
+     - 153,600,000
+   * - Worker scratch
+     - 64,512
+     - 64,512
+     - 64,512
+     - 64,512
+   * - Branch events and metadata
+     - 9,216
+     - 73,728
+     - 720,000
+     - 7,200,000
+   * - Retained compatibility work
+     - 26,624
+     - 212,992
+     - 2,080,000
+     - 20,800,000
+   * - Total compact
+     - 420,000
+     - 2,908,192
+     - 27,834,544
+     - 277,764,544
+   * - Phase 4A/4B same-fixture compact
+     - 2,949,248
+     - 23,593,984
+     - 230,410,000
+     - 2,304,100,000
+   * - Legacy work alone
+     - 9,015,424
+     - 72,123,392
+     - 704,330,000
+     - 7,043,300,000
+
+Logical versus capacity bytes and utilization are produced separately by
+``uv run python tests\benchmark_working_set.py --memory``. For this fixture,
+metadata, coefficient state, compatibility and concurrent worker scratch
+have 100% utilization. Integration logical bytes are 97.9167% of capacity:
+192,512 / 1,540,096 / 15,040,000 / 150,400,000 bytes at the four sizes.
+Branch logical bytes including offsets/counts are 5,376 / 43,008 / 420,000 /
+4,200,000, or 58.3333% of capacity. Compatibility includes retained
+``coef_error``, ``a0_error`` and scalar work ``error``; none is silently removed.
+Coefficient state counts current/candidate/compatibility-old and local
+convergence history exactly once.
+
+Worker scratch scales as
+``T * (3 * max(coef_capacity) * 16 + 3 * max(integration_capacity) * 8)``,
+not N times either legacy maximum. Branch payload scales with independently
+measured event capacities plus O(N) offsets/counts, not N*MAX_ELEMENTS.
+Even the diagnostic element-owned scratch mode uses real capacities rather
+than MAX_NCOEF.
+
+The kernel timing probe allocates no new Python NumPy ownership buffers
+inside its timed region: owned compact peak equals the totals above. It
+reports the larger persistent **benchmark harness** payload separately,
+because legacy, element-owned control and worker-owned states coexist.
+Native numerical kernels still allocate Numba-managed temporaries; these
+are not claimed to be zero or measured by the owned-NumPy accounting.
+Physical repack figures, as in Phase 4B, are payload bounds rather than
+allocator-complete transient-expression or process-RSS measurements.
+Initial worker scratch allocation directly allocates worker-sized arrays;
+it does not first allocate and discard all six per-element families.
+
+Quadrature is deliberately separate: the main driver still retains two
+``dtype_z_arrays`` arrays with MAX_NCOEF padding, totaling 3,276,800 /
+26,214,400 / 256,000,000 / 2,560,000,000 bytes at the four sizes. They are
+not allocated or used in the candidate-only kernel probe. Caller-retained
+legacy element+work records add 10,678,400 / 85,427,200 / 834,250,000 /
+8,342,500,000 bytes and are not necessary for compact candidate execution.
+Fracture connectivity/metadata, matrices and Python/compiled-code overhead
+are additional. This phase makes no whole-process or full-large-solve memory
+claim.
+
+Candidate-kernel scaling and dispersion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The actual-kernel benchmark tiles heterogeneous eight-element DFNs. It is
+representative of the existing element calculations and orders, but is
+**not** a globally connected 10,000-element solve. Branch capacity preparation
+is outside these candidate-only timings. Legacy, element-owned compact
+control and worker-owned compact runs alternate, reversing order on each
+sample. Eight samples are taken; the first is discarded. All three owners
+coexist, and their combined payload is reported separately from compact
+ownership. Run with ``uv run python tests\benchmark_working_set.py --solver``.
+
+The repeat measurement below follows an initial complete run, rather than
+replacing or concealing its unfavorable results. Cells contain median ms
+``[p10, p90]``; speedups are T1/Tn, legacy / compact.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Elements
+     - Threads
+     - Legacy ms [p10, p90]
+     - Compact ms [p10, p90]
+     - Speedup legacy / compact
+   * - 128
+     - 1
+     - 2.770 [2.715, 3.056]
+     - 2.726 [2.710, 2.797]
+     - 1.00 / 1.00
+   * - 128
+     - 2
+     - 1.386 [1.364, 1.440]
+     - 1.401 [1.395, 1.449]
+     - 2.00 / 1.95
+   * - 128
+     - 4
+     - 0.707 [0.696, 0.774]
+     - 0.735 [0.722, 0.979]
+     - 3.92 / 3.71
+   * - 128
+     - 8
+     - 0.641 [0.616, 0.734]
+     - 0.650 [0.643, 0.928]
+     - 4.32 / 4.19
+   * - 128
+     - 16
+     - 0.461 [0.400, 0.509]
+     - 0.433 [0.402, 0.532]
+     - 6.01 / 6.30
+   * - 128
+     - 28
+     - 0.412 [0.391, 0.464]
+     - 0.489 [0.452, 0.604]
+     - 6.72 / 5.57
+   * - 1,024
+     - 1
+     - 22.156 [21.717, 22.696]
+     - 22.320 [21.510, 22.648]
+     - 1.00 / 1.00
+   * - 1,024
+     - 2
+     - 11.216 [10.930, 11.632]
+     - 11.087 [10.853, 11.280]
+     - 1.98 / 2.01
+   * - 1,024
+     - 4
+     - 5.760 [5.639, 6.338]
+     - 5.772 [5.627, 7.667]
+     - 3.85 / 3.87
+   * - 1,024
+     - 8
+     - 5.253 [4.444, 5.362]
+     - 5.413 [4.615, 5.433]
+     - 4.22 / 4.12
+   * - 1,024
+     - 16
+     - 3.076 [3.034, 3.297]
+     - 3.064 [3.018, 3.090]
+     - 7.20 / 7.29
+   * - 1,024
+     - 28
+     - 2.284 [2.051, 2.757]
+     - 2.297 [2.028, 2.303]
+     - 9.70 / 9.71
+   * - 10,000
+     - 1
+     - 217.087 [214.316, 228.315]
+     - 217.651 [212.439, 221.893]
+     - 1.00 / 1.00
+   * - 10,000
+     - 2
+     - 114.439 [114.057, 119.055]
+     - 113.936 [109.132, 118.344]
+     - 1.90 / 1.91
+   * - 10,000
+     - 4
+     - 58.646 [56.343, 64.713]
+     - 57.320 [56.562, 60.067]
+     - 3.70 / 3.80
+   * - 10,000
+     - 8
+     - 37.271 [36.259, 44.852]
+     - 35.510 [33.693, 41.625]
+     - 5.82 / 6.13
+   * - 10,000
+     - 16
+     - 31.365 [31.212, 32.278]
+     - 31.530 [30.650, 31.736]
+     - 6.92 / 6.90
+   * - 10,000
+     - 28
+     - 19.553 [18.914, 20.674]
+     - 18.948 [18.624, 19.441]
+     - 11.10 / 11.49
+
+The first run's 10,000-element legacy / compact medians at
+1/2/4/8/16/28 threads were 224.060/226.589, 111.414/112.166,
+60.417/60.478, 46.488/41.715, 31.718/31.964 and 19.738/21.658 ms.
+At 28 threads its intervals were [19.101, 28.106] / [19.901, 29.481]
+and speedups 11.35 / 10.46, not a scaling improvement.
+Its worker/element-owned control ratios were
+0.975/1.007/0.945/0.999/0.996/1.050. The repeat ratios were
+0.987/0.997/0.985/0.873/1.005/0.940. There is no sustained
+10,000-element worker-scratch regression above 10 percent, but these
+measurements also do not establish a general parallel-scaling improvement.
+
+The first run's 1,024-element two-thread legacy median was 23.229 ms,
+versus 11.216 ms on repeat: machine variability was substantial.
+Its 28-thread worker/control ratio of 1.160 fell to 1.001 on repeat.
+The first 128-element eight-thread worker/control ratio of 1.702 fell
+to 0.989; the repeat's 128-element 28-thread result is itself unfavorable.
+These small timings are not used to select a favorable storage design or
+claim a universal speedup.
+
+The machine reports an Intel Core i7-13850HX, 20 physical / 28 logical
+processors, 28,672 KiB L2 and 30,720 KiB L3, with approximately 63.8 GiB
+OS-visible memory. No PMU events or memory-bandwidth counters were measured.
+The working-set reduction is established by owned payload; a cache-miss
+reduction, bandwidth saturation point, or causal cache-scaling improvement
+is **not** established by these timings.
+
+Unchanged adaptive benchmark and performance review gate
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The unchanged ``benchmark_adaptive.py --profile`` boundaries include branch
+capacity preparation. Final legacy / compact median ms:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - 1 thread
+     - 2 threads
+     - 28 threads
+   * - 128, no growth
+     - 21.553 / 25.121
+     - 10.024 / 11.670
+     - 3.382 / 4.183
+   * - 128, forced repacks
+     - 88.276 / 132.944
+     - 43.069 / 71.302
+     - 11.283 / 39.153
+   * - 128, spare growth
+     - 12.588 / 16.590
+     - 6.177 / 8.518
+     - 2.241 / 3.456
+   * - 1,024, multiple expansions
+     - 711.597 / 1039.683
+     - 352.903 / 544.431
+     - 66.977 / 265.557
+   * - 128, spare growth, 24 iterations
+     - 35.686 / 43.458
+     - 18.764 / 21.900
+     - 7.699 / 9.758
+
+The corresponding legacy / compact p10--p90 intervals, ms:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - 1 thread
+     - 2 threads
+     - 28 threads
+   * - 128, no growth
+     - [19.723, 22.659] / [23.333, 25.775]
+     - [9.906, 10.528] / [11.514, 11.983]
+     - [3.292, 3.777] / [3.899, 4.230]
+   * - 128, forced repacks
+     - [87.087, 93.521] / [127.633, 135.029]
+     - [42.627, 45.625] / [69.235, 74.472]
+     - [11.021, 12.001] / [37.866, 42.044]
+   * - 128, spare growth
+     - [11.660, 12.896] / [15.993, 17.430]
+     - [5.985, 6.481] / [8.269, 8.822]
+     - [2.220, 2.738] / [3.354, 3.976]
+   * - 1,024, multiple expansions
+     - [701.622, 735.708] / [997.771, 1070.098]
+     - [345.568, 355.930] / [541.288, 607.350]
+     - [63.190, 70.030] / [258.672, 279.831]
+   * - 128, spare growth, 24 iterations
+     - [35.369, 39.388] / [40.756, 45.218]
+     - [17.910, 19.412] / [21.263, 22.546]
+     - [7.287, 8.245] / [8.881, 10.530]
+
+Retained compact medians side by side, 1/2/28 threads, ms:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - Phase 4B
+     - Phase 4C
+   * - 128, no growth
+     - 18.979 / 9.855 / 4.264
+     - 25.121 / 11.670 / 4.183
+   * - 128, forced repacks
+     - 96.016 / 55.011 / 34.429
+     - 132.944 / 71.302 / 39.153
+   * - 128, spare growth
+     - 10.979 / 5.856 / 3.204
+     - 16.590 / 8.518 / 3.456
+   * - 1,024, multiple expansions
+     - 765.796 / 447.152 / 269.469
+     - 1039.683 / 544.431 / 265.557
+   * - 128, spare growth, 24 iterations
+     - 35.077 / 19.932 / 11.297
+     - 43.458 / 21.900 / 9.758
+
+Phase 3B and 4A medians remain in the preceding Phase 4B comparison.
+Baseline movement is visible; comparing only the latest legacy ratios would
+overstate some regressions. Nevertheless the one/two-thread adaptive
+regressions are material and **Phase 4C performance acceptance is not met**.
+The 28-thread spare-growth ratio is 1.542, versus Phase 4B's retained
+1.1262, although compact time increased by 0.252 ms rather than that ratio
+alone implying its entire increase.
+
+Investigation isolated the new branch-count preflight. It executes the same
+expensive crossing tests as topology construction, which still occurs later
+at the original numerical point. Twenty-one warm standalone samples measured
+the following medians (ms); serial is an isolated ``njit`` compilation of the
+same function body, not a production-path change:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Elements
+     - 1 thread parallel
+     - 2 threads parallel
+     - 28 threads parallel
+     - Serial at 28-thread setting
+   * - 128
+     - 2.524
+     - 1.295
+     - 0.402
+     - 2.604
+   * - 1,024
+     - 20.334
+     - 10.367
+     - 1.993
+     - 20.639
+   * - 10,000
+     - 199.041
+     - 103.914
+     - 23.218
+     - 198.389
+
+This is real duplicate geometry work, not merely dispatcher overhead.
+Switching to serial counting is not a remedy; no speculative serial threshold
+was introduced. On the six-step 28-thread element-only instrumented spare
+fixture, detection/construction-excluding-cache/cache/publication/
+recalculation/commits/remaining work were
+0.225/0.457/0.091/0.030/0.346/0.270/1.869 ms.
+Phase 4B construction was 0.094 ms. Branch preflight is included in
+construction on growth, and initial preflight in remaining work.
+Structural branch-ID/sign/interval validation executes at public validation
+and import, not as a new complete scan on ordinary logical growth.
+
+The implementation candidate is therefore **stopped for review**, not
+presented as an accepted performance migration. The next measured runtime
+priority is avoiding duplicate branch crossing work while preserving exact
+event order, delayed topology visibility and transactional publication.
+Moving topology construction earlier or retaining a new topology staging
+cache has not been silently introduced to pass the benchmark. Error-solver
+migration and legacy removal should not precede resolving this new cost.
+For further memory work, the retained padded quadrature is larger than the
+remaining compact state (256 MB versus 27.8 MB at 10,000 elements).
+That is a separate measured candidate, not work started in this phase.
+
+Transaction accounting and final validation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Standard-fixture branch counts fit their capacities, so no branch payload is
+copied. Growth adds one exact-count dispatcher and three short-lived numeric
+arrays (count, selected capacities and comparison mask) bounded by 17 bytes
+per affected element. This pass is additional **affected-element** work, not
+a complete finite/state scan. Branch replacement, when necessary, adds five
+ownership payloads (starts, capacities and three event buffers); it copies
+live event prefixes only, never unrelated work or coefficients.
+
+Across each original six-iteration fixture, the maximum transaction-owned
+payload accounting is:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Fixture
+     - Payload arrays
+     - Temporary bytes
+     - Persistent-plus-transaction peak bytes
+     - Complete validation passes
+   * - 128, no growth
+     - 0
+     - 0
+     - 420,000
+     - 0
+   * - 128, spare capacity
+     - 14
+     - 146,656
+     - 440,576
+     - 0
+   * - 128, forced repacks
+     - 39
+     - 1,394,688
+     - 2,242,208
+     - 10
+   * - 1,024, multiple expansions
+     - 39
+     - 10,216,480
+     - 16,537,376
+     - 10
+
+These are maxima across batches, not cumulative allocated bytes; the
+temporary and peak maxima need not occur at the same batch. They retain the
+Phase 4B accounting boundaries. Initial activation is outside those
+transaction counts: without a branch repack it adds an ID array plus the
+three count/comparison arrays, bounded by 25*N bytes (3,200 / 25,600 /
+250,000 at 128/1,024/10,000). Add this separately to persistent payload
+when bounding first-activation owned-NumPy peak. At 100,000 the corresponding
+2,500,000-byte bound is a formula, not a measured solve. Neither this bound
+nor transaction accounting includes native Numba/NRT temporary allocation
+or allocator-complete transient expressions.
+
+Across five forced batches coefficient copy totals remain 972,800 /
+7,782,400 bytes at 128 / 1,024 elements. Within-capacity coefficient copies,
+all unrelated-work copies, and standard-fixture branch copies remain zero.
+No new whole-state transaction copy or complete logical-growth scan was
+introduced. The extra cost is geometry computation rather than transaction
+copy bandwidth.
+
+The adaptive branch-repack regression additionally changes a two-point empty
+grid into an eight-point 1,600-event grid. It verifies private branch
+ownership before publication, a failure immediately before publication with
+unchanged complete state, successful capacity replacement, and complete
+structural/finite validation afterward. Existing allocation-failure tests,
+exact ordered-event checks, scratch isolation and numerical trajectories
+remain intact. Recorded numerical absolute/relative differences are zero,
+including the retained legacy cross-thread reduction comparisons; tolerances
+are unchanged.
+
+Final ``uv run pytest tests`` passed **324 tests** in 51.74 seconds.
+Both project Ruff commands were attempted and could not start because Ruff
+is unavailable. Pinned ``uvx ruff@0.16.2 check`` and
+``uvx ruff@0.16.2 format --check`` passed on all eight changed Python files.
+``git diff --check`` and ``git diff --check HEAD`` passed.
+
+Changed files: ``hpc_work.py``, ``hpc_adaptive.py``, the new ``hpc_branch.py``,
+``hpc_math_functions.py``, ``test_hpc_adaptive.py``, the new
+``test_working_set.py`` and ``test_compact_branch.py``, the new
+``benchmark_working_set.py``, and this documentation. Legacy/error storage,
+persistence, quadrature, retained compatibility fields and numerical order/
+damping/commit policies are unchanged. No later migration has begun.
+
 Solver functions
 ----------------
 

@@ -26,6 +26,7 @@ from andfn.storage import (
 from . import CACHE, PARALLEL
 from . import hpc_math_functions as mf
 from . import hpc_solve as hs
+from .hpc_branch import prepare_branches
 from .hpc_coefficients import coefficient_view
 from .hpc_work import (
     CACHE_FIELDS,
@@ -34,6 +35,8 @@ from .hpc_work import (
     WorkArrays,
     allocate_work,
     integration_view,
+    resize_scratch,
+    scratch_fields,
     state_arrays,
     state_payload,
     validate_work,
@@ -91,9 +94,11 @@ class AdaptiveSolver:
     assessments: list = field(default_factory=list)
     debug_validation: bool = False
     before_publication: object = None
+    branch_initialized: bool = False
+    branch_batches: list = field(default_factory=list)
 
 
-def adaptive_from_hpc(elements):
+def adaptive_from_hpc(elements, *, scratch_groups=7):
     """Import logical state; reject initialized padding lost by flat conversion."""
     for e in elements:
         n = e["ncoef"]
@@ -103,7 +108,12 @@ def adaptive_from_hpc(elements):
     # Legacy ratio checks require at least coef[1] for every non-well.
     if np.any((elements["_type"] != 2) & (elements["ncoef"] < 2)):
         raise ValueError("Adaptive non-well elements require at least two coefficients")
-    work = allocate_work(elements, storage.coef_start, storage.coef_capacity)
+    work = allocate_work(
+        elements,
+        storage.coef_start,
+        storage.coef_capacity,
+        scratch_groups=scratch_groups,
+    )
     for i, e in enumerate(elements):
         record = work_record(work, i)
         for name in ("thetas", "dpsi_corr"):
@@ -131,6 +141,19 @@ def validate_state(state, *, finite=False):
     validate_work(state.work, e["ncoef"], e["nint"])
     if any(not a.flags.writeable for a in state_arrays(state).values()):
         raise ValueError("Compact published buffers must be writable")
+    for i, count in enumerate(state.work.len_discharge_element):
+        a = state.work.branch_start[i]
+        ids = state.work.discharge_element[a : a + count]
+        positions = state.work.element_pos[a : a + count]
+        signs = state.work.sign_array[a : a + count]
+        if (
+            np.any(ids < 0)
+            or np.any(ids >= e.size)
+            or np.any(positions < 0)
+            or np.any(positions >= e["nint"][i] - 1)
+            or np.any((signs != -1) & (signs != 1))
+        ):
+            raise ValueError("Invalid live branch event")
     if finite:
         for name in e.dtype.names:
             if e[name].dtype.kind in "fc" and not np.all(np.isfinite(e[name])):
@@ -145,9 +168,13 @@ def validate_state(state, *, finite=False):
                 if not np.all(np.isfinite(a[c : c + n])):
                     raise ValueError("Nonfinite coefficient prefix")
             for name in COEFFICIENT_FIELDS + ("integral",):
+                if name in scratch_fields(state.work):
+                    continue
                 if not np.all(np.isfinite(getattr(state.work, name)[c : c + n])):
                     raise ValueError("Nonfinite coefficient work prefix")
             for name in INTEGRATION_FIELDS:
+                if name in scratch_fields(state.work):
+                    continue
                 start = state.work.integration_start[i]
                 if not np.all(
                     np.isfinite(
@@ -158,6 +185,9 @@ def validate_state(state, *, finite=False):
         for name in ("a0_error", "error"):
             if not np.all(np.isfinite(getattr(state.work, name))):
                 raise ValueError("Nonfinite scalar work")
+        for name in scratch_fields(state.work):
+            if not np.all(np.isfinite(getattr(state.work, name))):
+                raise ValueError("Nonfinite worker scratch")
 
 
 def to_hpc(state):
@@ -579,6 +609,8 @@ def build_repack(
     if repack:
         buffers = [np.zeros(size, dtype=np.complex128) for _ in range(3)]
         for name in COEFFICIENT_FIELDS + ("integral",):
+            if name in scratch_fields(state.work):
+                continue
             values[name] = np.zeros(size, dtype=complex)
         for i, length in enumerate(old.elements["ncoef"]):
             before, after = old.coef_start[i], starts[i]
@@ -607,6 +639,8 @@ def build_repack(
     integration_copied = 0
     if integration_repack:
         for name in INTEGRATION_FIELDS:
+            if name in scratch_fields(state.work):
+                continue
             values[name] = np.zeros(
                 integration_size, dtype=getattr(state.work, name).dtype
             )
@@ -619,6 +653,7 @@ def build_repack(
                     before : before + length_copy
                 ]
                 integration_copied += length_copy * values[name].itemsize
+    values.update(resize_scratch(state.work, capacities, integration_capacity))
     elements = old.elements
     work = state.work._replace(
         **values,
@@ -806,6 +841,19 @@ def adaptive_step(
     s = state.storage
     if not 1.0 > max_error:
         return
+    if not owner.branch_initialized:
+        work, branch_stats = prepare_branches(
+            state.work,
+            s.elements,
+            fractures,
+            np.arange(s.elements.size, dtype=np.int64),
+            s.elements["nint"],
+        )
+        if work is not state.work:
+            owner.state = AdaptiveState(s, work)
+            state = owner.state
+        owner.branch_batches.append(branch_stats)
+        owner.branch_initialized = True
     arguments = (
         s.elements.size,
         s.elements,
@@ -852,6 +900,30 @@ def adaptive_step(
     if np.any(requests[2]):
         transaction_start = perf_counter()
         replacement, stats = build_replacement(state, *requests, maximum, increase)
+        branch_work, branch_stats = prepare_branches(
+            replacement.state.work,
+            s.elements,
+            fractures,
+            replacement.ids,
+            requests[1],
+        )
+        stats.update(branch_stats)
+        stats["transaction_temporary_payload"] += branch_stats[
+            "branch_count_temporary_numpy_payload"
+        ]
+        stats["peak_simultaneous_numpy_payload"] += branch_stats[
+            "branch_count_temporary_numpy_payload"
+        ]
+        stats["temporary_array_count"] += branch_stats["branch_count_temporary_arrays"]
+        if branch_work is not replacement.state.work:
+            branch_state = AdaptiveState(replacement.state.storage, branch_work)
+            extra = branch_stats["branch_replacement_bytes"]
+            stats["transaction_temporary_payload"] += extra
+            stats["peak_simultaneous_numpy_payload"] += extra
+            stats["temporary_array_count"] += 5
+            stats["total_bytes_copied"] += branch_stats["branch_event_bytes_copied"]
+        else:
+            branch_state = None
         stats["transaction_seconds"] = perf_counter() - transaction_start
     else:
         # Typed assessment produced unchanged lengths. The active state was
@@ -883,6 +955,8 @@ def adaptive_step(
         owner.before_publication(owner.state)
     publication_start = perf_counter()
     owner.state = publish(replacement)
+    if stats is not None and branch_state is not None:
+        owner.state = branch_state
     if stats is not None:
         stats["publication_seconds"] = perf_counter() - publication_start
     observe("after_growth_publication", requests)

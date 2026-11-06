@@ -7,7 +7,6 @@ import numba as nb
 import numpy as np
 from numba.extending import overload
 
-from andfn.element import MAX_ELEMENTS
 from andfn.storage import _layout, _validate_layout, growth_capacities
 
 COEFFICIENT_FIELDS = ("coef0", "coef1", "old_coef", "coef_error")
@@ -22,6 +21,8 @@ INTEGRATION_FIELDS = (
     "dpsi",
 )
 CACHE_FIELDS = INTEGRATION_FIELDS[:5]
+SCRATCH_GROUPS = (("coef0", "coef1"), ("integral",), ("phi", "psi", "dpsi"))
+SCRATCH_FIELDS = sum(SCRATCH_GROUPS, ())
 BRANCH_FIELDS = ("sign_array", "discharge_element", "element_pos")
 SCALAR_FIELDS = ("len_discharge_element", "a0_error", "error", "set_zero")
 ARRAY_FIELDS = COEFFICIENT_FIELDS + ("integral",) + INTEGRATION_FIELDS + BRANCH_FIELDS
@@ -52,6 +53,9 @@ WorkArrays = namedtuple(
         "coef_capacity",
         "integration_start",
         "integration_capacity",
+        "scratch_layout",
+        "branch_start",
+        "branch_capacity",
     ),
 )
 
@@ -99,12 +103,21 @@ def work_record(work, i):
         return work[i]
     c, nc = work.coef_start[i], work.coef_capacity[i]
     s, ni = work.integration_start[i], work.integration_capacity[i]
-    b = i * MAX_ELEMENTS
+    b, bn = work.branch_start[i], work.branch_capacity[i]
+    mask, _slots, cs, ns = work.scratch_layout
+    worker = nb.get_thread_id()
+    c0, n0 = (worker * cs, cs) if mask & 1 else (c, nc)
+    ci, ni0 = (worker * cs, cs) if mask & 2 else (c, nc)
+    si, sn = (worker * ns, ns) if mask & 4 else (s, ni)
     return WorkRecord(
-        *(getattr(work, name)[c : c + nc] for name in COEFFICIENT_FIELDS),
-        work.integral[c : c + nc],
-        *(getattr(work, name)[s : s + ni] for name in INTEGRATION_FIELDS),
-        *(getattr(work, name)[b : b + MAX_ELEMENTS] for name in BRANCH_FIELDS),
+        work.coef0[c0 : c0 + n0],
+        work.coef1[c0 : c0 + n0],
+        work.old_coef[c : c + nc],
+        work.coef_error[c : c + nc],
+        work.integral[ci : ci + ni0],
+        *(getattr(work, name)[s : s + ni] for name in CACHE_FIELDS),
+        *(getattr(work, name)[si : si + sn] for name in ("phi", "psi", "dpsi")),
+        *(getattr(work, name)[b : b + bn] for name in BRANCH_FIELDS),
         *(getattr(work, name)[i : i + 1] for name in SCALAR_FIELDS),
     )
 
@@ -116,24 +129,29 @@ def _work_record(work, i):
         def compact(work, i):
             c, nc = work.coef_start[i], work.coef_capacity[i]
             s, ni = work.integration_start[i], work.integration_capacity[i]
-            b = i * MAX_ELEMENTS
+            b, bn = work.branch_start[i], work.branch_capacity[i]
+            mask, _slots, cs, ns = work.scratch_layout
+            worker = nb.get_thread_id()
+            c0, n0 = (worker * cs, cs) if mask & 1 else (c, nc)
+            ci, ni0 = (worker * cs, cs) if mask & 2 else (c, nc)
+            si, sn = (worker * ns, ns) if mask & 4 else (s, ni)
             return WorkRecord(
-                work.coef0[c : c + nc],
-                work.coef1[c : c + nc],
+                work.coef0[c0 : c0 + n0],
+                work.coef1[c0 : c0 + n0],
                 work.old_coef[c : c + nc],
                 work.coef_error[c : c + nc],
-                work.integral[c : c + nc],
+                work.integral[ci : ci + ni0],
                 work.thetas[s : s + ni],
                 work.dpsi_corr[s : s + ni],
                 work.exp_array_m[s : s + ni],
                 work.exp_array_p[s : s + ni],
                 work.z_integral[s : s + ni],
-                work.phi[s : s + ni],
-                work.psi[s : s + ni],
-                work.dpsi[s : s + ni],
-                work.sign_array[b : b + MAX_ELEMENTS],
-                work.discharge_element[b : b + MAX_ELEMENTS],
-                work.element_pos[b : b + MAX_ELEMENTS],
+                work.phi[si : si + sn],
+                work.psi[si : si + sn],
+                work.dpsi[si : si + sn],
+                work.sign_array[b : b + bn],
+                work.discharge_element[b : b + bn],
+                work.element_pos[b : b + bn],
                 work.len_discharge_element[i : i + 1],
                 work.a0_error[i : i + 1],
                 work.error[i : i + 1],
@@ -172,20 +190,74 @@ def _integration_view(element, work, name):
         return legacy
 
 
-def allocate_work(elements, coef_start, coef_capacity):
+def scratch_fields(work):
+    return tuple(
+        name
+        for group, names in enumerate(SCRATCH_GROUPS)
+        if work.scratch_layout[0] & (1 << group)
+        for name in names
+    )
+
+
+def resize_scratch(work, coef_capacity, integration_capacity, *, groups=None):
+    """Prepare worker storage outside parallel regions; never copy scratch."""
+    mask, slots, cs, ns = work.scratch_layout
+    old_mask = mask
+    if groups is not None:
+        if groups not in range(8):
+            raise ValueError("Scratch group mask must be between zero and seven")
+        mask, slots = groups, nb.config.NUMBA_NUM_THREADS
+    new_cs = max(cs, int(coef_capacity.max(initial=0)))
+    new_ns = max(ns, int(integration_capacity.max(initial=0)))
+    if groups is None and (new_cs, new_ns) == (cs, ns):
+        return {}
+    values = {"scratch_layout": np.array([mask, slots, new_cs, new_ns], dtype=np.int64)}
+    for group, names in enumerate(SCRATCH_GROUPS):
+        if mask & (1 << group):
+            for name in names:
+                width = new_ns if group == 2 else new_cs
+                values[name] = np.zeros(slots * width, dtype=getattr(work, name).dtype)
+        elif old_mask & (1 << group):
+            size = (
+                int(integration_capacity.sum())
+                if group == 2
+                else int(coef_capacity.sum())
+            )
+            for name in names:
+                values[name] = np.zeros(size, dtype=getattr(work, name).dtype)
+    return values
+
+
+def allocate_work(elements, coef_start, coef_capacity, *, scratch_groups=0):
+    if scratch_groups not in range(8):
+        raise ValueError("Scratch group mask must be between zero and seven")
     capacities = growth_capacities(elements["nint"])
     starts, size = _layout(capacities)
     ncoef = int(coef_capacity.sum())
+    slots = nb.config.NUMBA_NUM_THREADS
+    cs, ns = int(coef_capacity.max(initial=0)), int(capacities.max(initial=0))
+    selected = {
+        name
+        for group, names in enumerate(SCRATCH_GROUPS)
+        if scratch_groups & (1 << group)
+        for name in names
+    }
     values = {}
     for name in COEFFICIENT_FIELDS + ("integral",):
-        values[name] = np.zeros(ncoef, dtype=complex)
+        values[name] = np.zeros(
+            slots * cs if name in selected else ncoef, dtype=complex
+        )
     for name in INTEGRATION_FIELDS:
         dtype = (
             complex if name in ("exp_array_m", "exp_array_p", "z_integral") else float
         )
-        values[name] = np.zeros(size, dtype=dtype)
+        values[name] = np.zeros(slots * ns if name in selected else size, dtype=dtype)
+    branch_capacity = np.where(np.isin(elements["_type"], (1, 4, 5)), 4, 0).astype(
+        np.int64
+    )
+    branch_start, branch_size = _layout(branch_capacity)
     for name in BRANCH_FIELDS:
-        values[name] = np.zeros(elements.size * MAX_ELEMENTS, dtype=np.int64)
+        values[name] = np.zeros(branch_size, dtype=np.int64)
     for name in SCALAR_FIELDS:
         dtype = (
             np.int64
@@ -195,13 +267,17 @@ def allocate_work(elements, coef_start, coef_capacity):
             )
         )
         values[name] = np.zeros(elements.size, dtype=dtype)
-    return WorkArrays(
+    work = WorkArrays(
         **values,
         coef_start=coef_start,
         coef_capacity=coef_capacity,
         integration_start=starts,
         integration_capacity=capacities,
+        scratch_layout=np.array([scratch_groups, slots, cs, ns], dtype=np.int64),
+        branch_start=branch_start,
+        branch_capacity=branch_capacity,
     )
+    return work
 
 
 def payload(work):
@@ -217,6 +293,8 @@ def state_payload(state):
 
 
 def validate_work(work, ncoef, nint):
+    if work.scratch_layout.dtype != np.int64 or work.scratch_layout.shape != (4,):
+        raise ValueError("Invalid scratch ownership metadata")
     _validate_layout(
         work.coef_start,
         np.ascontiguousarray(ncoef),
@@ -232,6 +310,8 @@ def validate_work(work, ncoef, nint):
         "work integration",
     )
     for name in COEFFICIENT_FIELDS + ("integral",):
+        if name in scratch_fields(work):
+            continue
         a = getattr(work, name)
         if (
             a.dtype != np.complex128
@@ -240,6 +320,8 @@ def validate_work(work, ncoef, nint):
         ):
             raise ValueError(f"Invalid compact work array: {name}")
     for name in INTEGRATION_FIELDS:
+        if name in scratch_fields(work):
+            continue
         a = getattr(work, name)
         dtype = (
             np.complex128
@@ -248,14 +330,35 @@ def validate_work(work, ncoef, nint):
         )
         if a.dtype != dtype or a.shape != work.thetas.shape or not a.flags.c_contiguous:
             raise ValueError(f"Invalid compact work array: {name}")
+    mask, slots, cs, ns = work.scratch_layout
+    if mask < 0 or mask > 7 or slots < nb.config.NUMBA_NUM_THREADS:
+        raise ValueError("Invalid scratch ownership layout")
+    if mask and (
+        cs < work.coef_capacity.max(initial=0)
+        or ns < work.integration_capacity.max(initial=0)
+    ):
+        raise ValueError("Insufficient worker scratch extent")
+    for name in scratch_fields(work):
+        a = getattr(work, name)
+        width = ns if name in SCRATCH_GROUPS[2] else cs
+        dtype = np.float64 if name in SCRATCH_GROUPS[2] else np.complex128
+        if a.shape != (slots * width,) or a.dtype != dtype or not a.flags.c_contiguous:
+            raise ValueError(f"Invalid worker scratch: {name}")
     for name in BRANCH_FIELDS:
         a = getattr(work, name)
-        if a.dtype != np.int64 or a.shape != (ncoef.size * MAX_ELEMENTS,):
+        if (
+            a.dtype != np.int64
+            or a.shape != work.sign_array.shape
+            or not a.flags.c_contiguous
+        ):
             raise ValueError(f"Invalid compact branch array: {name}")
-    if np.any(work.len_discharge_element < 0) or np.any(
-        work.len_discharge_element > MAX_ELEMENTS
-    ):
-        raise ValueError("Invalid compact branch-event count")
+    _validate_layout(
+        work.branch_start,
+        work.len_discharge_element,
+        work.branch_capacity,
+        work.sign_array.size,
+        "branch events",
+    )
 
 
 def import_work(work, legacy, elements):
@@ -263,6 +366,12 @@ def import_work(work, legacy, elements):
     for i, e in enumerate(elements):
         target = work_record(work, i)
         for name in FIELDS:
+            if name in scratch_fields(work):
+                if np.any(legacy[name][i] != 0):
+                    raise ValueError(
+                        "Nonzero scratch import requires element-owned diagnostic mode"
+                    )
+                continue
             if name in ("thetas", "dpsi_corr"):
                 target[name][: e["nint"]] = e[name][: e["nint"]]
             elif name in SCALAR_FIELDS:
@@ -271,22 +380,42 @@ def import_work(work, legacy, elements):
                 n = (
                     e["ncoef"]
                     if name in COEFFICIENT_FIELDS + ("integral",)
-                    else (MAX_ELEMENTS if name in BRANCH_FIELDS else e["nint"])
+                    else (
+                        legacy["len_discharge_element"][i]
+                        if name in BRANCH_FIELDS
+                        else e["nint"]
+                    )
                 )
+                if n > target[name].size:
+                    raise ValueError(
+                        "Imported live branch events exceed prepared capacity"
+                    )
                 target[name][:n] = legacy[name][i, :n]
 
 
-def export_work(work, dtype):
+def export_work(work, dtype, *, include_scratch=True):
     """Explicit padded diagnostic export; not a solver execution bridge."""
+    if include_scratch and scratch_fields(work):
+        raise ValueError(
+            "Worker scratch has no element history; use include_scratch=False or element-owned diagnostic mode"
+        )
     result = np.zeros(work.set_zero.size, dtype=dtype)
     for i in range(result.size):
         record = work_record(work, i)
         for name in dtype.names:
             if name == "coef":
                 continue
+            if name in scratch_fields(work):
+                continue
             if name in SCALAR_FIELDS:
                 result[name][i] = record[name]
             else:
                 value = record[name]
+                if name in BRANCH_FIELDS:
+                    value = value[: record["len_discharge_element"]]
+                if value.size > result[name].shape[1]:
+                    raise ValueError(
+                        "Compact events exceed legacy diagnostic export capacity"
+                    )
                 result[name][i, : value.size] = value
     return result

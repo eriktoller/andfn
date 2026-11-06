@@ -295,7 +295,7 @@ def test_transition_snapshots_and_actual_legacy_loop(ratio, maximum, increase):
             state.storage.candidate_coef_data.copy(),
             state.storage.coef_start.copy(),
             requests,
-            cw.export_work(state.work, hs.dtype_work),
+            cw.export_work(state.work, hs.dtype_work, include_scratch=False),
         )
 
     owner.transition_callback = observe
@@ -534,8 +534,12 @@ def test_single_growing_element_and_unaffected_cache_state():
                 cw.work_record(owner.state.work, i)[name],
             )
     np.testing.assert_array_equal(
-        cw.export_work(replacement.work, hs.dtype_work)[unchanged],
-        cw.export_work(owner.state.work, hs.dtype_work)[unchanged],
+        cw.export_work(replacement.work, hs.dtype_work, include_scratch=False)[
+            unchanged
+        ],
+        cw.export_work(owner.state.work, hs.dtype_work, include_scratch=False)[
+            unchanged
+        ],
     )
 
 

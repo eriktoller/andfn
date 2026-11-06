@@ -644,8 +644,7 @@ def find_branch_cuts(
                     if crosses:
                         chi0 = gf.map_z_line_to_chi(z_pos[ii], endpoints)
                         chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], endpoints)
-                        work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["_id"]
+                        store_branch_event(work_array, cnt, ii, e["_id"])
                         get_sign(self_, work_array, cnt, chi0, chi1, -1)
                         work_array["len_discharge_element"] += 1
                         cnt += 1
@@ -658,8 +657,7 @@ def find_branch_cuts(
                     if crosses:
                         chi0 = gf.map_z_line_to_chi(z_pos[ii], endpoints)
                         chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], endpoints)
-                        work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["_id"]
+                        store_branch_event(work_array, cnt, ii, e["_id"])
                         get_sign(self_, work_array, cnt, chi0, chi1, 1)
                         work_array["len_discharge_element"] += 1
                         cnt += 1
@@ -675,13 +673,13 @@ def find_branch_cuts(
                     if crosses:
                         chi0m = gf.map_z_line_to_chi(z_pos[ii], m_endpoints)
                         chi1m = gf.map_z_line_to_chi(z_pos[ii + 1], m_endpoints)
-                        work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["_id"]
+                        store_branch_event(work_array, cnt, ii, e["_id"])
                         # Mirror can be crossed twice with opposite signs — use direction-based sign
-                        if np.imag(chi0m) < np.imag(chi1m):
-                            work_array["sign_array"][cnt] = -sign_val
-                        else:
-                            work_array["sign_array"][cnt] = sign_val
+                        if cnt < work_array["sign_array"].size:
+                            if np.imag(chi0m) < np.imag(chi1m):
+                                work_array["sign_array"][cnt] = -sign_val
+                            else:
+                                work_array["sign_array"][cnt] = sign_val
                         work_array["len_discharge_element"] += 1
                         cnt += 1
             elif e["_type"] == 2:  # Well
@@ -690,8 +688,7 @@ def find_branch_cuts(
                 ln0 = np.imag(np.log(chi0))
                 ln1 = np.imag(np.log(chi1))
                 if np.sign(ln0) != np.sign(ln1) and np.abs(ln0) + np.abs(ln1) > np.pi:
-                    work_array["element_pos"][cnt] = ii
-                    work_array["discharge_element"][cnt] = e["_id"]
+                    store_branch_event(work_array, cnt, ii, e["_id"])
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
                     work_array["len_discharge_element"] += 1
                     cnt += 1
@@ -702,8 +699,7 @@ def find_branch_cuts(
                 if crosses:
                     chi0 = gf.map_z_line_to_chi(z_pos[ii], e["endpoints0"])
                     chi1 = gf.map_z_line_to_chi(z_pos[ii + 1], e["endpoints0"])
-                    work_array["element_pos"][cnt] = ii
-                    work_array["discharge_element"][cnt] = e["_id"]
+                    store_branch_event(work_array, cnt, ii, e["_id"])
                     get_sign(self_, work_array, cnt, chi0, chi1, -1)
                     work_array["len_discharge_element"] += 1
                     cnt += 1
@@ -721,21 +717,31 @@ def find_branch_cuts(
                     if crosses:
                         chi0m = gf.map_z_line_to_chi(z_pos[ii], m_endpoints)
                         chi1m = gf.map_z_line_to_chi(z_pos[ii + 1], m_endpoints)
-                        work_array["element_pos"][cnt] = ii
-                        work_array["discharge_element"][cnt] = e["_id"]
+                        store_branch_event(work_array, cnt, ii, e["_id"])
                         # Mirror contributes +well_chi(chi_mirror, q) — same sign as direct term.
                         # neg→pos Im(chi_m): Im(log) jumps +2π → psi jumps +q → need dpsi_corr=+q → sign=+1
                         # pos→neg Im(chi_m): Im(log) jumps -2π → psi jumps -q → need dpsi_corr=-q → sign=-1
-                        if np.imag(chi0m) < np.imag(chi1m):
-                            work_array["sign_array"][cnt] = 1
-                        else:
-                            work_array["sign_array"][cnt] = -1
+                        if cnt < work_array["sign_array"].size:
+                            if np.imag(chi0m) < np.imag(chi1m):
+                                work_array["sign_array"][cnt] = 1
+                            else:
+                                work_array["sign_array"][cnt] = -1
                         work_array["len_discharge_element"] += 1
                         cnt += 1
 
 
 @nb.njit(inline="always")
+def store_branch_event(work, count, position, element_id):
+    # Count-only preparation intentionally supplies fewer slots than events.
+    if count < work["element_pos"].size:
+        work["element_pos"][count] = position
+        work["discharge_element"][count] = element_id
+
+
+@nb.njit(inline="always")
 def get_sign(self_, work_array, cnt, chi0, chi1, sign_default):
+    if cnt >= work_array["sign_array"].size:
+        return
     if self_["_type"] != 1:  # If not bounding circle
         if np.imag(chi0) < np.imag(chi1):
             work_array["sign_array"][cnt] = -1 * sign_default
@@ -787,6 +793,8 @@ def get_dpsi_corr(self_, fracture_struc_array, element_struc_array, work_array):
             work_array,
             self_["nint"],
         )
+    if work_array["len_discharge_element"] > work_array["sign_array"].size:
+        raise ValueError("Branch event capacity requires preparation before candidates")
     # set dpsi_corr to zero
     correction = integration_view(self_, work_array, "dpsi_corr")
     correction[: self_["nint"] - 1] = 0.0
