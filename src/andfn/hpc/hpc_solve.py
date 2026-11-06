@@ -70,6 +70,7 @@ def solve(
     coef_start=None,
     candidate_coef_data=None,
     iteration_callback=None,
+    _adaptive_owner=None,
 ):
     """
     Solves the DFN.
@@ -93,7 +94,7 @@ def solve(
         The array of elements
 
     """
-    if coef_data is not None and not fixed_order:
+    if coef_data is not None and not fixed_order and _adaptive_owner is None:
         raise ValueError("Flat coefficient buffers require fixed-order execution")
     if (coef_data is None) != (candidate_coef_data is None) or (
         (coef_data is None) != (coef_start is None)
@@ -118,7 +119,11 @@ def solve(
 
     # Allocate memory for the work array
     num_elements = len(element_struc_array)
-    work_array = np.zeros(num_elements, dtype=dtype_work)
+    work_array = (
+        np.zeros(num_elements, dtype=dtype_work)
+        if _adaptive_owner is None
+        else _adaptive_owner.state.work
+    )
     # head matrix
     size = discharge_indices.size + fracture_struc_array.size
     head_matrix = np.zeros(size)
@@ -213,7 +218,29 @@ def solve(
 
         # Solve the elements
         starte = time.time()
-        if fixed_order:
+        if _adaptive_owner is not None:
+            from .hpc_adaptive import adaptive_step
+
+            adaptive_step(
+                _adaptive_owner,
+                fracture_struc_array,
+                max_error,
+                nit,
+                cnt_error,
+                coef_ratio,
+                max_coef,
+                coef_increase,
+                damping,
+            )
+            # Reacquire every array after the transaction publication boundary.
+            storage = _adaptive_owner.state.storage
+            element_struc_array = storage.elements
+            coef_data = storage.coef_data
+            candidate_coef_data = storage.candidate_coef_data
+            coef_start = storage.coef_start
+            work_array = _adaptive_owner.state.work
+            cnt_set_zero = 0
+        elif fixed_order:
             fixed_order_step(
                 element_struc_array,
                 fracture_struc_array,
@@ -432,6 +459,7 @@ def calculate_candidates(
     coef_data=None,
     coef_start=None,
     candidate_coef_data=None,
+    selected=None,
 ):
     """
     Calculate candidates and convergence metadata without changing current coefficients.
@@ -466,6 +494,8 @@ def calculate_candidates(
 
     # Solve the elements
     for i in nb.prange(num_elements):
+        if selected is not None and not selected[i]:
+            continue
         e = element_struc_array[i]
         if e["error"] < max_error * 0 and nit > 30 and cnt_error == 0:
             cnt += 1

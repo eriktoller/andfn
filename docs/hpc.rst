@@ -371,8 +371,9 @@ DFN discharge and boundary errors. Regression tolerances retain
 Remaining padded consumers and Phase 3B proposal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``element_solver2`` adaptive coefficient checks and its adaptive commit remain
-legacy-only. Default DFN evaluation, flow-net/plotting APIs, Python element
+Phase 3A left ``element_solver2`` adaptive coefficient checks and its adaptive
+commit legacy-only; the opt-in Phase 3B path below now handles both. Default
+DFN evaluation, flow-net/plotting APIs, Python element
 objects, unconsolidation, save/load, and error-solver evaluation still expect
 legacy records unless explicitly given flat-buffer arguments at a migrated
 HPC entry point. ``get_max_min_phi`` retains its legacy diagnostic signature.
@@ -380,7 +381,7 @@ Integration fields and every work field remain padded, even on the compact
 fixed-order path. Explicit exports remain available; no legacy fields or APIs
 are removed.
 
-Proposed Phase 3B synchronization (not implemented): preserve the first commit,
+The Phase 3A synchronization proposal was to preserve the first commit,
 then record growth requests without changing active lengths inside parallel
 work; leave the parallel region; validate and batch-plan capacity growth;
 allocate/copy all affected families transactionally; publish new
@@ -391,6 +392,289 @@ second commit. Unaffected candidates must retain their staged values. In
 particular, growing coefficients cannot safely ignore the corresponding
 integration/work capacity and cache requirements. Repacking or publishing new
 offsets from inside ``prange`` remains prohibited.
+
+Phase 3B: opt-in adaptive flat coefficients
+------------------------------------------
+
+``andfn.hpc.hpc_adaptive.adaptive_from_hpc(elements)`` constructs an
+``AdaptiveSolver`` owner. Call ``solve_adaptive(owner, fractures,
+discharge_int, constants)`` and obtain the published storage/work through
+``owner.state`` afterwards. This is opt-in: the legacy fixed/adaptive paths
+and compact fixed-order path are unchanged. No persistence, public DFN default,
+error-solver or general work-storage migration is included.
+
+Legacy sequence preserved
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The original ``element_solver2`` sequence is:
+
+1. If ``max_error >= 1``, skip the element step entirely.
+2. Calculate first candidates from current coefficients for every element,
+   including the original error/history updates and type-specific integration.
+3. Commit every candidate using ``damping * candidate + (1-damping) * current``.
+4. Only from iteration two, assess coefficient ratios/errors using the
+   committed coefficients. Keep the existing ratio arithmetic, including
+   multiplication by zero, error-history checks and thresholds.
+5. For eligible non-wells, check the *old* order against ``MAX_NCOEF``, then add
+   ``COEF_INCREASE`` once. The existing ``max_cnt=1`` prevents another increase.
+   The numerical maximum can therefore be overshot; this behavior is retained.
+6. For each growing element set ``nint = 2 * new_ncoef``. This rule is not an
+   invariant for unchanged elements, which may have independent ``nint``.
+7. Rebuild theta values, reset the branch-event count, rebuild both exponential
+   arrays, and call ``fill_z_integral`` in that order.
+8. Recalculate that element's candidate at the expanded order. The existing
+   type-specific solve rebuilds dpsi corrections and branch events where used,
+   and updates coefficient/element errors again.
+9. Retain the post-recalculation checks; ``max_cnt=1`` prevents another growth
+   and the legacy ``set_zero`` flag ends false.
+10. Commit all candidates a second time, including unaffected elements'
+    previously calculated candidates, with the same damping expression.
+11. The driver retains its separate discharge/RHS solve before each element
+    step, convergence checks afterwards, and final extra candidate/commit at
+    the iteration limit.
+
+The legacy implementation interleaves steps 4--9 inside ``prange``. The compact
+implementation deliberately separates assessment, publication and recalculation
+by parallel barriers, as required for safe reallocation. Zero newly exposed
+coefficients make this equivalent in the regression fixtures; both the actual
+legacy loop and an instrumented staged padded reference are checked. Intermediate
+transition snapshots use the staged reference, not a claim that the original
+interleaved loop has a global publication barrier.
+
+The approved exception for independent integration counts is important:
+growth may *shrink logical nint* when the exact legacy rule requires it.
+Physical integration capacity is retained. Tests characterize ``ncoef=4,
+nint=30 -> ncoef=5, nint=10`` and old-order numerical-maximum overshoot.
+Requests beyond retained physical work/integration limits raise rather than
+clamping, silently changing the maximum rule, or accessing out of bounds.
+
+Assessment, construction and publication
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``assess_growth`` is a nopython parallel kernel receiving plain arrays.
+It reads lengths, offsets, capacities and current coefficients without writing
+active storage; requested ncoef/nint and a growth mask are separate arrays.
+Candidate coefficients also remain untouched during assessment. Integer request
+arithmetic is checked before addition/multiplication.
+
+On a growth batch, Python validates IDs, requests, nonshrinking coefficient
+lengths, exact legacy integration rules, maximum eligibility, physical limits,
+and prefix/capacity overflow. The quantum-4, factor-1.25 policy is unchanged.
+``build_replacement`` privately allocates three zero-filled coefficient buffers,
+copies logical prefixes, stages coefficient-free integration records and
+retained work, rebuilds affected caches, then validates the replacement.
+New current/candidate/compatibility-old entries are zero; capacity slack is
+never copied into newly exposed entries. Local convergence history in
+``work.old_coef`` remains on the existing type-specific calculation path.
+
+There is at most one coefficient layout repack per batch. Within-capacity
+growth still allocates private staging buffers to guarantee rollback, but
+does not change starts/capacities and is counted separately from a layout
+repack. Copy accounting includes this staging; a zero repack count does not
+mean zero allocation or copying.
+
+Only after all failure-prone construction/cache validation succeeds does
+``owner.state = replacement`` publish the complete state. The orchestration
+then reacquires all numerical arrays, recalculates selected candidates against
+the *full* element array, and performs the second commit. It never uses a
+singleton slice as the neighbor array. No owner/dataclass enters a compiled
+kernel. Normal execution reuses the compiled ``element_solver`` for the first
+candidate/commit pair; diagnostic callbacks split those same shared kernels
+to observe the intervening state.
+
+No-growth steps reuse the previously validated state rather than scanning its
+entire padded work/integration allocation again. The standalone transaction
+builder still validates no-growth requests and returns the original state
+identity without allocations. Transaction failures preserve published array
+identities and contents; the rollback boundary is the committed state at
+transaction entry, not the beginning of the whole iteration.
+
+Integration/cache bridge and invalidation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A full flat integration migration is unnecessary in this phase. Theta/dpsi
+arrays and work caches retain their existing physical padded capacity; thus
+there are **zero physical integration repacks**. A coefficient-only layout
+change, integration/cache-only growth within spare coefficient capacity, and
+simultaneous coefficient/grid changes are tested through this bridge. Tests do
+not pretend to exercise integration-family relocation that cannot occur here.
+
+For affected elements, a rebuilt theta grid invalidates branch-event
+*topology*, even though fracture CSR connectivity is unchanged. Clearing
+``len_discharge_element`` forces the existing circle/line routines to rebuild
+crossing positions, IDs and signs. Their existing dpsi reconstruction also
+updates discharge-dependent values. A discharge change alone affects correction
+values, not geometric connectivity. Unaffected grid/cache records are copied
+unchanged. Intersection ``z_integral`` follows its existing geometry/grid
+builder; driver discharge quadrature depends on geometry and ``discharge_int``,
+not adaptive ``nint``, and remains valid.
+
+Consumers and limitations
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Compact growth assessment, candidate recalculation, damping commits and the
+main adaptive driver use flat current/candidate arrays. Existing compile-time
+coefficient overloads avoid missing-field typing on compact records.
+``work.coef0``, ``work.coef1`` and local convergence history remain padded
+temporary compatibility storage; the padded candidate field remains allocated
+but compact persistent candidates use only ``candidate_coef_data``.
+
+The legacy ``element_solver2`` still reads padded current coefficients,
+recalculates padded candidates and commits padded fields. Default Python/DFN
+evaluation, legacy wrappers/exports, error solving, plotting/unconsolidation
+and persistence still require their existing padded representations. No export
+occurs inside adaptive iterations, and no legacy field or path is removed.
+Import rejects nonzero unused current/compatibility-old padding: otherwise
+later growth would silently lose previously initialized legacy tail values.
+Supporting those noncanonical tails requires a separate design decision.
+
+Validation and measured behavior
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Adaptive comparisons use all six element types, heterogeneous starting orders,
+independent integration counts, no/single/multiple/consecutive growth, spare
+capacity, repacking, overshoot, and repeated execution at 1, 2 and the normal
+28 Numba threads. Requests, lengths, IDs and trajectories use exact comparison;
+finite numerical values use the existing baseline-derived ``rtol=1e-13``,
+``atol=1e-12``. Every iteration compares current/candidate/compatibility-old
+coefficients, coefficient/element errors, fracture constants, discharge,
+DFN discharge, heads, boundary errors and convergence state. Transition tests
+add integration/cache/event and local-history comparisons.
+
+Observed maximum absolute and relative differences were both zero in all 12
+reported iteration snapshots, and in final benchmark coefficients.
+Failure tests cover invalid requests/IDs, simulated and real prefix overflow,
+allocation failure, cache exceptions/nonfinite values, and unchanged published
+identities/contents after failure.
+
+The final ``uv run pytest tests`` run passed all 286 tests. Both project Ruff
+commands were attempted but Ruff was unavailable in the environment. Pinned
+``uvx ruff@0.16.2`` lint and formatting checks passed for the changed Python
+files; ``git diff --check`` also passed. Dependencies/configuration were not
+changed.
+
+``uv run python tests\benchmark_adaptive.py --peak-rss`` reports warm medians of
+seven alternating paired runs, excluding storage import, matrix construction,
+LU factorization and compilation/cache loading. Each run includes six
+discharge/RHS plus adaptive-element iterations. Stage timing totals describe
+the final compact sample, not the median of independent stage timings.
+Compilation/cache loading and setup took 1.07 seconds in the final recorded run.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Case
+     - 1 thread legacy/compact ms
+     - 2 threads legacy/compact ms
+     - 28 threads legacy/compact ms
+   * - 128, no growth
+     - 18.883 / 19.096
+     - 24.711 / 23.261
+     - 4.148 / 4.303
+   * - 128, forced repacks
+     - 119.539 / 142.672
+     - 64.622 / 97.718
+     - 11.468 / 39.106
+   * - 128, growth within spare capacity
+     - 14.218 / 21.919
+     - 7.314 / 12.750
+     - 2.474 / 7.442
+   * - 1024, simultaneous/consecutive growth
+     - 990.606 / 1187.831
+     - 355.006 / 496.961
+     - 76.189 / 301.042
+
+The initial redundant no-growth validation was removed after measurement.
+Heterogeneous no-growth ratios in this run were 0.941--1.037. Growth-heavy timings remain
+materially worse, principally because transaction staging/validation copies
+retained padded work/integration allocations even when coefficients fit spare
+capacity. At 28 threads, summed detection/staging/cache/recalculation
+milliseconds were 0.243/13.109/1.006/6.344 for 128 forced-growth elements and
+0.326/94.516/6.554/51.400 for 1024 elements. Complete transaction times, including
+validation and cache rebuilding, were 29.508 and 196.923 ms respectively.
+Staging alone excludes request and replacement validation. Local timings vary
+with shared-machine load; they are not portable performance guarantees.
+
+A separate 24-iteration spare-capacity investigation at 28 threads measured
+9.533/15.484 ms overall (1.624x), and 1.118x across iterations after growth.
+The host-only orchestration with stubbed numerical kernels measured 5.85 us
+per step; profiling also shows three dispatcher crossings per assessment step
+versus the legacy compiled orchestration. Host bookkeeping explains only part
+of the residual dispatch/parallel-stage overhead; this low-order case remains
+over the approximate 10-percent review threshold. It is not presented as
+performance-approved. No unrelated numeric optimization or work migration is
+used to conceal the regression.
+
+Payload, capacity and copying
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+NumPy payload measurements (not process RSS):
+
+.. list-table::
+   :header-rows: 1
+
+   * - Case
+     - Initial/final capacity sum
+     - Max ncoef
+     - Batches / coefficient repacks / integration repacks
+     - Expanded element events
+     - Final utilization
+   * - 128, no growth
+     - 1472 / 1472
+     - 24
+     - 0 / 0 / 0
+     - 0
+     - 100%
+   * - 128, forced repacks
+     - 1472 / 4544
+     - 44
+     - 5 / 5 / 0
+     - 448
+     - 81.69%
+   * - 128, spare capacity
+     - 1152 / 1152
+     - 10
+     - 1 / 0 / 0
+     - 96
+     - 83.33%
+   * - 1024, forced repacks
+     - 11776 / 36352
+     - 44
+     - 5 / 5 / 0
+     - 3584
+     - 81.69%
+
+For 128 elements, legacy current and old payloads are 409,600 bytes *each*.
+Each compact family is ``16 * sum(coef_capacity)``: 23,552 bytes initially,
+72,704 after forced growth, or 18,432 in the spare-capacity fixture.
+Current, candidate and compatibility-old are three distinct allocations.
+Retained integration is 819,200 bytes; full retained work is 9,015,424 bytes,
+including 2,048,000 bytes for its five padded coefficient fields. The final
+forced-growth compact state plus work is 10,079,360 bytes. Retaining source
+legacy records adds another 1,662,976 bytes, excluding fractures, discharge
+matrices, quadrature and Python/compiled-code overhead.
+
+Across five forced-growth batches, coefficient prefixes copy 583,680 bytes,
+integration fields 4,096,000, other metadata 122,880, and work 45,077,120:
+49,879,680 bytes total. The spare-capacity transaction copies 9,900,672 bytes
+despite zero layout repacks. The 1024-element totals are eight times the
+128 forced-growth copy counts. Logical-length numeric expression temporaries
+remain unchanged; their concurrent peak is not measured.
+
+Maximum old/new published-state coexistence during forced transactions is
+20,124,928 bytes at 128 elements and 160,999,424 at 1024 elements, excluding
+source legacy records, request/planning arrays and expression temporaries.
+The isolated 4096-element Windows OS measurement observed process-lifetime
+peak working set rising from 855,756,800 to 1,114,804,224 bytes; simultaneous
+old/new NumPy state payload was 636,821,504 bytes. These are lifetime high-water
+measurements, not a precise incremental-repack RSS attribution. The optional
+probe uses Windows ``GetProcessMemoryInfo`` or Unix ``getrusage``, with no new
+dependency.
+
+Stop after Phase 3B. Padded work staging cost, the low-order residual slowdown,
+physical integration/work limits and initialized-unused-tail compatibility
+remain review items before any general work-array migration. This phase makes
+no complete-solver memory-reduction claim.
 
 Solver functions
 ----------------
