@@ -11,10 +11,15 @@ import numba as nb
 import numpy as np
 from benchmark_adaptive import run_case
 from benchmark_fixed_order import fixture
+from legacy_hpc_reference import (
+    connectivity_from_hpc,
+    dtype_work,
+    dtype_z_arrays,
+    fixed_order_from_hpc,
+)
 
 from andfn.hpc import hpc_solve as hs
 from andfn.hpc.hpc_quadrature import allocate_quadrature
-from andfn.storage import connectivity_from_hpc, fixed_order_from_hpc
 
 
 def describe(values):
@@ -47,7 +52,7 @@ def kernel_case(count):
     connectivity = connectivity_from_hpc(fractures, count)
     indices = hs.get_discharge_indices(elements)
     q = 8
-    padded = np.zeros(count, dtype=hs.dtype_z_arrays)
+    padded = np.zeros(count, dtype=dtype_z_arrays)
     dense = allocate_quadrature(indices.size, q)
     for values in (padded, dense):
         hs.get_z_int_array(values, elements, q, indices)
@@ -83,7 +88,7 @@ def kernel_case(count):
         )
 
     def allocate_padded():
-        values = np.zeros(count, dtype=hs.dtype_z_arrays)
+        values = np.zeros(count, dtype=dtype_z_arrays)
         prepare(values)
 
     def allocate_dense():
@@ -139,7 +144,7 @@ def memory_cases():
         report[count] = {
             "selected": int(selected),
             "quadrature_count": q,
-            "legacy_two_padded_payload": 2 * count * hs.dtype_z_arrays.itemsize,
+            "legacy_two_padded_payload": 2 * count * dtype_z_arrays.itemsize,
             "compact_discharge_payload": actual,
             "compact_boundary_payload_separate_operation": 2 * count * q * 16,
             "bytes_per_selected_element": q * 16 * 2,
@@ -152,7 +157,7 @@ def memory_cases():
             "csr_connectivity_bytes": connectivity.ids.nbytes * copies
             + (fractures.size * copies + 1) * 8,
             "legacy_elements_retained_bytes": count * elements.dtype.itemsize,
-            "optional_legacy_work_bytes": count * hs.dtype_work.itemsize,
+            "optional_legacy_work_bytes": count * dtype_work.itemsize,
             "shared_padded_fracture_input_bytes": copies * fractures.nbytes,
             "discharge_rhs_and_history_vector_bytes": 3
             * (selected + copies * fractures.size)
@@ -179,14 +184,7 @@ def main(include_adaptive):
                         ("forced", (16, -1, 5, 40)),
                         ("1024", (128, -1, 5, 40)),
                     ):
-                        cases["adaptive"][name] = {
-                            layout: run_case(
-                                *args,
-                                spare=name == "spare",
-                                compact_quadrature=layout == "dense",
-                            )
-                            for layout in ("padded", "dense")
-                        }
+                        cases["adaptive"][name] = run_case(*args, spare=name == "spare")
             report["threads"][threads] = cases
     finally:
         nb.set_num_threads(normal)

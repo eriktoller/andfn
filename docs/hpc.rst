@@ -8,6 +8,28 @@ The compiled function utilizes parallel processing to speed up the computation.
 
 These functions are not to be called from the user directly, but are used by the other functions in the package.
 
+Current runtime architecture
+----------------------------
+
+The normal ``DFN.solve()``, ``DFN.solve_error()``, and post-processing paths use
+compact state directly. Element metadata is fixed-size; coefficients and
+integration caches use contiguous capacity-based buffers; fracture connectivity
+uses CSR; branch events and worker scratch scale with their actual capacities;
+and quadrature is allocated from the selected rows and requested count. No
+normal runtime path constructs padded HPC records.
+
+Adaptive growth prepares replacement buffers outside numerical kernels, then
+publishes the new compact state. ``MAX_COEFFICIENT_ORDER`` is an algorithmic
+limit and does not determine allocation size. Historical ``MAX_NCOEF`` config
+values are accepted as a deprecated alias; ``MAX_ELEMENTS`` and
+``MAX_DISCHARGE_INT`` no longer size runtime storage. Persistence continues to
+store logical Python object state, so loading does not reconstruct the former
+padded runtime.
+
+The phase sections below preserve the migration and benchmark history. Their
+descriptions of opt-in compact modes, padded runtime state, and outstanding
+work describe the historical phase at the time, not the current runtime.
+
 Opt-in flat storage (Phase 1)
 ----------------------------
 
@@ -4142,29 +4164,101 @@ new ``tests\test_compact_error.py``, new ``tests\benchmark_error.py`` and
 this documentation. Existing normal numerical algorithms and default paths
 remain.
 
-Phase 8 readiness
-~~~~~~~~~~~~~~~~~
+Phase 8 removal inventory (before implementation)
+--------------------------------------------------
 
-**Not unconditionally ready to make compact execution the default.**
-The blocking measured behavior is the unresolved 1/2-thread error-solver
-slowdown above 10%; it needs a focused fix or explicit acceptance before
-default migration. Storage/correctness migration itself no longer requires
-padded normal or error execution.
+The pre-removal source audit classified the remaining concepts as follows.
+This table is retained as historical review evidence; the current-runtime
+disposition is summarized at the start of this document.
 
-The following are outstanding Phase 8 implementation work, not work silently
-performed here: replace the legacy default and remove the compact flag;
-remove both legacy padded execution branches and dtypes; remove or explicitly
-retain compatibility exports/diagnostic staging; update persistence to
-logical compact state; separate the genuine adaptive stopping control from
-storage MAX_NCOEF and its dtype-derived guards; remove storage MAX_ELEMENTS
-and dormant MAX_DISCHARGE_INT after deciding their compatibility surface;
-update configuration/docs/tests for those changed contracts. These schema/
-API/limit decisions are not authorized by Phase 7. Do not remove numerical
-stopping/overflow safeguards merely because allocation padding is gone.
-Previously unsupported error element types remain unsupported and are not
-a requirement to broaden numerical scope in Phase 8.
+.. list-table::
+   :header-rows: 1
 
-Phase 7 stops here. Phase 8 requires separate approval.
+   * - Classification
+     - Locations / concepts
+     - Phase 8 disposition
+   * - A: obsolete storage artifacts
+     - ``element.MAX_NCOEF/MAX_ELEMENTS/MAX_DISCHARGE_INT``, HPC element/fracture dtypes and initializers; ``DFN.consolidate_dfn(hpc=True)`` staging; ``hpc_solve.dtype_work/dtype_z_arrays`` and ``hpc_error_solve`` equivalents; the legacy per-element work/grid allocations
+     - Remove from active source/runtime; compact constructors and error/normal workflows already cover the corresponding data.
+   * - B: legacy execution only
+     - ``hpc_solve.solve`` legacy host loop and legacy-only work wrappers; ``hpc_error_solve`` padded dispatch/allocations; ``DFN`` branches that require retained HPC element/fracture arrays; per-object ``consolidate_hpc/unconsolidate_hpc``
+     - Remove after public workflows and low-level compact callers are the sole runtime route; preserve numerical kernels that compact still calls.
+   * - C: explicit conversion/export
+     - ``storage.from_hpc/to_hpc``, ``fixed_order_from_hpc/to_hpc``, ``hpc_adaptive.adaptive_from_hpc/to_hpc``
+     - The input is HPC state, not historical persistence. No public external-use evidence is present in repository code; remove implementation conversions with their source dtypes, while retaining only test-local padded references where regression tests require them.
+   * - D: persistence boundary
+     - ``element_dtype``, ``fracture_dtype``, object ``consolidate/unconsolidate``, ``DFN.save_dfn/load_dfn``
+     - Retain: HDF5 saves object/logical arrays, not the HPC padded dtypes. On save, publish compact solved values to Python objects and serialize the existing logical schema. The HDF5 loader is already a logical compatibility reader.
+   * - E: genuine numerical limit
+     - Scalar solver ``constants["MAX_NCOEF"]`` used by adaptive eligibility/old-order checks; dtype-derived ``_MAX_REQUEST_INCREMENT`` overflow guard
+     - Retain the solver limit under an unambiguous numerical name and preserve its old-order/overshoot behavior. Replace the overflow guard's dependency on a dtype shape with the equivalent int64 arithmetic bound.
+   * - F: test/benchmark/reference
+     - HPC kernel fixtures and expected-value calculations; storage conversion tests; benchmarks comparing legacy and compact paths
+     - Convert to compact-default tests or isolate a small padded reference dtype in tests only. Delete benchmark branches that solely exercise removed legacy execution; retain numerical baselines reproducible from Phase 7 compact measurements.
+   * - G: configuration/documentation
+     - ``.andfn_config.yaml`` loading of sizing values, examples and migration-history tables/text
+     - Remove obsolete sizing options from tracked docs/examples. The local untracked ``.andfn_config.yaml`` is user data and is not edited; unknown historical sizing keys will be ignored by the new runtime.
+   * - H: active compact functionality
+     - ``hpc_compact``, adaptive compact kernels, numeric CSR, worker work, ragged branches, runtime quadrature, compact error state and compact post-processing
+     - Retain as the sole runtime implementation; avoid redesign.
+
+The persistence audit found no need for a historical padded-runtime loader:
+the existing save path serializes the non-HPC object dtypes, whose
+coefficient/theta/correction fields contain per-element logical arrays.
+The loader reads those datasets into Python elements. The HPC-specific
+consolidation route is not used by save/load.
+
+Phase 8 final structure
+-----------------------
+
+The default public workflow is ``solve()``, ``solve_error()``, and direct
+compact post-processing. Coefficients and integration caches use
+capacity-sized flat buffers, fracture connectivity uses CSR, branch events use
+capacity-based ragged storage, and quadrature is allocated from actual runtime
+counts. Adaptive updates publish replacement buffers in batches; storage size
+does not depend on former global coefficient, element, or quadrature maxima.
+Persistence remains at the logical Python-object boundary.
+
+Compared with the original solver, numerical loops and solver sequencing remain
+recognizable in most areas. The following structural changes are limited to
+those required by compact storage:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Area
+     - Structural comparison
+     - Reason
+   * - Consolidation
+     - Substantially changed
+     - Construct compact metadata, capacities, and CSR directly rather than first creating padded HPC records.
+   * - Potential/head evaluation
+     - Minimally changed for storage access
+     - Numerical evaluators use compact coefficient views; arithmetic and summation order are preserved.
+   * - Coefficient calculation
+     - Minimally changed for storage access
+     - Flat coefficient segments replace padded rows without changing the numerical calculation.
+   * - Adaptive solving
+     - Substantially changed
+     - Capacity growth and batched publication are required to grow individual elements without global padded arrays or per-element hot-loop reconstruction.
+   * - Fracture calculations
+     - Minimally changed for storage access
+     - Fixed metadata and CSR adjacency replace padded connectivity lists.
+   * - Branch calculations
+     - Substantially changed
+     - Ragged event capacities and worker-owned scratch replace fixed per-element event arrays.
+   * - Quadrature
+     - Minimally changed for storage access
+     - Temporary arrays use the selected rows and runtime quadrature count instead of padded records.
+   * - Boundary diagnostics
+     - Minimally changed for storage access
+     - Diagnostics consume compact state and runtime-sized quadrature directly.
+   * - Error solving
+     - Substantially changed
+     - Error coefficients and solver state are isolated in compact storage while retaining the existing iteration behavior.
+   * - Post-processing
+     - Minimally changed for storage access
+     - Public methods read compact coefficients and connectivity directly; the underlying calculations remain recognizable.
 
 Solver functions
 ----------------

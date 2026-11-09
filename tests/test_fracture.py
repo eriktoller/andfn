@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import andfn.fracture as fracture_mod
-from andfn.element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
+from andfn.element import fracture_dtype, fracture_index_dtype
 from andfn.fracture import Fracture, fracture_from_dict
 
 
@@ -239,60 +239,6 @@ def test_calc_flow_net_shapes_and_values_for_constant_omega():
     assert x_array.shape == (5,)
     assert y_array.shape == (5,)
     assert np.allclose(omega_fn, 3.0 + 4.0j)
-
-
-def test_consolidate_and_hpc_consolidation_fields():
-    frac = Fracture(
-        "C",
-        3.0,
-        2.0,
-        np.array([1.0, 2.0, 3.0]),
-        np.array([0.0, 0.0, 1.0]),
-        elements=False,
-    )
-    frac.set_id(42)
-    frac.constant = 1.75
-    frac.elements = [_PlainElement(_id=5), _PlainElement(_id=9)]
-
-    arr, idx = frac.consolidate()
-    assert arr["_id"][0] == 42
-    assert arr["t"][0] == pytest.approx(3.0)
-    assert arr["elements"][0].tolist() == [5, 9]
-    assert idx["label"][0] == "C"
-
-    arr_hpc, idx_hpc = frac.consolidate_hpc()
-    assert arr_hpc["_id"][0] == 42
-    assert arr_hpc["nelements"][0] == 2
-    assert arr_hpc["elements"][0][:2].tolist() == [5, 9]
-    assert idx_hpc["_id"][0] == 42
-
-
-def test_consolidate_into_hpc_and_unconsolidate_hpc_filters_elements():
-    frac = Fracture(
-        "UH", 2.0, 1.0, np.zeros(3), np.array([0.0, 0.0, 1.0]), elements=False
-    )
-    frac.set_id(7)
-    frac.constant = 0.5
-    frac.elements = [_PlainElement(_id=1), _PlainElement(_id=4)]
-
-    arr = np.zeros(1, dtype=fracture_dtype_hpc)
-    idx = np.zeros(1, dtype=fracture_index_dtype)
-    frac.consolidate_into_hpc(arr, idx, 0)
-
-    assert arr["nelements"][0] == 2
-    assert idx["label"][0] == "UH"
-
-    target = Fracture(
-        "tmp", 1.0, 1.0, np.zeros(3), np.array([0.0, 1.0, 0.0]), elements=False
-    )
-    keep = _PlainElement(_id=4)
-    drop = _PlainElement(_id=99)
-    target.elements = [keep, drop]
-    target.unconsolidate_hpc(arr[0], idx[0])
-
-    assert [e._id for e in target.elements] == [4]
-    assert target._id == 7
-    assert target.constant == pytest.approx(0.5)
 
 
 def test_consolidate_into_non_hpc_dtype_currently_raises_type_error():

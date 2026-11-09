@@ -1,14 +1,20 @@
 import numpy as np
 import pytest
+from legacy_hpc_reference import (
+    connectivity_from_hpc,
+    dtype_work,
+    dtype_z_arrays,
+    element_dtype_hpc,
+    fracture_dtype_hpc,
+    fracture_metadata_from_hpc,
+)
 from scipy.sparse import csc_matrix
 
-from andfn.element import element_dtype_hpc, fracture_dtype_hpc
 from andfn.geometry_functions import count_fracture_adjacency_from_fractures
 from andfn.hpc import hpc_error_solve as error_solver
 from andfn.hpc import hpc_fracture as hf
 from andfn.hpc import hpc_math_functions as mf
 from andfn.hpc import hpc_solve as hs
-from andfn.storage import connectivity_from_hpc, fracture_metadata_from_hpc
 
 
 def _network():
@@ -159,18 +165,12 @@ def test_potential_derivative_and_heads_match_legacy(index_dtype):
     )
     np.testing.assert_allclose(actual_heads, expected_heads, rtol=1e-13, atol=1e-12)
     np.testing.assert_array_equal(actual_points, expected_points)
-    wrapped_heads, wrapped_points = hf.get_heads_from_hpc(fractures, elements, z)
-    np.testing.assert_array_equal(wrapped_heads, actual_heads)
-    np.testing.assert_array_equal(wrapped_points, actual_points)
     selection = np.array([3, 0, 1, 0], dtype=np.int64)
-    selected_heads, selected_points = hf.get_heads_from_hpc(
-        fractures, elements, z, selection
+    selected_heads, selected_points = hf.get_heads_csr(
+        metadata, elements, connectivity.ids, connectivity.indptr, z, selection
     )
     np.testing.assert_array_equal(selected_heads, actual_heads[selection])
     np.testing.assert_array_equal(selected_points, actual_points[selection])
-    for selection in (np.array([-1]), np.array([4]), np.array([1.5])):
-        with pytest.raises(ValueError, match="fracture indices"):
-            hf.get_heads_from_hpc(fractures, elements, z, selection)
     assert hf.calc_omega_csr.nopython_signatures
     assert hf.calc_w_csr.nopython_signatures
     assert hf.get_heads_csr.nopython_signatures
@@ -191,7 +191,7 @@ def test_discharge_order_matrix_structure_and_values(index_dtype):
     assert indices.nbytes == 4 * 8
     assert legacy.nbytes == 4 * element_dtype_hpc.itemsize
     n = 8
-    z_legacy = np.zeros(indices.size, dtype=hs.dtype_z_arrays)
+    z_legacy = np.zeros(indices.size, dtype=dtype_z_arrays)
     z = np.zeros_like(z_legacy)
     hs.get_z_int_array(z_legacy, legacy, n)
     hs.get_z_int_array(z, elements, n, indices)
@@ -216,10 +216,6 @@ def test_discharge_order_matrix_structure_and_values(index_dtype):
     np.testing.assert_array_equal(actual.indptr, reference.indptr)
     np.testing.assert_array_equal(actual.indices, reference.indices)
     np.testing.assert_allclose(actual.data, reference.data, rtol=1e-13, atol=1e-12)
-    wrapped = hs.build_discharge_matrix(fractures, elements, legacy, n, z_legacy)
-    np.testing.assert_array_equal(wrapped.indptr, actual.indptr)
-    np.testing.assert_array_equal(wrapped.indices, actual.indices)
-    np.testing.assert_array_equal(wrapped.data, actual.data)
     expected_head = np.zeros(8)
     actual_head = np.zeros(8)
     hs.build_head_matrix(fractures, elements, legacy, n, expected_head, z_legacy)
@@ -271,7 +267,7 @@ def test_empty_matrix_and_invalid_order():
         connectivity.indptr,
         indices,
         1,
-        np.zeros(0, dtype=hs.dtype_z_arrays),
+        np.zeros(0, dtype=dtype_z_arrays),
     )
     assert matrix.shape == (0, 0)
     assert matrix.nnz == 0
@@ -285,7 +281,7 @@ def test_empty_matrix_and_invalid_order():
             connectivity.indptr,
             hs.get_discharge_indices(elements)[::-1].copy(),
             1,
-            np.zeros(elements.size, dtype=hs.dtype_z_arrays),
+            np.zeros(elements.size, dtype=dtype_z_arrays),
         )
 
 
@@ -294,7 +290,7 @@ def test_branch_events_preserved_without_neighbor_record_gather():
     connectivity = connectivity_from_hpc(fractures, elements.size, index_dtype=np.int32)
     metadata = fracture_metadata_from_hpc(fractures)
     # Event arrays are deliberately independent of connectivity degree.
-    work = np.zeros(2, dtype=hs.dtype_work)
+    work = np.zeros(2, dtype=dtype_work)
     points = 4 * np.exp(1j * np.arange(16) * 2 * np.pi / 16)
     mf.find_branch_cuts(elements[0], points, fractures, elements, work[0], 16)
     mf.find_branch_cuts(

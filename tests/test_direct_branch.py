@@ -3,6 +3,7 @@
 import numba as nb
 import numpy as np
 import pytest
+from legacy_hpc_reference import adaptive_from_hpc, dtype_work, to_hpc
 from test_compact_branch import assert_unchanged, snapshot
 from test_hpc_coefficients import network
 
@@ -18,7 +19,7 @@ def fixture(overflow=False):
         elements["center"][2] = 2 + 0.5j
         fractures["nelements"] = fractures.dtype["elements"].shape[0]
         fractures["elements"][:] = 2
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
     return fractures, owner.state
 
 
@@ -26,14 +27,13 @@ def fixture(overflow=False):
 @pytest.mark.parametrize("overflow", [False, True])
 def test_direct_exact_count_and_legacy_events_agree(threads, overflow):
     from andfn.hpc import hpc_math_functions as mf
-    from andfn.hpc import hpc_solve as hs
 
     previous = nb.get_num_threads()
     nb.set_num_threads(threads)
     try:
         fractures, state = fixture(overflow)
         e, w = state.storage.elements, state.work
-        legacy_elements = adaptive.to_hpc(state)
+        legacy_elements = to_hpc(state)
         ids = np.arange(e.size, dtype=np.int64)
         before = snapshot(state)
         prepared, stats = branch.prepare_direct(w, e, fractures, ids, e["nint"])
@@ -57,8 +57,8 @@ def test_direct_exact_count_and_legacy_events_agree(threads, overflow):
             a, n = prepared.starts[i], counts[i]
             for name, value in zip(cw.BRANCH_FIELDS, prepared.values):
                 np.testing.assert_array_equal(value[a : a + n], record[name][:n])
-            if n <= hs.dtype_work["sign_array"].shape[0]:
-                legacy = np.zeros(1, dtype=hs.dtype_work)
+            if n <= dtype_work["sign_array"].shape[0]:
+                legacy = np.zeros(1, dtype=dtype_work)
                 mf.fill_exp_array(theta.size, theta, legacy[0]["exp_array_p"], 1)
                 mf.get_dpsi_corr(
                     legacy_elements[i], fractures, legacy_elements, legacy[0]
@@ -134,7 +134,7 @@ def test_direct_failures_preserve_published_state(monkeypatch, failure):
 
 def test_default_solver_never_calls_exact_count(monkeypatch):
     fractures, elements = network()
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
 
     def forbidden(*args):
         raise AssertionError("exact count must not execute")
@@ -212,7 +212,7 @@ def test_readonly_publication_destination_is_rejected_before_construction(monkey
 
 def test_discharge_change_only_updates_event_values(monkeypatch):
     fractures, elements = network()
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
     adaptive.adaptive_step(owner, fractures, 1e-12, 1, 0, 1e100, 0, 2, 0.5)
     work = owner.state.work
     topology = {

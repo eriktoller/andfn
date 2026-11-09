@@ -8,7 +8,7 @@ import numpy as np
 
 from .bounding import BoundingCircle
 from .const_head import ConstantHeadLine
-from .element import fracture_dtype, fracture_dtype_hpc, fracture_index_dtype
+from .element import fracture_dtype, fracture_index_dtype
 from .intersection import Intersection
 from .well import Well
 
@@ -201,64 +201,6 @@ class Fracture:
 
         fracture_index_array[i] = (self.label, self._id)
 
-    def consolidate_hpc(self):
-        """
-        Consolidates the fracture into a structured array for HPC.
-
-        Returns
-        -------
-        fracture_struc_array : np.ndarray
-            The structured array for the fracture.
-        fracture_index_array : np.ndarray
-            The structured array for the fracture index.
-        """
-        fracture_struc_array = np.empty(1, dtype=fracture_dtype_hpc)
-
-        fracture_struc_array["_id"][0] = self._id
-        fracture_struc_array["t"][0] = self.t
-        fracture_struc_array["radius"][0] = self.radius
-        fracture_struc_array["center"][0] = self.center
-        fracture_struc_array["normal"][0] = self.normal
-        fracture_struc_array["x_vector"][0] = self.x_vector
-        fracture_struc_array["y_vector"][0] = self.y_vector
-        elements = np.array([e._id for e in self.elements])
-        fracture_struc_array["elements"][0][: elements.size] = elements
-        fracture_struc_array["nelements"][0] = elements.size
-        fracture_struc_array["constant"][0] = self.constant
-
-        fracture_index_array = np.array(
-            [(self.label, self._id)], dtype=fracture_index_dtype
-        )
-
-        return fracture_struc_array, fracture_index_array
-
-    def consolidate_into_hpc(self, fracture_struc_array, fracture_index_array, i):
-        """
-        Consolidates the fracture into a structured array for HPC.
-
-        Parameters
-        ----------
-        fracture_struc_array : np.ndarray
-            The structured array for the fracture.
-        fracture_index_array : np.ndarray
-            The structured array for the fracture index.
-        i : int
-            The index to consolidate into.
-        """
-        fracture_struc_array["_id"][i] = self._id
-        fracture_struc_array["t"][i] = self.t
-        fracture_struc_array["radius"][i] = self.radius
-        fracture_struc_array["center"][i] = self.center
-        fracture_struc_array["normal"][i] = self.normal
-        fracture_struc_array["x_vector"][i] = self.x_vector
-        fracture_struc_array["y_vector"][i] = self.y_vector
-        elements = np.array([e._id for e in self.elements])
-        fracture_struc_array["elements"][i][: elements.size] = elements
-        fracture_struc_array["nelements"][i] = elements.size
-        fracture_struc_array["constant"][i] = self.constant
-
-        fracture_index_array[i] = (self.label, self._id)
-
     def unconsolidate(self, fracture_struc_array, fracture_index_array):
         """
         Unconsolidates the fracture from the structured array.
@@ -285,31 +227,6 @@ class Fracture:
         self.constant = fracture_struc_array["constant"]
 
         self.label = fracture_index_array["label"]
-
-    def unconsolidate_hpc(self, fracture_struc_array, fracture_index_array):
-        """
-        Unconsolidates the fracture from the structured array for HPC.
-
-        Parameters
-        ----------
-        fracture_struc_array : np.ndarray
-            The structured array for the fracture.
-        fracture_index_array : np.ndarray
-            The structured array for the fracture index.
-        """
-        self._id = fracture_struc_array["_id"]
-        self.t = fracture_struc_array["t"]
-        self.radius = fracture_struc_array["radius"]
-        self.center = fracture_struc_array["center"]
-        self.normal = fracture_struc_array["normal"]
-        self.x_vector = fracture_struc_array["x_vector"]
-        self.y_vector = fracture_struc_array["y_vector"]
-        self.elements = [
-            e for e in self.elements if e._id in fracture_struc_array["elements"]
-        ]
-        self.constant = fracture_struc_array["constant"]
-
-        # self.label = fracture_index_array["label"]
 
     def add_element(self, new_element):
         """

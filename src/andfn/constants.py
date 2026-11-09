@@ -17,11 +17,10 @@ dtype_constants = np.dtype(
         ("SE_FACTOR", np.float64),
         ("MAX_ITERATIONS", np.int32),
         ("MAX_ERROR", np.float64),
-        ("MAX_NCOEF", np.int32),
+        ("MAX_COEFFICIENT_ORDER", np.int32),
         ("DAMPING", np.float64),
         ("COEF_INCREASE", np.int32),
         ("COEF_RATIO", np.float64),
-        ("MAX_ELEMENTS", np.int32),
         ("NCOEF", np.int32),
         ("NINT", np.int32),
         ("NUM_THREADS", np.int32),
@@ -58,8 +57,6 @@ def load_yaml_config():
 
 config = load_yaml_config()
 R_COND = 90 / 100
-if config:
-    R_COND = config.get("MAX_NCOEF", 90 / 100)
 
 
 logger = logging.getLogger(__name__)
@@ -78,11 +75,10 @@ class Constants:
                 0.9,  # SE factor (shortening element length)
                 50,  # Maximum number of iterations
                 1e-6,  # Maximum error
-                150,  # Maximum number of coefficients
+                150,  # Maximum coefficient order for adaptive growth
                 0.5,  # Damping factor for the solver (default 0.5)
                 5,  # Coefficient increase factor
                 0.05,  # Coefficient ratio
-                150,  # Maximum number of elements
                 5,  # Number of coefficients (default)
                 10,  # Number of integration points (default)
                 -1,  # Number of threads (default -1 = use all available threads)
@@ -103,11 +99,10 @@ class Constants:
         logger.info(f"      SE_FACTOR: {self.constants['SE_FACTOR']}")
         logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
         logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
-        logger.info(f"      MAX_NCOEF: {self.constants['MAX_NCOEF']}")
+        logger.info(f"MAX_COEFFICIENT_ORDER: {self.constants['MAX_COEFFICIENT_ORDER']}")
         logger.info(f"        DAMPING: {self.constants['DAMPING']}")
         logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
         logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
-        logger.info(f"   MAX_ELEMENTS: {self.constants['MAX_ELEMENTS']}")
         logger.info(f"          NCOEF: {self.constants['NCOEF']}")
         logger.info(f"           NINT: {self.constants['NINT']}")
 
@@ -118,7 +113,7 @@ class Constants:
         logger.info("Solver Constants:")
         logger.info(f" MAX_ITERATIONS: {self.constants['MAX_ITERATIONS']}")
         logger.info(f"      MAX_ERROR: {self.constants['MAX_ERROR']}")
-        logger.info(f"      MAX_NCOEF: {self.constants['MAX_NCOEF']}")
+        logger.info(f"MAX_COEFFICIENT_ORDER: {self.constants['MAX_COEFFICIENT_ORDER']}")
         logger.info(f"        DAMPING: {self.constants['DAMPING']}")
         logger.info(f"  COEF_INCREASE: {self.constants['COEF_INCREASE']}")
         logger.info(f"     COEF_RATIO: {self.constants['COEF_RATIO']}")
@@ -138,10 +133,9 @@ class Constants:
             - SE_FACTOR: Shortening element length factor
             - MAX_ITERATIONS: Maximum number of iterations
             - MAX_ERROR: Maximum error
-            - MAX_NCOEF: Maximum number of coefficients
+            - MAX_COEFFICIENT_ORDER: Maximum coefficient order for adaptive growth
             - COEF_INCREASE: Coefficient increase factor
             - COEF_RATIO: Coefficient ratio
-            - MAX_ELEMENTS: Maximum number of elements
             - NCOEF: Number of coefficients
             - NINT: Number of integration points
             - NUM_THREADS: Number of threads to use for Numba (default -1 = use all available threads)
@@ -152,6 +146,13 @@ class Constants:
             The constants to change. The keys should be the names of the constants and the values should be the new values.
 
         """
+        if "MAX_NCOEF" in kwargs:
+            if "MAX_COEFFICIENT_ORDER" not in kwargs:
+                kwargs["MAX_COEFFICIENT_ORDER"] = kwargs["MAX_NCOEF"]
+                logger.warning(
+                    "MAX_NCOEF is deprecated; use MAX_COEFFICIENT_ORDER instead."
+                )
+            kwargs.pop("MAX_NCOEF")
         for key, value in kwargs.items():
             if key in self.constants.dtype.names:
                 if key == "NUM_THREADS":
@@ -159,27 +160,19 @@ class Constants:
                     if value <= 0:
                         raise ValueError("Number of threads must be greater than 0")
                     set_num_threads(value)
-                if key == "MAX_NCOEF":
-                    from .element import MAX_NCOEF
-
-                    # Ensure MAX_NCOEF is not greater than what is set in the code
-                    if value > MAX_NCOEF:
-                        raise ValueError(
-                            f"MAX_NCOEF cannot be greater than {MAX_NCOEF}. I you need a higher value set the MAX_NCOEF using the .andfn_config.yaml file instead."
-                        )
-                if key == "MAX_ELEMENTS":
-                    from .element import MAX_ELEMENTS
-
-                    # Ensure MAX_ELEMENTS is not greater than what is set in the code
-                    if value > MAX_ELEMENTS:
-                        raise ValueError(
-                            f"MAX_ELEMENTS cannot be greater than {MAX_ELEMENTS}. If you need a higher value set the MAX_ELEMENTS using the .andfn_config.yaml file instead."
-                        )
                 self.constants[key] = value
 
     def configure_constants(self):
         if os.path.exists(".andfn_config.yaml"):
-            config = load_yaml_config()
+            config = load_yaml_config() or {}
+            legacy_order = config.pop("MAX_NCOEF", None)
+            if "MAX_COEFFICIENT_ORDER" not in config and legacy_order is not None:
+                config["MAX_COEFFICIENT_ORDER"] = legacy_order
+                logger.warning(
+                    "MAX_NCOEF is deprecated; use MAX_COEFFICIENT_ORDER instead."
+                )
+            config.pop("MAX_ELEMENTS", None)
+            config.pop("MAX_DISCHARGE_INT", None)
             self.change_constants(**config)
 
     @staticmethod

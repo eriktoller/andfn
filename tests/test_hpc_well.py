@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
+from legacy_hpc_reference import element_dtype_hpc
 
-from andfn.element import element_dtype_hpc
 from andfn.hpc import hpc_well
 
 

@@ -25,9 +25,9 @@ The maximum number of iterations for the solver. Default is 50.
 
 The maximum error allowed in the solver. Default is 1e-6.
 
-``MAX_NCOEF: (int)``
+``MAX_COEFFICIENT_ORDER: (int)``
 
-The maximum number of coefficients for a single element. Default is 150.
+The numerical upper limit used by adaptive coefficient growth. Default is 150.
 
 ``COEF_INCREASE: (int)``
 
@@ -36,10 +36,6 @@ The value for which to increase the number of coefficients in the solver when th
 ``COEF_RATIO: (float)``
 
 The ration betwenn the maximum of the first two coefficients nad the last two of an element. Default is 0.05.
-
-``MAX_ELEMENTS: (int)``
-
-Maximum number of elements in a single fracture. Default is 150.
 
 ``NCOEF: (int)``
 
@@ -78,13 +74,11 @@ Example Configuration File
 
     MAX_ERROR: 1e-6
 
-    MAX_NCOEF: 150
+    MAX_COEFFICIENT_ORDER: 150
 
     COEF_INCREASE: 5
 
     COEF_RATIO: 0.05
-
-    MAX_ELEMENTS: 150
 
     NCOEF: 5
 
@@ -98,3 +92,8 @@ Example Configuration File
 
     LOG_FILE: andfn.log
 ```
+
+Older configuration files may still use ``MAX_NCOEF``; it is accepted as a
+deprecated alias for ``MAX_COEFFICIENT_ORDER``. ``MAX_ELEMENTS`` and
+``MAX_DISCHARGE_INT`` were storage-sizing settings and are ignored because
+runtime storage now grows from actual problem sizes.

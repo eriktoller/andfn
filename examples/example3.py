@@ -55,7 +55,9 @@ if __name__ == "__main__":
     dfn.check_connectivity()
 
     # set the solver parameters, I have chosen good values for this example, but you can change them to see how it affects the solution.
-    dfn.set_kwargs(COEF_RATIO=0.001, MAX_ITERATIONS=30, MAX_NCOEF=200, MAX_ERROR=5e-4)
+    dfn.set_kwargs(
+        COEF_RATIO=0.001, MAX_ITERATIONS=30, MAX_COEFFICIENT_ORDER=200, MAX_ERROR=5e-4
+    )
 
     """
     SOLVE THE DFN

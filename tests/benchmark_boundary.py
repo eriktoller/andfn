@@ -8,18 +8,23 @@ import numba as nb
 import numpy as np
 from benchmark_fixed_order import fixture
 from benchmark_quadrature import memory_cases
+from legacy_hpc_reference import (
+    adaptive_from_hpc,
+    connectivity_from_hpc,
+    dtype_work,
+    dtype_z_arrays,
+    fracture_metadata_from_hpc,
+)
 
 from andfn.constants import Constants
-from andfn.hpc import hpc_adaptive as adaptive
 from andfn.hpc import hpc_solve as hs
 from andfn.hpc import hpc_work as cw
 from andfn.hpc.hpc_connectivity import FractureArrays
-from andfn.storage import connectivity_from_hpc, fracture_metadata_from_hpc
 
 
 def prepare(count):
     fractures, elements = fixture(count // 8)
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
     connectivity = connectivity_from_hpc(fractures, elements.size)
     compact = FractureArrays(
         fracture_metadata_from_hpc(fractures), connectivity.ids, connectivity.indptr
@@ -28,35 +33,29 @@ def prepare(count):
 
 
 def measure(count, repeats=7):
-    f, e, owner, fractures = prepare(count)
+    _, _, owner, fractures = prepare(count)
     constants = Constants().constants.copy()
     storage = owner.state.storage
-    results = [[], []]
-    outputs = [None, None]
+    results, outputs = [], []
     for sample in range(repeats + 1):
-        for mode in (0, 1) if sample % 2 == 0 else (1, 0):
-            start = perf_counter()
-            if mode:
-                outputs[mode] = hs.compute_bnd_error(
-                    fractures,
-                    storage.elements,
-                    8,
-                    constants,
-                    storage.coef_data,
-                    storage.coef_start,
-                    work=owner.state.work,
-                )
-            else:
-                outputs[mode] = hs.compute_bnd_error(f, e, 8, constants)
-            if sample:
-                results[mode].append((perf_counter() - start) * 1000)
-    np.testing.assert_array_equal(*outputs)
-    legacy, compact = (float(np.median(values)) for values in results)
+        start = perf_counter()
+        output = hs.compute_bnd_error(
+            fractures,
+            storage.elements,
+            8,
+            constants,
+            storage.coef_data,
+            storage.coef_start,
+            work=owner.state.work,
+        )
+        outputs.append(output)
+        if sample:
+            results.append((perf_counter() - start) * 1000)
+    for output in outputs[1:]:
+        np.testing.assert_array_equal(outputs[0], output)
     return {
-        "legacy_ms": legacy,
-        "compact_ms": compact,
-        "ratio": compact / legacy,
-        "p10_p90_ms": [np.percentile(values, [10, 90]).tolist() for values in results],
+        "compact_ms": float(np.median(results)),
+        "p10_p90_ms": np.percentile(results, [10, 90]).tolist(),
         "exact": True,
     }
 
@@ -92,8 +91,8 @@ def memory():
             )
         )
         report[count] = {
-            "legacy_work": count * hs.dtype_work.itemsize,
-            "legacy_boundary_quadrature": count * hs.dtype_z_arrays.itemsize,
+            "legacy_work": count * dtype_work.itemsize,
+            "legacy_boundary_quadrature": count * dtype_z_arrays.itemsize,
             "fixed_metadata": 0,
             "coefficient_references": 0,
             "integration_cache": 0,
@@ -161,7 +160,7 @@ def memory():
             "sparse_matrix_inputs": sparse,
             "retained_legacy_elements": e.nbytes,
             "retained_legacy_fractures": f.nbytes,
-            "optional_legacy_work": count * hs.dtype_work.itemsize,
+            "optional_legacy_work": count * dtype_work.itemsize,
             "storage_only": False,
         }
     seed = report[10000]

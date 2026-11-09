@@ -20,14 +20,18 @@ from time import perf_counter
 import numba as nb
 import numpy as np
 from benchmark_fixed_order import differences, fixture
+from legacy_hpc_reference import (
+    adaptive_from_hpc,
+    connectivity_from_hpc,
+    import_work,
+)
 from scipy.sparse.linalg import splu
 from test_hpc_adaptive import run_adaptive
-from test_hpc_coefficients import legacy_logical, logical, work_for
+from test_hpc_coefficients import work_for
 
 from andfn.hpc import hpc_adaptive as adaptive
 from andfn.hpc import hpc_solve as hs
 from andfn.hpc import hpc_work as cw
-from andfn.storage import connectivity_from_hpc
 
 
 def prepare(copies, spare=False):
@@ -37,8 +41,8 @@ def prepare(copies, spare=False):
         elements["ncoef"][elements["_type"] != 2] = 9
         elements["nint"][elements["_type"] != 2] = 18
     work = work_for(elements)
-    owner = adaptive.adaptive_from_hpc(elements)
-    cw.import_work(owner.state.work, work, elements)
+    owner = adaptive_from_hpc(elements)
+    import_work(owner.state.work, work, elements)
     return fractures, elements, work, owner
 
 
@@ -49,100 +53,68 @@ def run_case(
     maximum,
     iterations=6,
     spare=False,
-    *,
-    compact_quadrature=False,
 ):
     _f0, e0, _w0, owner0 = prepare(copies, spare)
     initial_capacity = int(owner0.state.storage.coef_capacity.sum())
-    elapsed = [[], []]
-    iteration_times = [[[] for _ in range(iterations)] for _ in range(2)]
+    elapsed = []
+    iteration_times = [[] for _ in range(iterations)]
     samples = None
     for sample in range(7):
-        for compact in (False, True) if sample % 2 == 0 else (True, False):
-            fractures, elements, work, owner = prepare(copies, spare)
-            active = owner.state.storage.elements if compact else elements
-            connectivity = connectivity_from_hpc(fractures, elements.size)
-            indices = hs.get_discharge_indices(active)
-            z = (
-                hs.allocate_quadrature(indices.size, 8)
-                if compact and compact_quadrature
-                else np.zeros(elements.size, dtype=hs.dtype_z_arrays)
+        fractures, elements, _work, owner = prepare(copies, spare)
+        active = owner.state.storage.elements
+        connectivity = connectivity_from_hpc(fractures, elements.size)
+        indices = hs.get_discharge_indices(active)
+        z = hs.allocate_quadrature(indices.size, 8)
+        hs.get_z_int_array(z, active, 8, indices)
+        lu = splu(
+            hs.build_discharge_matrix_csr(
+                fractures,
+                active,
+                connectivity.ids,
+                connectivity.indptr,
+                indices,
+                8,
+                z,
             )
-            hs.get_z_int_array(z, active, 8, indices)
-            lu = splu(
-                hs.build_discharge_matrix_csr(
-                    fractures,
-                    active,
-                    connectivity.ids,
-                    connectivity.indptr,
-                    indices,
-                    8,
-                    z,
-                )
+        )
+        size = fractures.size + indices.size
+        rhs, discharge, old_discharge = (np.zeros(size) for _ in range(3))
+        started = perf_counter()
+        for nit in range(1, iterations + 1):
+            iteration_start = perf_counter()
+            s = owner.state.storage
+            hs.solve_discharge_matrix(
+                fractures,
+                active,
+                active,
+                8,
+                rhs,
+                discharge,
+                old_discharge,
+                z,
+                lu,
+                connectivity.ids,
+                connectivity.indptr,
+                indices,
+                s.coef_data,
+                s.coef_start,
             )
-            size = fractures.size + indices.size
-            rhs, discharge, old_discharge = (np.zeros(size) for _ in range(3))
-            started = perf_counter()
-            for nit in range(1, iterations + 1):
-                iteration_start = perf_counter()
-                s = owner.state.storage if compact else None
-                active = s.elements if compact else elements
-                hs.solve_discharge_matrix(
-                    fractures,
-                    active,
-                    active,
-                    8,
-                    rhs,
-                    discharge,
-                    old_discharge,
-                    z,
-                    lu,
-                    connectivity.ids,
-                    connectivity.indptr,
-                    indices,
-                    s.coef_data if compact else None,
-                    s.coef_start if compact else None,
-                )
-                if compact:
-                    adaptive.adaptive_step(
-                        owner, fractures, 1e-12, nit, 0, ratio, maximum, increase, 0.5
-                    )
-                else:
-                    hs.element_solver2(
-                        elements.size,
-                        elements,
-                        fractures,
-                        work,
-                        1e-12,
-                        nit,
-                        0,
-                        ratio,
-                        maximum,
-                        increase,
-                        0.5,
-                    )
-                hs.get_error(owner.state.storage.elements if compact else elements)
-                iteration_times[int(compact)][nit - 1].append(
-                    perf_counter() - iteration_start
-                )
-            elapsed[int(compact)].append(perf_counter() - started)
-            if compact:
-                samples = owner
-            else:
-                last_legacy = elements
+            adaptive.adaptive_step(
+                owner, fractures, 1e-12, nit, 0, ratio, maximum, increase, 0.5
+            )
+            hs.get_error(owner.state.storage.elements)
+            iteration_times[nit - 1].append(perf_counter() - iteration_start)
+        elapsed.append(perf_counter() - started)
+        samples = owner
     state = samples.state
     s = state.storage
-    a, b = map(median, elapsed)
+    b = median(elapsed)
     batches = samples.batches
     metrics = {
         "elements": e0.size,
-        "legacy_ms": 1000 * a,
         "compact_ms": 1000 * b,
-        "runtime_ratio": b / a,
-        "legacy_p10_p90_ms": (1000 * np.percentile(elapsed[0], [10, 90])).tolist(),
-        "compact_p10_p90_ms": (1000 * np.percentile(elapsed[1], [10, 90])).tolist(),
-        "legacy_iteration_ms": [1000 * median(x) for x in iteration_times[0]],
-        "compact_iteration_ms": [1000 * median(x) for x in iteration_times[1]],
+        "compact_p10_p90_ms": (1000 * np.percentile(elapsed, [10, 90])).tolist(),
+        "compact_iteration_ms": [1000 * median(x) for x in iteration_times],
         "growth_batches": len(batches),
         "expanded_element_events": sum(x["expanded_elements"] for x in batches),
         "initial_capacity_sum": initial_capacity,
@@ -196,8 +168,6 @@ def run_case(
             x["complete_state_scans"] for x in batches
         ),
         "payload": {
-            "legacy_current": e0["coef"].nbytes,
-            "legacy_old": e0["old_coef"].nbytes,
             "compact_current": s.coef_data.nbytes,
             "compact_candidate": s.candidate_coef_data.nbytes,
             "compact_compatibility_old": s.old_coef_data.nbytes,
@@ -206,12 +176,8 @@ def run_case(
             ),
             "retained_work": cw.payload(state.work)
             - sum(getattr(state.work, name).nbytes for name in cw.CACHE_FIELDS),
-            "legacy_compatibility": e0.nbytes,
             "total_compact_state_and_work": cw.state_payload(state),
         },
-        "final_coefficient_difference": differences(
-            legacy_logical(last_legacy), logical(s, s.coef_data)
-        ),
     }
     metrics["remaining_solver_work_ms"] = metrics["compact_ms"] - sum(
         metrics[k]
@@ -389,8 +355,7 @@ def main(include_peak=False, include_profile=False):
     nb.set_num_threads(1)
     start = perf_counter()
     # Warm both paths with an actual growth batch before timing.
-    f, e, w, owner = prepare(1)
-    hs.element_solver2(e.size, e, f, w, 1e-12, 2, 0, -1.0, 40, 2, 0.5)
+    f, _, _, owner = prepare(1)
     adaptive.adaptive_step(owner, f, 1e-12, 2, 0, -1.0, 40, 2, 0.5)
     f, _, _, owner = prepare(1, spare=True)
     adaptive.adaptive_step(owner, f, 1e-12, 2, 0, -1.0, 10, 1, 0.5)
@@ -414,8 +379,8 @@ def main(include_peak=False, include_profile=False):
                 ),
             }
         nb.set_num_threads(1)
-        a, _ = run_adaptive(False)
-        b, owner = run_adaptive(True)
+        a, _ = run_adaptive()
+        b, owner = run_adaptive()
         report["iteration_differences"] = [
             {
                 "iteration": left[0],

@@ -1,4 +1,4 @@
-"""Batch adaptation for the opt-in flat-coefficient main solver.
+"""Adaptive solving over compact coefficient and worker-owned cache storage.
 
 The compact owner has independent coefficient, cache, scratch and branch
 buffers. Construction never mutates active state; publication occurs only at
@@ -12,14 +12,11 @@ from time import perf_counter
 import numba as nb
 import numpy as np
 
-from andfn.element import element_dtype_hpc
 from andfn.storage import (
     FixedOrderStorage,
     _counts,
     _layout,
     element_metadata_dtype,
-    fixed_order_from_hpc,
-    fixed_order_to_hpc,
     growth_capacities,
 )
 
@@ -34,7 +31,6 @@ from .hpc_work import (
     COEFFICIENT_FIELDS,
     INTEGRATION_FIELDS,
     WorkArrays,
-    allocate_work,
     integration_view,
     invalidate_branch,
     resize_scratch,
@@ -43,10 +39,6 @@ from .hpc_work import (
     state_payload,
     validate_work,
     work_record,
-)
-
-_MAX_REQUEST_INCREMENT = (
-    np.iinfo(np.int64).max // 2 - element_dtype_hpc["coef"].shape[0]
 )
 
 
@@ -98,42 +90,6 @@ class AdaptiveSolver:
     before_publication: object = None
     branch_initialized: bool = False
     branch_batches: list = field(default_factory=list)
-
-
-def adaptive_from_hpc(elements, *, scratch_groups=7):
-    """Import logical state; reject initialized padding lost by flat conversion."""
-    for e in elements:
-        n = e["ncoef"]
-        if np.any(e["coef"][n:] != 0) or np.any(e["old_coef"][n:] != 0):
-            raise ValueError("Adaptive import requires zero unused coefficient padding")
-    storage = fixed_order_from_hpc(elements)
-    # Legacy ratio checks require at least coef[1] for every non-well.
-    if np.any((elements["_type"] != 2) & (elements["ncoef"] < 2)):
-        raise ValueError("Adaptive non-well elements require at least two coefficients")
-    work = allocate_work(
-        elements,
-        storage.coef_start,
-        storage.coef_capacity,
-        scratch_groups=scratch_groups,
-    )
-    for i, e in enumerate(elements):
-        record = work_record(work, i)
-        for name in ("thetas", "dpsi_corr"):
-            record[name][: e["nint"]] = e[name][: e["nint"]]
-    metadata = np.empty(elements.size, dtype=element_metadata_dtype)
-    for name in metadata.dtype.names:
-        metadata[name] = elements[name]
-    storage = AdaptiveStorage(
-        metadata,
-        storage.coef_data,
-        storage.candidate_coef_data,
-        storage.old_coef_data,
-        storage.coef_start,
-        storage.coef_capacity,
-    )
-    owner = AdaptiveSolver(AdaptiveState(storage, work))
-    validate_state(owner.state)
-    return owner
 
 
 def validate_state(state, *, finite=False):
@@ -192,21 +148,12 @@ def validate_state(state, *, finite=False):
                 raise ValueError("Nonfinite worker scratch")
 
 
-def to_hpc(state):
-    """Explicit legacy diagnostic export; never called inside iterations."""
-    elements = fixed_order_to_hpc(state.storage)
-    for i, e in enumerate(elements):
-        for name in ("thetas", "dpsi_corr"):
-            e[name][: e["nint"]] = work_record(state.work, i)[name][: e["nint"]]
-    return elements
-
-
 @nb.njit(parallel=PARALLEL, cache=CACHE)
 def assess_growth(
     elements, coef_data, coef_start, nit, max_error, ratio_limit, maximum, increase
 ):
     """Read-only assessment; retain the legacy old-order maximum check."""
-    if increase <= 0 or increase > _MAX_REQUEST_INCREMENT:
+    if increase <= 0 or increase > np.iinfo(np.int64).max // 2:
         raise ValueError("COEF_INCREASE would overflow adaptive request arithmetic")
     requested = elements["ncoef"].copy()
     integrations = elements["nint"].copy()
@@ -237,6 +184,8 @@ def assess_growth(
         ):
             ratio = ratio_limit + 1.0
         if ratio > ratio_limit and e["ncoef"] < maximum and nit > 1:
+            if e["ncoef"] > np.iinfo(np.int64).max // 2 - increase:
+                raise ValueError("Adaptive request arithmetic would overflow int64")
             requested[i] = e["ncoef"] + increase
             integrations[i] = requested[i] * 2
             required[i] = True
@@ -270,10 +219,6 @@ def validate_requests(state, requested, integrations, required, maximum, increas
         ni[~required] != elements["nint"][~required]
     ):
         raise ValueError("Requested nint must follow the element's legacy growth rule")
-    if np.any(nc > element_dtype_hpc["coef"].shape[0]) or np.any(
-        ni > element_dtype_hpc["thetas"].shape[0]
-    ):
-        raise ValueError("Growth exceeds retained integration/work storage")
     if not isinstance(state.work, WorkArrays):
         raise TypeError("Invalid compact adaptive work storage")
     validate_work(state.work, elements["ncoef"], elements["nint"])
@@ -326,7 +271,7 @@ def validate_affected(
     elements, work, starts, capacities, ids, nc, ni, maximum, increase
 ):
     """Only affected metadata/layout endpoints; never scan active values."""
-    if increase <= 0 or increase > _MAX_REQUEST_INCREMENT:
+    if increase <= 0 or increase > np.iinfo(np.int64).max // 2:
         raise ValueError("Invalid coefficient increment")
     coefficient_repack, integration_repack = False, False
     for i in ids:
@@ -339,8 +284,8 @@ def validate_affected(
             raise ValueError("Invalid requested coefficient length")
         if ni[i] != 2 * nc[i] or ni[i] < 0:
             raise ValueError("Invalid requested integration length")
-        if nc[i] > element_dtype_hpc_coef_limit or ni[i] > element_dtype_hpc_int_limit:
-            raise ValueError("Growth exceeds retained integration/work storage")
+        if nc[i] > np.iinfo(np.int64).max // 2:
+            raise ValueError("Requested integration extent would overflow int64")
         if starts[i] < 0 or starts[i] + capacities[i] > work.old_coef.size:
             raise ValueError("Invalid affected coefficient segment")
         if work.integration_start[i] < 0 or (
@@ -350,10 +295,6 @@ def validate_affected(
         coefficient_repack |= nc[i] > capacities[i]
         integration_repack |= ni[i] > work.integration_capacity[i]
     return coefficient_repack, integration_repack
-
-
-element_dtype_hpc_coef_limit = element_dtype_hpc["coef"].shape[0]
-element_dtype_hpc_int_limit = element_dtype_hpc["thetas"].shape[0]
 
 
 @nb.njit(cache=CACHE)
@@ -1021,17 +962,12 @@ def adaptive_step(
 def solve_adaptive(
     owner, fractures, discharge_int, constants, *, iteration_callback=None
 ):
-    """Opt-in compact adaptive main solve; retains the legacy adaptive path."""
+    """Run the adaptive solver over compact state."""
     owner.state.storage.validate()
     return hs.solve(
         fractures,
-        owner.state.storage.elements,
         discharge_int,
         constants,
-        None,
-        coef_data=owner.state.storage.coef_data,
-        coef_start=owner.state.storage.coef_start,
-        candidate_coef_data=owner.state.storage.candidate_coef_data,
+        adaptive_owner=owner,
         iteration_callback=iteration_callback,
-        _adaptive_owner=owner,
     )

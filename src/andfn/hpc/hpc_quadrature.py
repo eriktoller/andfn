@@ -1,4 +1,4 @@
-"""Runtime-sized main-solver quadrature; padded legacy records remain supported."""
+"""Runtime-sized quadrature for the normal and error solvers."""
 
 import operator
 
@@ -27,7 +27,7 @@ def _dimensions(rows, count):
 
 
 def allocate_quadrature(rows, count):
-    """Allocate two contiguous side/row/point planes, independent of MAX_NCOEF."""
+    """Allocate two contiguous side/row/point planes."""
     rows, count = _dimensions(rows, count)
     return np.zeros((2, rows, count), dtype=np.complex128)
 

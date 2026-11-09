@@ -11,8 +11,7 @@ import numba as nb
 import numpy as np
 import scipy as sp
 
-from andfn.element import MAX_ELEMENTS, MAX_NCOEF
-from andfn.storage import Connectivity, connectivity_from_hpc
+from andfn.storage import Connectivity
 
 from . import (
     CACHE,
@@ -29,130 +28,56 @@ from .hpc_coefficients import candidate_at, coefficient_view
 from .hpc_quadrature import allocate_quadrature, quadrature_row, validate_quadrature
 from .hpc_work import boundary_work, integration_view, work_record
 
-dtype_work = np.dtype(
-    [
-        ("phi", np.float64, MAX_NCOEF * 2),
-        ("psi", np.float64, MAX_NCOEF * 2),
-        ("coef", np.complex128, MAX_NCOEF),
-        ("coef0", np.complex128, MAX_NCOEF),
-        ("coef1", np.complex128, MAX_NCOEF),
-        ("coef_error", np.complex128, MAX_NCOEF),
-        ("a0_error", np.complex128),
-        ("old_coef", np.complex128, MAX_NCOEF),
-        ("dpsi", np.float64, MAX_NCOEF * 2),
-        ("error", np.float64),
-        ("integral", np.complex128, MAX_NCOEF * 2),
-        ("sign_array", np.int64, MAX_ELEMENTS),
-        ("discharge_element", np.int64, MAX_ELEMENTS),
-        ("element_pos", np.int64, MAX_ELEMENTS),
-        ("len_discharge_element", np.int64),
-        ("exp_array_m", np.complex128, MAX_NCOEF * 2),
-        ("exp_array_p", np.complex128, MAX_NCOEF * 2),
-        ("z_integral", np.complex128, MAX_NCOEF * 2),
-        ("set_zero", np.bool),
-    ]
-)
-
-dtype_z_arrays = np.dtype(
-    [("z0", complex, MAX_NCOEF * 2), ("z1", complex, MAX_NCOEF * 2)]
-)
-
 logger = logging.getLogger(__name__)
 
 
 def solve(
-    fracture_struc_array,
-    element_struc_array,
+    fracture_arrays,
     discharge_int,
     constants,
-    ntype_elements,
     *,
-    fixed_order=False,
-    coef_data=None,
-    coef_start=None,
-    candidate_coef_data=None,
+    adaptive_owner,
     iteration_callback=None,
-    _adaptive_owner=None,
 ):
-    """
-    Solves the DFN.
-
-    Parameters
-    ----------
-    fracture_struc_array : np.ndarray[fracture_dtype]
-        Array of fractures
-    element_struc_array : np.ndarray[element_dtype]
-        Array of elements
-    discharge_int : int
-        The number of integration points
-    constants : np.ndarray[constants_dtype]
-        The constants for the solver and dfn.
-    ntype_elements : np.ndarray[int]
-        A dictionary with the number of elements of each type.
-
-    Returns
-    -------
-    element_struc_array : np.ndarray[element_dtype]
-        The array of elements
-
-    """
-    if coef_data is not None and not fixed_order and _adaptive_owner is None:
-        raise ValueError("Flat coefficient buffers require fixed-order execution")
-    if (coef_data is None) != (candidate_coef_data is None) or (
-        (coef_data is None) != (coef_start is None)
-    ):
-        raise ValueError(
-            "Current, candidate, and start arrays must be supplied together"
-        )
-    if not element_struc_array.size or not fracture_struc_array.size:
+    """Run the adaptive solver over compact coefficient and fracture arrays."""
+    if adaptive_owner is None:
+        raise ValueError("Adaptive solving requires compact owner state")
+    storage = adaptive_owner.state.storage
+    element_struc_array = storage.elements
+    if not element_struc_array.size or not fracture_arrays.size:
         raise ValueError("Solving requires at least one element and fracture")
-    # Get the constants, this is necessary for Numba parallelization to work
     max_error = constants["MAX_ERROR"]
     max_iterations = constants["MAX_ITERATIONS"]
     coef_ratio = constants["COEF_RATIO"]
-    max_coef = constants["MAX_NCOEF"]
+    max_coef = constants["MAX_COEFFICIENT_ORDER"]
     coef_increase = constants["COEF_INCREASE"]
     damping = float(constants["DAMPING"])
 
-    # get the discharge elements
     logger.info("Compiling HPC code...")
     discharge_indices = get_discharge_indices(element_struc_array)
-    connectivity = connectivity_from_hpc(fracture_struc_array, len(element_struc_array))
-
-    # Allocate memory for the work array
-    num_elements = len(element_struc_array)
-    work_array = (
-        np.zeros(num_elements, dtype=dtype_work)
-        if _adaptive_owner is None
-        else _adaptive_owner.state.work
-    )
-    # head matrix
-    size = discharge_indices.size + fracture_struc_array.size
+    connectivity_ids, connectivity_indptr = fracture_arrays.ids, fracture_arrays.indptr
+    work_array = adaptive_owner.state.work
+    num_elements = element_struc_array.size
+    size = discharge_indices.size + fracture_arrays.size
     head_matrix = np.zeros(size)
     discharges = get_old_discharges(
         element_struc_array,
-        fracture_struc_array,
+        fracture_arrays,
         element_struc_array,
         discharge_indices,
     )
     discharges_old = np.zeros(size)
-    if coef_data is not None:
-        z_int = allocate_quadrature(discharge_indices.size, discharge_int)
-        get_z_int_array(z_int, element_struc_array, discharge_int, discharge_indices)
-    else:
-        z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
-        get_z_int_array(z_int, element_struc_array, discharge_int, discharge_indices)
-        z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
-        get_z_int_array(z_int_error, element_struc_array, discharge_int)
+    z_int = allocate_quadrature(discharge_indices.size, discharge_int)
+    get_z_int_array(z_int, element_struc_array, discharge_int, discharge_indices)
 
     # Discharge matrix
     logger.info("Building discharge matrix...")
     startdm = time.time()
     discharge_matrix = build_discharge_matrix_csr(
-        fracture_struc_array,
+        fracture_arrays,
         element_struc_array,
-        connectivity.ids,
-        connectivity.indptr,
+        connectivity_ids,
+        connectivity_indptr,
         discharge_indices,
         discharge_int,
         z_int,
@@ -181,7 +106,7 @@ def solve(
         mf.fill_z_integral(e, record)
 
     logger.info(f"Number of elements: {len(element_struc_array)}")
-    logger.info(f"Number of fractures: {len(fracture_struc_array)}")
+    logger.info(f"Number of fractures: {fracture_arrays.size}")
     logger.info(f"Number of entries in discharge matrix: {discharge_matrix.getnnz()}")
 
     error = np.float64(1.0)
@@ -200,7 +125,7 @@ def solve(
         if error_q > max_error / 1e30:
             discharges_old[:] = discharges[:]
             solve_discharge_matrix(
-                fracture_struc_array,
+                fracture_arrays,
                 element_struc_array,
                 element_struc_array,
                 discharge_int,
@@ -209,11 +134,11 @@ def solve(
                 discharges_old,
                 z_int,
                 lu_matrix,
-                connectivity.ids,
-                connectivity.indptr,
+                connectivity_ids,
+                connectivity_indptr,
                 discharge_indices,
-                coef_data,
-                coef_start,
+                storage.coef_data,
+                storage.coef_start,
             )
             error_q = np.max(np.abs(discharges - discharges_old))
             error_q = np.mean(np.abs(discharges - discharges_old))
@@ -225,56 +150,23 @@ def solve(
 
         # Solve the elements
         starte = time.time()
-        if _adaptive_owner is not None:
-            from .hpc_adaptive import adaptive_step
+        from .hpc_adaptive import adaptive_step
 
-            adaptive_step(
-                _adaptive_owner,
-                fracture_struc_array,
-                max_error,
-                nit,
-                cnt_error,
-                coef_ratio,
-                max_coef,
-                coef_increase,
-                damping,
-            )
-            # Reacquire every array after the transaction publication boundary.
-            storage = _adaptive_owner.state.storage
-            element_struc_array = storage.elements
-            coef_data = storage.coef_data
-            candidate_coef_data = storage.candidate_coef_data
-            coef_start = storage.coef_start
-            work_array = _adaptive_owner.state.work
-            cnt_set_zero = 0
-        elif fixed_order:
-            fixed_order_step(
-                element_struc_array,
-                fracture_struc_array,
-                work_array,
-                max_error,
-                nit,
-                cnt_error,
-                damping,
-                coef_data,
-                coef_start,
-                candidate_coef_data,
-            )
-            cnt_set_zero = 0
-        else:
-            cnt_set_zero = element_solver2(
-                num_elements,
-                element_struc_array,
-                fracture_struc_array,
-                work_array,
-                max_error,
-                nit,
-                cnt_error,
-                coef_ratio,
-                max_coef,
-                coef_increase,
-                damping,
-            )
+        adaptive_step(
+            adaptive_owner,
+            fracture_arrays,
+            max_error,
+            nit,
+            cnt_error,
+            coef_ratio,
+            max_coef,
+            coef_increase,
+            damping,
+        )
+        storage = adaptive_owner.state.storage
+        element_struc_array = storage.elements
+        work_array = adaptive_owner.state.work
+        cnt_set_zero = 0
         timee = time.time() - starte
         sum_timee += timee
         sum_timeq += timeq
@@ -299,27 +191,19 @@ def solve(
                 f"Solve time {(timee + timeq):.2f} sec (E: {timee:.2f}, Q: {timeq:.2f}), "
                 f"Elements set to zero: {cnt_set_zero}"
             )
-            e = element_struc_array[_id]
-            # print(
-            #    f"Error increasing for element {e['_id']}, type {e['_type']}, fractures {e['frac0']} and {e['frac1']}, "
-            #    f"error: {e['error']}, error_old: {e['error_old']}, error_old2: {e['error_old2']}, ncoef: {e['ncoef']}, "
-            #    f"\n   coef[:5]:    {e['coef'][:5]}, \nold_coef[:5]: {work_array[_id]['old_coef'][:5]}"
-            #    f"\ncoef[:-5]:    {e['coef'][e['ncoef']-5:e['ncoef']]}, \nold_coef[:-5]: {work_array[_id]['old_coef'][e['ncoef']-5:e['ncoef']]}"
-            #    f"\npercent change: {np.abs(np.sum(np.abs(e['coef']))-np.sum(np.abs(work_array[_id]['old_coef'])))/np.sum(np.abs(work_array[_id]['old_coef']))*100 if np.sum(np.abs(work_array[_id]['old_coef'])) > 0 else np.nan}")
-
         if cnt_bnd > 1 or nit == max_iterations:
             element_solver(
                 num_elements,
                 element_struc_array,
-                fracture_struc_array,
+                fracture_arrays,
                 work_array,
                 max_error,
                 nit,
                 cnt_error,
                 damping,
-                coef_data,
-                coef_start,
-                candidate_coef_data,
+                storage.coef_data,
+                storage.coef_start,
+                storage.candidate_coef_data,
             )
             # error = 1.0
 
@@ -331,7 +215,7 @@ def solve(
             iteration_callback(
                 nit,
                 element_struc_array,
-                fracture_struc_array,
+                fracture_arrays,
                 work_array,
                 discharges,
                 error_q,
@@ -354,37 +238,6 @@ def solve(
     )
 
     return element_struc_array, work_array
-
-
-def solve_fixed_order(
-    storage, fractures, discharge_int, constants, *, iteration_callback=None
-):
-    """Opt-in compact solve; no export, expansion, or layout mutation."""
-    storage.validate()
-    ncoef, nint = storage.elements["ncoef"].copy(), storage.elements["nint"].copy()
-    starts, capacities = storage.coef_start.copy(), storage.coef_capacity.copy()
-    result = solve(
-        fractures,
-        storage.elements,
-        discharge_int,
-        constants,
-        None,
-        fixed_order=True,
-        coef_data=storage.coef_data,
-        coef_start=storage.coef_start,
-        candidate_coef_data=storage.candidate_coef_data,
-        iteration_callback=iteration_callback,
-    )
-    if not (
-        np.array_equal(ncoef, storage.elements["ncoef"])
-        and np.array_equal(nint, storage.elements["nint"])
-        and np.array_equal(starts, storage.coef_start)
-        and np.array_equal(capacities, storage.coef_capacity)
-    ):
-        raise RuntimeError(
-            "Fixed-order solve changed coefficient or integration layout"
-        )
-    return result
 
 
 @nb.njit(cache=CACHE)
@@ -479,8 +332,8 @@ def calculate_candidates(
         Array of elements
     fracture_struc_array : np.ndarray[fracture_dtype]
         Array of fractures
-    work_array : np.ndarray[dtype_work]
-        The work array
+    work_array : WorkArrays
+        Compact worker-owned solver state.
     max_error : float
         The maximum error
     nit : int
@@ -614,247 +467,6 @@ def element_solver(
     return cnt
 
 
-@nb.njit(cache=CACHE)
-def fixed_order_step(
-    elements,
-    fractures,
-    work,
-    max_error,
-    nit,
-    cnt_error,
-    damping,
-    coef_data=None,
-    coef_start=None,
-    candidate_coef_data=None,
-):
-    """The no-growth element_solver2 schedule, including its second commit."""
-    if not 1.0 > max_error:
-        return
-    calculate_candidates(
-        elements.size,
-        elements,
-        fractures,
-        work,
-        max_error,
-        nit,
-        cnt_error,
-        damping,
-        coef_data,
-        coef_start,
-        candidate_coef_data,
-    )
-    commit_coefficients(
-        elements, work, damping, coef_data, coef_start, candidate_coef_data
-    )
-    if nit >= 2:
-        work["set_zero"][:] = False
-        commit_coefficients(
-            elements, work, damping, coef_data, coef_start, candidate_coef_data
-        )
-
-
-@nb.njit(parallel=PARALLEL, cache=CACHE)
-def element_solver2(
-    num_elements,
-    element_struc_array,
-    fracture_struc_array,
-    work_array,
-    max_error,
-    nit,
-    cnt_error,
-    max_coef_ratio,
-    max_coef,
-    coef_increase,
-    damping,
-):
-    """
-    Solves the elements and updates the coefficients in the work array.
-    Parameters
-    ----------
-    num_elements : int
-        The number of elements
-    element_struc_array : np.ndarray[element_dtype]
-        Array of elements
-    fracture_struc_array : np.ndarray[fracture_dtype]
-        Array of fractures
-    work_array : np.ndarray[dtype_work]
-        The work array
-    max_error : float
-        The maximum error
-    nit : int
-        The number of iterations
-    cnt_error : int
-        The number of errors
-    max_coef_ratio : float
-        The coefficient ratio
-    max_coef : int
-        The maximum number of coefficients
-    coef_increase : int
-        The coefficient increase
-    damping : float
-        The damping factor for the solver (default 0.5)
-
-    Returns
-    -------
-    cnt : int
-        The number of elements that were solved
-    """
-    error = 1.0
-    nit_el = 0
-    while error > max_error and nit_el < 1:
-        nit_el += 1
-
-        # Solve the elements
-        if nit <= 2000000000000:
-            for _ in range(1):
-                element_solver(
-                    num_elements,
-                    element_struc_array,
-                    fracture_struc_array,
-                    work_array,
-                    max_error,
-                    nit,
-                    cnt_error,
-                    damping,
-                )
-
-        error, _id = get_error(element_struc_array)
-
-        ncc = 3  # Number of coefficients to check the ratio
-
-        # Get the coefficients from the work array
-        if nit < 2:
-            continue
-        for i in nb.prange(num_elements):
-            # TODO: check if I can use sum(coef) and look if the change in sum due to the last 3 is significant,
-            #  maybe also check if the error is continously increasing for an element (possibly track error history)
-            work_array[i]["set_zero"] = False
-            e = element_struc_array[i]
-            if e["_type"] == 2:  # Well
-                continue
-            coefs = e["coef"][: e["ncoef"]]
-            coef0 = np.mean(np.abs(coefs[1:ncc])) + 1e-30  # CHANGED
-            coef1 = np.max(np.abs(coefs[-ncc:]))
-            if coef0 == 0.0:
-                coef_ratio = 0.0
-            else:
-                coef_ratio = coef1 / coef0 * 0
-            if np.max(np.abs(coefs[1:2])) < max_error / 1e10:
-                coef_ratio = 0.0
-            if (
-                e["error"] > e["error_old"]
-                and e["error"] > e["error_old2"]
-                and e["error"] > max_error
-                and nit > 5
-            ):
-                work_array[i]["set_zero"] = True
-                work_array[i]["set_zero"] = False
-                coef_ratio = max_coef_ratio + 1.0
-            if (
-                np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc]) + 1e-30))
-                > max_coef_ratio
-                and e["error"] > max_error
-            ):
-                coef_ratio = max_coef_ratio + 1.0
-            cnt = 0
-
-            # Increase the number of coefficients if the ratio is too high
-            max_cnt = 1
-            while (
-                coef_ratio > max_coef_ratio
-                and e["ncoef"] < max_coef
-                and cnt < max_cnt
-                and nit > 1
-            ):
-                cnt += 1
-
-                e["ncoef"] = int(e["ncoef"] + coef_increase)
-                e["nint"] = e["ncoef"] * 2
-
-                mf.calc_thetas(e["nint"], e["_type"], e["thetas"][: e["nint"]])
-                work_array[i]["len_discharge_element"] = 0
-                mf.fill_exp_array(
-                    e["nint"], e["thetas"], work_array[i]["exp_array_m"], -1
-                )
-                mf.fill_exp_array(
-                    e["nint"], e["thetas"], work_array[i]["exp_array_p"], 1
-                )
-                mf.fill_z_integral(e, work_array[i])
-                # mf.get_dpsi_corr(e, fracture_struc_array, element_struc_array, work_array[i])
-
-                if e["_type"] == 0:  # Intersection
-                    hpc_intersection.solve(
-                        e, fracture_struc_array, element_struc_array, work_array[i]
-                    )
-                elif e["_type"] == 1:  # Bounding circle
-                    hpc_bounding_circle.solve(
-                        e, fracture_struc_array, element_struc_array, work_array[i]
-                    )
-                elif e["_type"] == 2:  # Well
-                    e["error"] = 0.0
-                elif e["_type"] == 3:  # Constant head line
-                    hpc_const_head_line.solve(
-                        e, fracture_struc_array, element_struc_array, work_array[i]
-                    )
-                elif e["_type"] == 4:  # Impermeable circle
-                    hpc_imp_object.solve_circle(
-                        e, fracture_struc_array, element_struc_array, work_array[i]
-                    )
-                elif e["_type"] == 5:  # Impermeable line
-                    hpc_imp_object.solve_line(
-                        e, fracture_struc_array, element_struc_array, work_array[i]
-                    )
-                coefs = work_array[i]["coef"][: e["ncoef"]]
-                coef0 = np.mean(np.abs(coefs[1:ncc])) + 1e-30
-                coef1 = np.max(np.abs(coefs[-ncc:]))
-                coef_ratio = coef1 / coef0
-                # if e["error"] > e["error_old"] and e["error"] > e["error_old2"] and e["error"] > max_error and nit > 5:
-                #    coef_ratio = max_coef_ratio + 1.0
-                if (
-                    np.abs(np.sum(coefs[-ncc:]) / (np.sum(coefs[:-ncc]) + 1e-30))
-                    > max_coef_ratio
-                ):
-                    coef_ratio = max_coef_ratio + 1.0
-                # The coefficients needs to be reset to zero if the number of coefficients is increased, otherwise the
-                # error might grow if the discharge are computed with faulty coefficients
-                if cnt == max_cnt:
-                    work_array[i]["set_zero"] = True
-                    work_array[i]["set_zero"] = False
-                # print(f"Element {e['_id']} of type {e['_type']} has been set to zero coefficients due to high coefficient ratio.")
-
-        for i in nb.prange(num_elements):
-            e = element_struc_array[i]
-            if work_array[i]["set_zero"]:
-                work_array[i]["coef"][: e["ncoef"]] = (
-                    work_array[i]["coef"][: e["ncoef"]] / 100.0 * 0
-                )
-                e["error_old"] = 1e30
-            # if e["_type"] == 0:  # Intersection
-            #    work_array[i]["coef"][: e["ncoef"]] = (
-            #            work_array[i]["coef"][: e["ncoef"]]* 0
-            #    )
-            e["coef"][: e["ncoef"]] = (
-                damping * work_array[i]["coef"][: e["ncoef"]]
-                + (1 - damping) * e["coef"][: e["ncoef"]]
-            )
-
-        # Solve the elements
-        if nit <= -2000:
-            for _ in range(1):
-                element_solver(
-                    num_elements,
-                    element_struc_array,
-                    fracture_struc_array,
-                    work_array,
-                    max_error,
-                    nit,
-                    cnt_error,
-                    damping,
-                )
-
-    return np.sum(work_array["set_zero"])
-
-
 def solve_discharge_matrix(
     fractures_struc_array,
     element_struc_array,
@@ -891,7 +503,7 @@ def solve_discharge_matrix(
     discharges_old : np.ndarray
         The old discharges
     z_int : np.ndarray
-        Selected-row quadrature, dense (2, selected, count) or padded legacy.
+        Selected-row quadrature, dense (2, selected, count).
     lu_matrix : scipy.sparse.linalg.splu
         The LU factorization of the discharge matrix
 
@@ -968,7 +580,7 @@ def pre_matrix_solve(
     head_matrix : np.ndarray[dtype_head_matrix]
         The head matrix
     z_int : np.ndarray
-        Selected-row quadrature, dense (2, selected, count) or padded legacy.
+        Selected-row quadrature, dense (2, selected, count).
 
     Returns
     -------
@@ -1108,7 +720,7 @@ def build_head_matrix(
     head_matrix : np.ndarray[dtype_head_matrix]
         The head matrix
     z_int : np.ndarray
-        Selected-row quadrature, dense (2, selected, count) or padded legacy.
+        Selected-row quadrature, dense (2, selected, count).
 
     Returns
     -------
@@ -1164,28 +776,6 @@ def build_head_matrix(
             head_matrix[j] = np.real(omega1) / frac1["t"] - np.real(omega) / frac0["t"]
         elif e["_type"] in [2, 3]:  # Well or Constant head line
             head_matrix[j] = e["phi"] - np.real(omega)
-
-
-def build_discharge_matrix(
-    fractures_struc_array,
-    element_struc_array,
-    discharge_elements,
-    discharge_int,
-    z_int,
-):
-    """Legacy record-based entry point; extract CSR once at this boundary."""
-    connectivity = connectivity_from_hpc(
-        fractures_struc_array, element_struc_array.size
-    )
-    return build_discharge_matrix_csr(
-        fractures_struc_array,
-        element_struc_array,
-        connectivity.ids,
-        connectivity.indptr,
-        np.ascontiguousarray(discharge_elements["_id"], dtype=np.int64),
-        discharge_int,
-        z_int,
-    )
 
 
 def build_discharge_matrix_csr(
@@ -1495,14 +1085,14 @@ def get_bnd_error(
         Array of fractures
     element_struc_array : np.ndarray[element_dtype]
         Array of elements
-    work_array : np.ndarray[dtype_work]
-        The work array
+    work_array : WorkArrays
+        Compact worker-owned solver state.
     discharge_int : int
         The number of integration points
     bnd_error : np.ndarray[dtype_head_matrix]
         The error matrix for the boundary conditions
     z_int : np.ndarray
-        All-element quadrature, dense (2, elements, count) or padded legacy.
+        All-element quadrature, dense (2, elements, count).
     nit : int
         The number of iterations
     max_error : float
@@ -1681,8 +1271,8 @@ def get_max_min_phi(
         The ids of the elements to check
     frac_id : int
         The id of the fracture to check
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        Runtime quadrature points for discharge elements.
     discharge_int : int
         The number of integration points
 
@@ -1868,19 +1458,14 @@ def compute_bnd_error(
     """
     num_elements = len(element_struc_array)
 
-    # Scratch arrays – work_array is zero-initialised;
-    # find_branch_cuts resets len_discharge_element itself.
-    if coef_data is not None:
-        work_array, z_int, _ = prepare_boundary_work(
-            fracture_struc_array,
-            element_struc_array,
-            discharge_int,
-            work,
-        )
-    else:
-        work_array = np.zeros(num_elements, dtype=dtype_work)
-        z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
-        get_z_int_array(z_int, element_struc_array, discharge_int)
+    if coef_data is None or coef_start is None:
+        raise ValueError("Boundary diagnostics require compact coefficient storage")
+    work_array, z_int, _ = prepare_boundary_work(
+        fracture_struc_array,
+        element_struc_array,
+        discharge_int,
+        work,
+    )
 
     max_error = float(constants["MAX_ERROR"])
     bnd_error = np.zeros([num_elements, 7], dtype=np.float64)
@@ -1898,7 +1483,7 @@ def compute_bnd_error(
         constants,
         coef_data,
         coef_start,
-        coef_data is not None,
+        True,
     )
 
     return bnd_error

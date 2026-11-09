@@ -11,7 +11,6 @@ import numba as nb
 import numpy as np
 import scipy as sp
 
-from andfn.element import MAX_ELEMENTS, MAX_NCOEF
 from andfn.hpc import (
     CACHE,
     PARALLEL,
@@ -27,34 +26,6 @@ from andfn.hpc import hpc_math_functions as mf
 from .hpc_error import error_work_record, selected_element
 from .hpc_quadrature import quadrature_row
 
-dtype_work = np.dtype(
-    [
-        ("phi", np.float64, MAX_NCOEF * 2),
-        ("psi", np.float64, MAX_NCOEF * 2),
-        ("coef", np.complex128, MAX_NCOEF),
-        ("coef0", np.complex128, MAX_NCOEF),
-        ("coef1", np.complex128, MAX_NCOEF),
-        ("coef_error", np.complex128, MAX_NCOEF),
-        ("a0_error", np.complex128),
-        ("old_coef", np.complex128, MAX_NCOEF),
-        ("dpsi", np.float64, MAX_NCOEF * 2),
-        ("error", np.float64),
-        ("integral", np.complex128, MAX_NCOEF * 2),
-        ("sign_array", np.int64, MAX_ELEMENTS),
-        ("discharge_element", np.int64, MAX_ELEMENTS),
-        ("element_pos", np.int64, MAX_ELEMENTS),
-        ("len_discharge_element", np.int64),
-        ("exp_array_m", np.complex128, MAX_NCOEF * 2),
-        ("exp_array_p", np.complex128, MAX_NCOEF * 2),
-        ("z_integral", np.complex128, MAX_NCOEF * 2),
-        ("set_zero", np.bool),
-    ]
-)
-
-dtype_z_arrays = np.dtype(
-    [("z0", complex, MAX_NCOEF * 2), ("z1", complex, MAX_NCOEF * 2)]
-)
-
 logger = logging.getLogger("andfn")
 
 
@@ -64,7 +35,6 @@ def solve_error(
     error_struc_array,
     discharge_int,
     constants,
-    ntype_elements,
     *,
     compact_state=None,
     iteration_callback=None,
@@ -85,9 +55,6 @@ def solve_error(
         The number of integration points
     constants : np.ndarray[constants_dtype]
         The constants for the solver and dfn.
-    ntype_elements : np.ndarray[int]
-        A dictionary with the number of elements of each type.
-
     Returns
     -------
     error_struc_array : np.ndarray[element_dtype]
@@ -107,21 +74,15 @@ def solve_error(
     from . import hpc_solve as main
     from .hpc_quadrature import allocate_quadrature
 
-    compact = compact_state is not None
-    discharge_elements = (
-        main.get_discharge_indices(compact_state.state.storage.elements)
-        if compact
-        else get_discharge_elements(error_struc_array)
+    if compact_state is None:
+        raise ValueError("Error solving requires compact error state")
+    discharge_elements = main.get_discharge_indices(
+        compact_state.state.storage.elements
     )
     num_elements = error_struc_array.size
-    work_array = (
-        compact_state.state.work
-        if compact
-        else np.zeros(num_elements, dtype=dtype_work)
-    )
-    work_array_org = None if compact else np.zeros(num_elements, dtype=dtype_work)
-    candidates = compact_state.state.storage.candidate_coef_data if compact else None
-    starts = compact_state.state.storage.coef_start if compact else None
+    work_array = compact_state.state.work
+    candidates = compact_state.state.storage.candidate_coef_data
+    starts = compact_state.state.storage.coef_start
     # head matrix
     size = discharge_elements.size + fracture_struc_array.size
     head_matrix = np.zeros(size)
@@ -130,19 +91,13 @@ def solve_error(
     )
     discharges_old = np.zeros(size)
     quadrature_start = time.perf_counter()
-    if compact:
-        z_int = allocate_quadrature(discharge_elements.size, discharge_int)
-        main.get_z_int_array(
-            z_int,
-            compact_state.state.storage.elements,
-            discharge_int,
-            discharge_elements,
-        )
-    else:
-        z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
-        get_z_int_array(z_int, discharge_elements, discharge_int)
-        z_int_error = np.zeros(num_elements, dtype=dtype_z_arrays)
-        get_z_int_array(z_int_error, error_struc_array, discharge_int)
+    z_int = allocate_quadrature(discharge_elements.size, discharge_int)
+    main.get_z_int_array(
+        z_int,
+        compact_state.state.storage.elements,
+        discharge_int,
+        discharge_elements,
+    )
     if timings is not None:
         timings["quadrature_seconds"] = time.perf_counter() - quadrature_start
 
@@ -150,24 +105,14 @@ def solve_error(
     logger.info("Building discharge matrix...")
     startdm = time.time()
     matrix_start = time.perf_counter()
-    discharge_matrix = (
-        main.build_discharge_matrix_csr(
-            fracture_struc_array,
-            compact_state.state.storage.elements,
-            fracture_struc_array.ids,
-            fracture_struc_array.indptr,
-            discharge_elements,
-            discharge_int,
-            z_int,
-        )
-        if compact
-        else build_discharge_matrix(
-            fracture_struc_array,
-            error_struc_array,
-            discharge_elements,
-            discharge_int,
-            z_int,
-        )
+    discharge_matrix = main.build_discharge_matrix_csr(
+        fracture_struc_array,
+        compact_state.state.storage.elements,
+        fracture_struc_array.ids,
+        fracture_struc_array.indptr,
+        discharge_elements,
+        discharge_int,
+        z_int,
     )
     logger.debug(f"Discharge matrix build time: {time.time() - startdm}")
 
@@ -183,24 +128,6 @@ def solve_error(
         e = error_struc_array[i]
         e["error_old"] = 1e30
         e["error"] = 1e30
-
-    # fill work array ex_array
-    for i in range(0 if compact else num_elements):
-        e = error_struc_array[i]
-        n = e["nint"]
-        mf.calc_thetas(n, e["_type"], e["thetas"][:n])
-        thetas = e["thetas"]
-        mf.fill_exp_array(n, thetas, work_array[i]["exp_array_m"], -1)
-        mf.fill_exp_array(n, thetas, work_array[i]["exp_array_p"], 1)
-        mf.fill_z_integral(e, work_array[i])
-    for i in range(0 if compact else num_elements):
-        e = element_struc_array[i]
-        n = e["nint"]
-        mf.calc_thetas(n, e["_type"], e["thetas"][:n])
-        thetas = e["thetas"]
-        mf.fill_exp_array(n, thetas, work_array_org[i]["exp_array_m"], -1)
-        mf.fill_exp_array(n, thetas, work_array_org[i]["exp_array_p"], 1)
-        mf.fill_z_integral(e, work_array_org[i])
 
     logger.info(f"Number of elements: {error_struc_array.size}")
     logger.info(f"Number of fractures: {fracture_struc_array.size}")
@@ -317,53 +244,22 @@ def solve_error(
         f"Solve time: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds\n"
     )
 
-    if compact:
-        for array in (
-            compact_state.state.storage.coef_data,
-            compact_state.state.storage.candidate_coef_data,
-            compact_state.state.storage.old_coef_data,
-            work_array.dpsi_corr,
-            compact_state.fractures.constants,
-            *(
-                error_struc_array.scalars[name]
-                for name in error_struc_array.scalars.dtype.names
-            ),
-        ):
-            if not np.all(np.isfinite(array)):
-                raise ValueError("Nonfinite compact error state")
-        if timings is not None:
-            timings["iterations"] = nit
-            timings["iteration_seconds"] = time.time() - start
-            timings["element_seconds"] = sum_timee
-        return error_struc_array, work_array
-    num_elements = element_struc_array.size
-
-    # Scratch arrays – work_array is zero-initialised;
-    # find_branch_cuts resets len_discharge_element itself.
-    work_array = np.zeros(num_elements, dtype=dtype_work)
-    z_int = np.zeros(num_elements, dtype=dtype_z_arrays)
-
-    # z_int is only used for intersection / well / const-head rows
-    get_z_int_array(z_int, error_struc_array, discharge_int)
-
-    """max_error = float(constants["MAX_ERROR"])
-    bnd_error = np.zeros((num_elements, 7), dtype=np.float64)
-
-    get_bnd_error(
-        num_elements,
-        fracture_struc_array,
-        element_struc_array,
-        error_struc_array,
-        work_array,
-        work_array_org,
-        discharge_int,
-        bnd_error,
-        z_int,
-    )"""
-
+    for array in (
+        compact_state.state.storage.coef_data,
+        compact_state.state.storage.candidate_coef_data,
+        compact_state.state.storage.old_coef_data,
+        work_array.dpsi_corr,
+        compact_state.fractures.constants,
+        *(
+            error_struc_array.scalars[name]
+            for name in error_struc_array.scalars.dtype.names
+        ),
+    ):
+        if not np.all(np.isfinite(array)):
+            raise ValueError("Nonfinite compact error state")
     if timings is not None:
         timings["iterations"] = nit
-        timings["iteration_seconds"] = solve_time
+        timings["iteration_seconds"] = time.time() - start
         timings["element_seconds"] = sum_timee
     return error_struc_array, work_array
 
@@ -399,8 +295,8 @@ def solve_discharge_matrix_error(
         The discharges to be solved
     discharges_old : np.ndarray
         The old discharges
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        Runtime-sized quadrature points for discharge elements.
     lu_matrix : scipy.sparse.linalg.splu
         The LU factorization of the discharge matrix
 
@@ -467,8 +363,8 @@ def pre_matrix_solve(
         The number of integration points
     head_matrix : np.ndarray[dtype_head_matrix]
         The head matrix
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        Runtime-sized quadrature points for discharge elements.
 
     Returns
     -------
@@ -583,8 +479,8 @@ def build_head_matrix(
         The number of integration points
     head_matrix : np.ndarray[dtype_head_matrix]
         The head matrix
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        Runtime-sized quadrature points for discharge elements.
 
     Returns
     -------
@@ -951,8 +847,8 @@ def element_solver_error(
         Array of elements to compute the error for
     fracture_struc_array : np.ndarray[fracture_dtype]
         Array of fractures
-    work_array : np.ndarray[dtype_work]
-        The work array
+    work_array : compact worker-owned solver state
+        Reusable solver scratch and caches.
     max_error : float
         The maximum error
     nit : int
@@ -1091,14 +987,14 @@ def get_bnd_error(
         Array of fractures
     element_struc_array : np.ndarray[element_dtype]
         Array of elements
-    work_array : np.ndarray[dtype_work]
-        The work array
+    work_array : compact worker-owned solver state
+        Reusable solver scratch and caches.
     discharge_int : int
         The number of integration points
     bnd_error : np.ndarray[dtype_head_matrix]
         The error matrix for the boundary conditions
-    z_int : np.ndarray[dtype_z_arrays]
-        The z arrays for the discharge elements
+    z_int : np.ndarray
+        Runtime-sized quadrature points for discharge elements.
     nit : int
         The number of iterations
     max_error : float

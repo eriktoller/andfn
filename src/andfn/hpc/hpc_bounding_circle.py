@@ -162,8 +162,8 @@ def solve(
         The array of fractures
     element_struc_array : np.ndarray[element_dtype]
         The array of elements
-    work_array : np.ndarray[dtype_work]
-        The work array
+    work_array : compact worker record
+        Solver scratch and caches for this element.
 
     Returns
     -------
@@ -217,8 +217,8 @@ def solve_error(
         The array of fractures
     element_struc_array : np.ndarray[element_dtype]
         The array of elements
-    work_array : np.ndarray[dtype_work]
-        The work array
+    work_array : compact worker record
+        Solver scratch and caches for this element.
 
     Returns
     -------

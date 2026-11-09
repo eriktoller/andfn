@@ -4,6 +4,12 @@ import numba as nb
 import numpy as np
 import pytest
 from benchmark_boundary import prepare as model
+from legacy_hpc_reference import (
+    dtype_work,
+    dtype_z_arrays,
+    element_dtype_hpc,
+    fracture_dtype_hpc,
+)
 
 from andfn.constants import Constants
 from andfn.hpc import hpc_adaptive as adaptive
@@ -106,30 +112,21 @@ def test_error_transitions_are_exact_and_normal_state_is_preserved(threads, caps
     previous = nb.get_num_threads()
     nb.set_num_threads(threads)
     try:
-        f, e, owner, fractures, constants = solved()
+        f, _e, owner, fractures, constants = solved()
         normal = {
             id(a): a.copy()
             for a in (*cw.state_arrays(owner.state).values(), *fractures)
         }
-        error = ce.prepare(owner, fractures)
-        legacy = e.copy()
-        legacy["coef"][:] = 0
+        errors = [ce.prepare(owner, fractures) for _ in range(2)]
         traces = [[], []]
-        reference_fractures = f.copy()
-        for index, (fs, ns, state, compact) in enumerate(
-            (
-                (reference_fractures, e.copy(), legacy, None),
-                (error.fractures, error.normal, error.elements, error),
-            )
-        ):
+        for index, error in enumerate(errors):
             es.solve_error(
-                fs,
-                ns,
-                state,
+                error.fractures,
+                error.normal,
+                error.elements,
                 8,
                 constants,
-                None,
-                compact_state=compact,
+                compact_state=error,
                 iteration_callback=lambda *args, index=index: traces[index].append(
                     snapshot(*args)
                 ),
@@ -155,10 +152,13 @@ def test_error_transitions_are_exact_and_normal_state_is_preserved(threads, caps
         output = capsys.readouterr().out
         assert "Warning: Impermeable circle not implemented yet. Skipping." in output
         assert "Warning: Impermeable line not implemented yet. Skipping." in output
+        error = errors[0]
         for i in range(f.size):
             for point in (1.3 + 0.7j, 0.7 + 0.2j):
                 np.testing.assert_array_equal(
-                    hf.calc_omega_error(reference_fractures[i], point, legacy),
+                    hf.calc_omega_error(
+                        errors[1].fractures[i], point, errors[1].elements
+                    ),
                     hf.calc_omega_error(error.fractures[i], point, error.elements),
                 )
     finally:
@@ -169,7 +169,6 @@ def test_public_compact_error_never_allocates_padded_records_and_repeats(monkeyp
     from types import SimpleNamespace
 
     from andfn.dfn import DFN
-    from andfn.element import element_dtype_hpc, fracture_dtype_hpc
 
     _f, _e, owner, fractures, constants = solved()
     dfn = DFN("compact-error", discharge_int=8)
@@ -192,8 +191,8 @@ def test_public_compact_error_never_allocates_padded_records_and_repeats(monkeyp
             if dtype is not None and np.dtype(dtype) in (
                 element_dtype_hpc,
                 fracture_dtype_hpc,
-                es.dtype_work,
-                es.dtype_z_arrays,
+                dtype_work,
+                dtype_z_arrays,
             ):
                 raise AssertionError("Padded error allocation")
             return allocator(*args, **kwargs)
@@ -202,8 +201,8 @@ def test_public_compact_error_never_allocates_padded_records_and_repeats(monkeyp
     dfn.solve_error()
     np.testing.assert_array_equal(first, dfn._compact_error.state.storage.coef_data)
     assert dfn.calc_error(1.3 + 0.7j, dfn.fractures[0]) == expected
-    assert dfn.elements_struc_array_hpc is None
-    assert dfn.fractures_struc_array_hpc is None
+    assert not hasattr(dfn, "elements_struc_array_hpc")
+    assert not hasattr(dfn, "fractures_struc_array_hpc")
     monkeypatch.setattr(np, "zeros", originals[0])
     monkeypatch.setattr(np, "empty", originals[1])
     points = np.array([0.1 + 0.2j])
@@ -229,10 +228,10 @@ def test_error_payload_and_results_are_independent_of_unused_storage_maxima(
     results = []
     normal_ids = set(cw.state_arrays(owner.state)) | {id(a) for a in fractures}
     for m, n in ((200, 500), (500, 5000), (1000, 5000)):
-        monkeypatch.setattr(element, "MAX_NCOEF", m)
-        monkeypatch.setattr(element, "MAX_ELEMENTS", n)
-        monkeypatch.setattr(es, "MAX_NCOEF", m)
-        monkeypatch.setattr(es, "MAX_ELEMENTS", n)
+        monkeypatch.setattr(element, "MAX_NCOEF", m, raising=False)
+        monkeypatch.setattr(element, "MAX_ELEMENTS", n, raising=False)
+        monkeypatch.setattr(es, "MAX_NCOEF", m, raising=False)
+        monkeypatch.setattr(es, "MAX_ELEMENTS", n, raising=False)
         error = ce.prepare(owner, fractures)
         es.solve_error(
             error.fractures,
@@ -240,7 +239,6 @@ def test_error_payload_and_results_are_independent_of_unused_storage_maxima(
             error.elements,
             8,
             constants,
-            None,
             compact_state=error,
         )
         arrays = {
@@ -319,7 +317,6 @@ def test_error_preserves_overcapacity_integration_layout():
             error.elements,
             8,
             constants,
-            None,
             compact_state=error,
         )
     np.testing.assert_array_equal(
@@ -332,73 +329,49 @@ def test_public_normal_error_postprocessing_and_failed_publication(monkeypatch):
     from andfn import dfn as dfn_module
     from andfn.dfn import DFN
 
-    models = []
-    for compact in (False, True):
-        fracture = Fracture(
-            "f",
-            1.0,
-            radius=4.0,
-            center=np.zeros(3),
-            normal=np.array([0.0, 0.0, 1.0]),
-            ncoef=8,
-            nint=16,
-            aperture=1.0,
-        )
-        for x, head in ((-2.0, 10.0), (2.0, 8.0)):
-            ConstantHeadLine(
-                str(x), np.array([x - 0.1j, x + 0.1j]), head, fracture, 8, 16
-            )
-        dfn = DFN("normal-and-error", discharge_int=8, MAX_ITERATIONS=6)
-        dfn.add_fracture(fracture)
-        dfn.check_connectivity(compact=compact)
-        dfn.solve(compact=compact)
-        if compact:
-            before = {
-                key: a.copy()
-                for key, a in cw.state_arrays(dfn._compact_owner.state).items()
-            }
-            normal_head = dfn.calc_head(1.3 + 0.7j, fracture)
-            normal_discharge = dfn.get_dfn_discharge()
-            normal_constants = dfn._compact_fractures.metadata.copy()
-        dfn.solve_error()
-        if compact:
-            for key, a in cw.state_arrays(dfn._compact_owner.state).items():
-                np.testing.assert_array_equal(a, before[key])
-            np.testing.assert_array_equal(
-                dfn._compact_fractures.metadata, normal_constants
-            )
-            assert dfn.calc_head(1.3 + 0.7j, fracture) == normal_head
-            assert dfn.get_dfn_discharge() == normal_discharge
-        models.append(dfn)
-    legacy, compact = models
+    fracture = Fracture(
+        "f",
+        1.0,
+        radius=4.0,
+        center=np.zeros(3),
+        normal=np.array([0.0, 0.0, 1.0]),
+        ncoef=8,
+        nint=16,
+        aperture=1.0,
+    )
+    for x, head in ((-2.0, 10.0), (2.0, 8.0)):
+        ConstantHeadLine(str(x), np.array([x - 0.1j, x + 0.1j]), head, fracture, 8, 16)
+    dfn = DFN("normal-and-error", discharge_int=8, MAX_ITERATIONS=6)
+    dfn.add_fracture(fracture)
+    dfn.check_connectivity()
+    dfn.solve()
+    before = {
+        key: a.copy() for key, a in cw.state_arrays(dfn._compact_owner.state).items()
+    }
+    normal_head = dfn.calc_head(1.3 + 0.7j, fracture)
+    normal_discharge = dfn.get_dfn_discharge()
+    normal_constants = dfn._compact_fractures.metadata.copy()
+    dfn.solve_error()
+    for key, a in cw.state_arrays(dfn._compact_owner.state).items():
+        np.testing.assert_array_equal(a, before[key])
+    np.testing.assert_array_equal(dfn._compact_fractures.metadata, normal_constants)
+    assert dfn.calc_head(1.3 + 0.7j, fracture) == normal_head
+    assert dfn.get_dfn_discharge() == normal_discharge
     for point in (1.3 + 0.7j, 0.7 + 0.2j):
-        reference = legacy.calc_error(point, legacy.fractures[0])
-        actual = compact.calc_error(point, compact.fractures[0])
-        assert np.isfinite(reference) and np.isfinite(actual)
-        np.testing.assert_array_equal(actual, reference)
+        assert np.isfinite(dfn.calc_error(point, dfn.fractures[0]))
     points = np.array([0.1 + 0.2j, 0.5 + 0.3j])
     for heads in (False, True):
-        reference = hf.get_errors(
-            legacy.fractures_struc_array_hpc,
-            legacy.error_structured_array,
+        values = hf.get_errors(
+            dfn._compact_error.fractures,
+            dfn._compact_error.elements,
             points,
             heads=heads,
         )
-        actual = hf.get_errors(
-            compact._compact_error.fractures,
-            compact._compact_error.elements,
-            points,
-            heads=heads,
-        )
-        for a, b in zip(actual, reference):
-            assert np.all(np.isfinite(a)) and np.all(np.isfinite(b))
-            np.testing.assert_array_equal(a, b)
-    np.testing.assert_array_equal(
-        compact.check_boundary_conditions(8)[0],
-        legacy.check_boundary_conditions(8)[0],
-    )
-    published = compact._compact_error
-    output = compact.error_structured_array
+        assert all(np.isfinite(a).all() for a in values)
+    boundary, _ = dfn.check_boundary_conditions(8)
+    assert np.isfinite(boundary).all()
+    published = dfn._compact_error
+    output = dfn.error_structured_array
 
     def fail(*args, **kwargs):
         args[2].scalars["q"][:] = np.nan
@@ -406,13 +379,10 @@ def test_public_normal_error_postprocessing_and_failed_publication(monkeypatch):
 
     monkeypatch.setattr(dfn_module, "hpc_solve_error", fail)
     with pytest.raises(ValueError, match="Injected"):
-        compact.solve_error()
-    assert compact._compact_error is published
-    assert compact.error_structured_array is output
-    assert compact.calc_error(1.3 + 0.7j, compact.fractures[0]) == legacy.calc_error(
-        1.3 + 0.7j, legacy.fractures[0]
-    )
-    compact.reset()
-    assert compact._compact_owner is None
-    assert compact._compact_error is None
-    assert compact.error_structured_array is None
+        dfn.solve_error()
+    assert dfn._compact_error is published
+    assert dfn.error_structured_array is output
+    dfn.reset()
+    assert dfn._compact_owner is None
+    assert dfn._compact_error is None
+    assert dfn.error_structured_array is None

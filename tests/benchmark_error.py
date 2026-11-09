@@ -1,16 +1,18 @@
-"""Phase 7 paired error timings and unique NumPy payload accounting."""
+"""Compact error-solver timings and unique NumPy payload accounting."""
 
 import argparse
 import contextlib
 import json
 import logging
 import os
+from itertools import pairwise
 from time import perf_counter
 
 import numba as nb
 import numpy as np
 from benchmark_boundary import prepare as model
 from benchmark_quadrature import memory_cases
+from legacy_hpc_reference import dtype_work, dtype_z_arrays
 
 from andfn.constants import Constants
 from andfn.hpc import hpc_error as ce
@@ -50,8 +52,11 @@ def memory():
     for count in (128, 1024, 10000):
         f, e, owner, fractures = prepare(count)
         normal = {**cw.state_arrays(owner.state), **{id(a): a for a in fractures}}
+        normal_ids = {id(array) for array in normal.values()}
         error = ce.prepare(owner, fractures)
-        private = {key: a for key, a in arrays(error).items() if key not in normal}
+        private = {
+            key: array for key, array in arrays(error).items() if key not in normal_ids
+        }
         work, storage = error.state.work, error.state.storage
         control = controls[count]
         sparse = sum(
@@ -88,7 +93,7 @@ def memory():
         branch_temporary = error.branch_stats["branch_count_temporary_numpy_payload"]
         # Bound host finite-check expressions (one family at a time).
         finite_temporary = max(storage.coef_data.size, work.thetas.size, count * 5)
-        legacy_normal = e.nbytes + f.nbytes + count * es.dtype_work.itemsize
+        legacy_normal = e.nbytes + f.nbytes + count * dtype_work.itemsize
         report[count] = {
             "normal_state": normal_bytes,
             "error_steady": owned,
@@ -120,17 +125,17 @@ def memory():
             + control["discharge_rhs_and_history_vector_bytes"],
             "legacy_error_records": e.nbytes,
             "legacy_selected_record_copy": selected * e.dtype.itemsize,
-            "legacy_two_work_arrays": 2 * count * es.dtype_work.itemsize,
-            "legacy_two_quadrature_arrays": 2 * count * es.dtype_z_arrays.itemsize,
+            "legacy_two_work_arrays": 2 * count * dtype_work.itemsize,
+            "legacy_two_quadrature_arrays": 2 * count * dtype_z_arrays.itemsize,
             "legacy_final_dead_work_and_grid": count
-            * (es.dtype_work.itemsize + es.dtype_z_arrays.itemsize),
+            * (dtype_work.itemsize + dtype_z_arrays.itemsize),
             "retained_legacy_normal_elements_and_fractures": e.nbytes + f.nbytes,
-            "retained_legacy_normal_work": count * es.dtype_work.itemsize,
+            "retained_legacy_normal_work": count * dtype_work.itemsize,
             "legacy_total_simultaneous_envelope": legacy_normal
             + e.nbytes
             + selected * e.dtype.itemsize
-            + 3 * count * es.dtype_work.itemsize
-            + 2 * count * es.dtype_z_arrays.itemsize
+            + 3 * count * dtype_work.itemsize
+            + 2 * count * dtype_z_arrays.itemsize
             + sparse
             + control["discharge_rhs_and_history_vector_bytes"],
             "storage_only": False,
@@ -157,70 +162,48 @@ def memory():
 
 
 def measure(count, repeats):
-    f, e, owner, fractures = prepare(count)
+    _, _, owner, fractures = prepare(count)
     constants = Constants().constants.copy()
-    output = [[], []]
-    final = [None, None]
+    timings, results = [], []
     for sample in range(repeats + 1):
-        for mode in (0, 1) if sample % 2 == 0 else (1, 0):
-            timing = {}
-            fs = f.copy() if not mode else None
-            start = perf_counter()
-            if mode:
-                error = ce.prepare(owner, fractures)
-                timing["state_preparation_seconds"] = perf_counter() - start
-                timing["branch_seconds"] = sum(
-                    error.branch_stats.get(key, 0)
-                    for key in (
-                        "branch_direct_seconds",
-                        "branch_repack_seconds",
-                        "branch_reconstruction_seconds",
-                    )
-                )
-                es.solve_error(
-                    error.fractures,
-                    error.normal,
-                    error.elements,
-                    8,
-                    constants,
-                    None,
-                    compact_state=error,
-                    timings=timing,
-                )
-            else:
-                source, values = e, e.copy()
-                values["coef"][:] = 0
-                timing["state_preparation_seconds"] = perf_counter() - start
-                es.solve_error(fs, source, values, 8, constants, None, timings=timing)
-            timing["total_seconds"] = perf_counter() - start
-            final[mode] = (
-                [error.elements[i]["coef"].copy() for i in range(count)]
-                if mode
-                else [row["coef"][: row["ncoef"]].copy() for row in values]
+        timing = {}
+        start = perf_counter()
+        error = ce.prepare(owner, fractures)
+        timing["state_preparation_seconds"] = perf_counter() - start
+        timing["branch_seconds"] = sum(
+            error.branch_stats.get(key, 0)
+            for key in (
+                "branch_direct_seconds",
+                "branch_repack_seconds",
+                "branch_reconstruction_seconds",
             )
-            start = perf_counter()
-            if mode:
-                hf.get_errors(error.fractures, error.elements, np.array([1.3 + 0.7j]))
-            else:
-                hf.get_errors(fs, values, np.array([1.3 + 0.7j]))
-            timing["postprocessing_seconds"] = perf_counter() - start
-            if sample:
-                output[mode].append(timing)
-    for a, b in zip(*final):
-        assert np.all(np.isfinite(a)) and np.all(np.isfinite(b))
-        np.testing.assert_array_equal(a, b)
-    result = {
-        key: {
-            name: float(np.median([value[name] for value in values]))
-            for name in values[0]
-        }
-        for key, values in zip(("legacy", "compact"), output)
+        )
+        es.solve_error(
+            error.fractures,
+            error.normal,
+            error.elements,
+            8,
+            constants,
+            compact_state=error,
+            timings=timing,
+        )
+        timing["total_seconds"] = perf_counter() - start
+        results.append([error.elements[i]["coef"].copy() for i in range(count)])
+        post_start = perf_counter()
+        hf.get_errors(error.fractures, error.elements, np.array([1.3 + 0.7j]))
+        timing["postprocessing_seconds"] = perf_counter() - post_start
+        if sample:
+            timings.append(timing)
+    for a, b in pairwise(results):
+        for x, y in zip(a, b):
+            np.testing.assert_array_equal(x, y)
+    return {
+        "compact": {
+            name: float(np.median([value[name] for value in timings]))
+            for name in timings[0]
+        },
+        "repeatability_exact": True,
     }
-    result["ratio"] = (
-        result["compact"]["total_seconds"] / result["legacy"]["total_seconds"]
-    )
-    result["exact"] = True
-    return result
 
 
 def main():

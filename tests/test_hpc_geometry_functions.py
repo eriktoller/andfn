@@ -1,6 +1,6 @@
 import numpy as np
+from legacy_hpc_reference import fracture_dtype_hpc
 
-from andfn.element import fracture_dtype_hpc
 from andfn.hpc import hpc_geometry_functions as hgf
 
 

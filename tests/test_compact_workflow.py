@@ -5,6 +5,15 @@ from types import SimpleNamespace
 import numba as nb
 import numpy as np
 import pytest
+from legacy_hpc_reference import (
+    adaptive_from_hpc,
+    connectivity_from_hpc,
+    dtype_work,
+    dtype_z_arrays,
+    element_dtype_hpc,
+    fracture_dtype_hpc,
+    fracture_metadata_from_hpc,
+)
 from test_hpc_coefficients import network
 
 from andfn.constants import Constants
@@ -15,7 +24,6 @@ from andfn.hpc import hpc_fracture as hf
 from andfn.hpc import hpc_solve as hs
 from andfn.hpc import hpc_work as cw
 from andfn.hpc.hpc_connectivity import FractureArrays
-from andfn.storage import connectivity_from_hpc, fracture_metadata_from_hpc
 
 
 def objects():
@@ -53,17 +61,19 @@ def bundle(fractures, elements):
 @pytest.mark.parametrize("count", [1, 8, 100, 401])
 def test_boundary_exact_and_persistent_state_unchanged(count):
     f, e = network()
-    owner = adaptive.adaptive_from_hpc(e)
+    owner = adaptive_from_hpc(e)
     storage = owner.state.storage
     fractures = bundle(f, e)
     before = {key: value.copy() for key, value in cw.state_arrays(owner.state).items()}
     constants = Constants().constants
-    if count <= hs.MAX_NCOEF * 2:
-        expected = hs.compute_bnd_error(f, e, count, constants)
-    else:
-        expected = hs.compute_bnd_error(
-            f, storage.elements, count, constants, storage.coef_data, storage.coef_start
-        )
+    expected = hs.compute_bnd_error(
+        fractures,
+        storage.elements,
+        count,
+        constants,
+        storage.coef_data,
+        storage.coef_start,
+    )
     result = hs.compute_bnd_error(
         fractures,
         storage.elements,
@@ -94,7 +104,7 @@ def test_direct_consolidation_matches_legacy_logical_state():
     fs, es = objects()
     owner, fractures = compact.consolidate(es, fs)
     f, e = network()
-    expected = adaptive.adaptive_from_hpc(e)
+    expected = adaptive_from_hpc(e)
     for name in owner.state.storage.elements.dtype.names:
         np.testing.assert_array_equal(
             owner.state.storage.elements[name], expected.state.storage.elements[name]
@@ -117,7 +127,7 @@ def test_compiled_fracture_extent_is_metadata_size_not_tuple_arity(copies):
     from benchmark_fixed_order import fixture
 
     f, e = fixture(copies)
-    owner = adaptive.adaptive_from_hpc(e)
+    owner = adaptive_from_hpc(e)
     storage = owner.state.storage
     fractures = bundle(f, e)
     expected = hf.get_flow_nets(f, 2, 2, e)
@@ -162,11 +172,12 @@ def test_csr_solver_and_evaluations_match_legacy_fractures_exactly(threads):
     nb.set_num_threads(threads)
     try:
         f, e = network()
-        owners = [adaptive.adaptive_from_hpc(e) for _ in range(2)]
+        owners = [adaptive_from_hpc(e) for _ in range(2)]
         constants = Constants().constants.copy()
         constants["MAX_ITERATIONS"] = 6
-        for owner, fractures in zip(owners, (f, bundle(f, e))):
-            adaptive.solve_adaptive(owner, fractures, 8, constants)
+        compact_fractures = bundle(f, e)
+        for owner in owners:
+            adaptive.solve_adaptive(owner, compact_fractures, 8, constants)
         a, b = owners
         for name in a.state.storage.elements.dtype.names:
             np.testing.assert_array_equal(
@@ -204,14 +215,13 @@ def test_public_workflow_does_not_allocate_legacy_records(monkeypatch):
         raise AssertionError("Legacy consolidation entered compact workflow")
 
     monkeypatch.setattr(dfn, "consolidate_dfn", forbidden)
-    dfn.solve(compact=True)
+    dfn.solve()
     dfn.check_boundary_conditions(8)
     for evaluate in (dfn.calc_head, dfn.calc_w, dfn.calc_velocity):
         evaluate(1.3 + 0.7j, fs[0])
     dfn.fractures, dfn.elements = objects()
     allocators = (np.zeros, np.empty)
-    legacy_dtypes = (hs.dtype_work, hs.dtype_z_arrays)
-    from andfn.element import element_dtype_hpc, fracture_dtype_hpc
+    legacy_dtypes = (dtype_work, dtype_z_arrays)
 
     for name, original in zip(("zeros", "empty"), allocators):
 
@@ -226,7 +236,7 @@ def test_public_workflow_does_not_allocate_legacy_records(monkeypatch):
             return _original(*args, **kwargs)
 
         monkeypatch.setattr(np, name, guarded)
-    dfn.solve(compact=True)
+    dfn.solve()
     errors, index = dfn.check_boundary_conditions(8)
     assert errors.shape == (len(es), 7)
     assert index == np.argmax(errors[:, 0])
@@ -239,9 +249,9 @@ def test_public_workflow_does_not_allocate_legacy_records(monkeypatch):
     assert heads.shape == (2, 1)
     assert points.shape == (2, 1, 3)
     assert np.isfinite(dfn.get_dfn_discharge())
-    dfn.unconsolidate_dfn(hpc=True)
-    assert dfn.elements_struc_array_hpc is None
-    assert dfn.fractures_struc_array_hpc is None
+    dfn.unconsolidate_dfn()
+    assert dfn.elements
+    assert dfn.fractures
 
 
 def test_storage_constants_do_not_affect_compact_payload_or_results(monkeypatch):
@@ -250,10 +260,10 @@ def test_storage_constants_do_not_affect_compact_payload_or_results(monkeypatch)
     results = []
     constants = Constants().constants.copy()
     for nc, ne in ((200, 500), (500, 5000), (1000, 5000)):
-        monkeypatch.setattr(element, "MAX_NCOEF", nc)
-        monkeypatch.setattr(element, "MAX_ELEMENTS", ne)
-        monkeypatch.setattr(hs, "MAX_NCOEF", nc)
-        monkeypatch.setattr(hs, "MAX_ELEMENTS", ne)
+        monkeypatch.setattr(element, "MAX_NCOEF", nc, raising=False)
+        monkeypatch.setattr(element, "MAX_ELEMENTS", ne, raising=False)
+        monkeypatch.setattr(hs, "MAX_NCOEF", nc, raising=False)
+        monkeypatch.setattr(hs, "MAX_ELEMENTS", ne, raising=False)
         fs, es = objects()
         owner, fractures = compact.consolidate(es, fs)
         storage = owner.state.storage
@@ -282,7 +292,7 @@ def test_storage_constants_do_not_affect_compact_payload_or_results(monkeypatch)
 
 def test_boundary_overflow_uses_actual_grid_and_does_not_change_solver(monkeypatch):
     f, e = network()
-    owner = adaptive.adaptive_from_hpc(e)
+    owner = adaptive_from_hpc(e)
     storage = owner.state.storage
     before = {key: value.copy() for key, value in cw.state_arrays(owner.state).items()}
     original = hs.boundary_work
@@ -301,7 +311,7 @@ def test_boundary_overflow_uses_actual_grid_and_does_not_change_solver(monkeypat
     )
     assert stats["branch_overflow_elements"] > 0
     assert stats["branch_repacks"] == 1
-    legacy = np.zeros(e.size, dtype=hs.dtype_work)
+    legacy = np.zeros(e.size, dtype=dtype_work)
     for i in np.flatnonzero(e["_type"] == 1):
         hs.mf.find_branch_cuts(e[i], coordinates[0, i], f, e, legacy[i], 32)
         row = cw.work_record(work, i)
@@ -313,69 +323,83 @@ def test_boundary_overflow_uses_actual_grid_and_does_not_change_solver(monkeypat
         np.testing.assert_array_equal(value, before[key])
 
 
-def test_actual_public_model_matches_legacy_and_compact_postprocessing():
+def test_actual_public_model_uses_default_compact_postprocessing():
     from andfn import ConstantHeadLine, Fracture
 
-    models = []
-    for is_compact in (False, True):
-        fracture = Fracture(
-            "f",
-            1.0,
-            radius=4.0,
-            center=np.zeros(3),
-            normal=np.array([0.0, 0.0, 1.0]),
-            ncoef=8,
-            nint=16,
-            aperture=1.0,
-        )
-        for x, head in ((-2.0, 10.0), (2.0, 8.0)):
-            ConstantHeadLine(
-                str(x), np.array([x - 0.1j, x + 0.1j]), head, fracture, 8, 16
-            )
-        dfn = DFN("real", discharge_int=8, MAX_ITERATIONS=6)
-        dfn.add_fracture(fracture)
-        dfn.check_connectivity(compact=is_compact)
-        dfn.solve(compact=is_compact)
-        models.append(dfn)
-    legacy, compact_dfn = models
-    f = legacy.fractures[0]
+    fracture = Fracture(
+        "f",
+        1.0,
+        radius=4.0,
+        center=np.zeros(3),
+        normal=np.array([0.0, 0.0, 1.0]),
+        ncoef=8,
+        nint=16,
+        aperture=1.0,
+    )
+    for x, head in ((-2.0, 10.0), (2.0, 8.0)):
+        ConstantHeadLine(str(x), np.array([x - 0.1j, x + 0.1j]), head, fracture, 8, 16)
+    dfn = DFN("real", discharge_int=8, MAX_ITERATIONS=6)
+    dfn.add_fracture(fracture)
+    dfn.check_connectivity()
+    dfn.solve()
+    f = dfn.fractures[0]
     points = np.array([0.1 + 0.2j, 0.5 + 0.3j])
     for fn in ("calc_head", "calc_w", "calc_velocity"):
         for point in points:
-            np.testing.assert_array_equal(
-                getattr(legacy, fn)(point, f),
-                getattr(compact_dfn, fn)(point, compact_dfn.fractures[0]),
-            )
-    np.testing.assert_array_equal(
-        legacy.check_boundary_conditions(8)[0],
-        compact_dfn.check_boundary_conditions(8)[0],
-    )
-    for a, b in zip(legacy._head_samples(points), compact_dfn._head_samples(points)):
-        np.testing.assert_array_equal(a, b)
-    state = compact_dfn._compact_owner.state.storage
+            assert np.isfinite(getattr(dfn, fn)(point, f))
+    boundary, index = dfn.check_boundary_conditions(8)
+    assert boundary.shape == (len(dfn.elements), 7)
+    assert 0 <= index < len(dfn.elements)
+    heads, sampled = dfn._head_samples(points)
+    assert heads.shape == (1, points.size)
+    assert sampled.shape == (1, points.size, 3)
+    state = dfn._compact_owner.state.storage
     args = (
-        compact_dfn._compact_fractures,
+        dfn._compact_fractures,
         2,
         2,
         state.elements,
         state.coef_data,
         state.coef_start,
     )
-    expected = hf.get_flow_nets(
-        legacy.fractures_struc_array_hpc, 2, 2, legacy.elements_struc_array_hpc
-    )
     actual = hf.get_flow_nets(*args)
-    for a, b in zip(expected, actual):
-        np.testing.assert_array_equal(a, b)
+    assert len(actual) == 2
+    assert all(np.isfinite(values).all() for values in actual)
 
 
 def test_compact_constructors_do_not_import_storage_maxima():
     import ast
     import inspect
 
-    from andfn.hpc import hpc_connectivity, hpc_quadrature
+    from andfn import element, fracture, storage
+    from andfn.hpc import (
+        hpc_adaptive,
+        hpc_compact,
+        hpc_connectivity,
+        hpc_error,
+        hpc_error_solve,
+        hpc_fracture,
+        hpc_quadrature,
+        hpc_solve,
+        hpc_work,
+    )
 
-    for module in (compact, cw, hpc_connectivity, hpc_quadrature):
+    for module in (
+        element,
+        fracture,
+        storage,
+        compact,
+        cw,
+        hpc_adaptive,
+        hpc_compact,
+        hpc_connectivity,
+        hpc_error,
+        hpc_error_solve,
+        hpc_fracture,
+        hpc_quadrature,
+        hpc_solve,
+        hpc_work,
+    ):
         tree = ast.parse(inspect.getsource(module))
         names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
         names.update(

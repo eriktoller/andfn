@@ -37,7 +37,9 @@ if __name__ == "__main__":
 
     dfn.check_connectivity()
 
-    dfn.set_kwargs(COEF_RATIO=0.001, MAX_ITERATIONS=30, MAX_NCOEF=200, MAX_ERROR=5e-4)
+    dfn.set_kwargs(
+        COEF_RATIO=0.001, MAX_ITERATIONS=30, MAX_COEFFICIENT_ORDER=200, MAX_ERROR=5e-4
+    )
 
     """
 

@@ -10,7 +10,6 @@ from andfn.element import (
     element_dtype,
     element_index_dtype,
     initiate_elements_array,
-    initiate_elements_array_hpc,
 )
 
 
@@ -54,18 +53,6 @@ def test_initiate_elements_array_defaults():
     assert np.isnan(arr["center"][0].imag)
     assert arr["thetas"][0].shape == (1,)
     assert np.isnan(arr["thetas"][0][0])
-
-
-def test_initiate_elements_array_hpc_defaults():
-    arr = initiate_elements_array_hpc()
-
-    assert arr.shape == (1,)
-    assert arr["_id"][0] == -1
-    assert np.isnan(arr["radius"][0])
-    assert np.all(arr["thetas"][0] == 0.0)
-    assert np.all(arr["coef"][0] == 0.0 + 0.0j)
-    assert np.all(np.isnan(arr["endpoints0"][0].real))
-    assert np.all(np.isnan(arr["endpoints0"][0].imag))
 
 
 def test_element_init_reset_set_id_and_str_repr():
@@ -147,39 +134,6 @@ def test_consolidate_into_writes_given_slot():
     assert struc["frac1"][1] == 4
     assert struc["q"][1] == pytest.approx(3.4)
     assert index["label"][1] == "E4"
-
-
-def test_consolidate_hpc_and_unconsolidate_hpc_roundtrip():
-    frac0 = _FracStub(_id=5)
-    frac1 = _FracStub(_id=6)
-    el = Element("E5", 12, 0, frac0=frac0)
-    el.frac1 = frac1
-    el.ncoef = 3
-    el.nint = 11
-    el.coef = np.array([1 + 2j, 3 + 4j, 5 + 6j], dtype=np.complex128)
-    el.old_coef = np.array([7 + 8j, 9 + 10j, 11 + 12j], dtype=np.complex128)
-    el.thetas = np.array([0.1, 0.2, 0.3], dtype=np.float64)
-    el.dpsi_corr = np.array([0.01, 0.02], dtype=np.float64)
-    el.q = 4.5
-    el.error = 0.03
-
-    struc, _ = el.consolidate_hpc()
-
-    assert struc["frac0"][0] == 5
-    assert struc["frac1"][0] == 6
-    assert np.allclose(struc["coef"][0][:3], el.coef)
-    assert np.allclose(struc["old_coef"][0][:3], el.old_coef)
-    assert np.allclose(struc["thetas"][0][:3], el.thetas)
-    assert np.allclose(struc["dpsi_corr"][0][:2], el.dpsi_corr)
-
-    restored = Element("tmp", 0, 0, frac0=_FracStub(_id=0))
-    restored.unconsolidate_hpc(struc[0], np.zeros(1, dtype=element_index_dtype)[0], [])
-
-    assert restored.ncoef == 3
-    assert restored.nint == 11
-    assert np.allclose(restored.coef, el.coef)
-    assert restored.q == pytest.approx(4.5)
-    assert restored.error == pytest.approx(0.03)
 
 
 def test_plot_line_type_uses_line_geometry(monkeypatch):

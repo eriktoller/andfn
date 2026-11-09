@@ -2,12 +2,16 @@
 
 import numpy as np
 import pytest
+from legacy_hpc_reference import (
+    adaptive_from_hpc,
+    dtype_work,
+    export_work,
+)
 from test_hpc_coefficients import network
 
 from andfn.hpc import hpc_adaptive as adaptive
 from andfn.hpc import hpc_branch as branch
 from andfn.hpc import hpc_math_functions as mf
-from andfn.hpc import hpc_solve as hs
 from andfn.hpc import hpc_work as cw
 
 
@@ -25,7 +29,7 @@ def assert_unchanged(state, before):
 
 def test_exact_count_pass_and_event_order_match_padded_reference():
     fractures, elements = network()
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
     state = owner.state
     ids = np.arange(elements.size, dtype=np.int64)
     counts = branch.count_events(
@@ -48,7 +52,7 @@ def test_exact_count_pass_and_event_order_match_padded_reference():
     for i, element in enumerate(elements):
         if element["_type"] not in (1, 4, 5):
             continue
-        legacy = np.zeros(1, dtype=hs.dtype_work)
+        legacy = np.zeros(1, dtype=dtype_work)
         mf.fill_exp_array(
             element["nint"], element["thetas"], legacy[0]["exp_array_p"], 1
         )
@@ -80,7 +84,7 @@ def test_exact_count_pass_and_event_order_match_padded_reference():
 
 def test_branch_preparation_failure_is_before_growth_publication(monkeypatch):
     fractures, elements = network()
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
     adaptive.adaptive_step(owner, fractures, 1e-12, 1, 0, -1.0, 12, 2, 0.5)
     observed = {}
 
@@ -104,12 +108,12 @@ def test_repeated_crossings_exceed_legacy_padding_and_keep_position_order():
     fractures, elements = network()
     elements["center"][4], elements["radius"][4] = 0, 1
     elements["center"][2] = 2 + 0.5j
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
     state = owner.state
     small = fractures.copy()
     small["nelements"] = 1
     small["elements"][:, 0] = 2
-    record = np.zeros(1, dtype=hs.dtype_work)
+    record = np.zeros(1, dtype=dtype_work)
     theta = np.empty(elements[4]["nint"])
     mf.calc_thetas(theta.size, elements[4]["_type"], theta)
     mf.fill_exp_array(theta.size, theta, record[0]["exp_array_p"], 1)
@@ -128,7 +132,7 @@ def test_repeated_crossings_exceed_legacy_padding_and_keep_position_order():
     mf.fill_exp_array(theta.size, theta, local["exp_array_p"], 1)
     mf.get_dpsi_corr(state.storage.elements[4], dense, state.storage.elements, local)
     assert local["len_discharge_element"] == 2 * repetitions
-    assert local["len_discharge_element"] > hs.dtype_work["sign_array"].shape[0]
+    assert local["len_discharge_element"] > dtype_work["sign_array"].shape[0]
     for name in cw.BRANCH_FIELDS:
         np.testing.assert_array_equal(
             local[name][: 2 * repetitions], np.repeat(record[0][name][:2], repetitions)
@@ -137,12 +141,12 @@ def test_repeated_crossings_exceed_legacy_padding_and_keep_position_order():
         adaptive.AdaptiveState(state.storage, prepared), finite=True
     )
     with pytest.raises(ValueError, match="exceed legacy"):
-        cw.export_work(prepared, hs.dtype_work, include_scratch=False)
+        export_work(prepared, dtype_work, include_scratch=False)
 
 
 def test_z_integral_is_retained_for_diagnostics_not_numerical_input():
     fractures, elements = network()
-    owners = [adaptive.adaptive_from_hpc(elements) for _ in range(2)]
+    owners = [adaptive_from_hpc(elements) for _ in range(2)]
     owners[1].state.work.z_integral[:] = 1234 + 56j
     for nit in range(1, 4):
         for owner in owners:
@@ -156,7 +160,7 @@ def test_z_integral_is_retained_for_diagnostics_not_numerical_input():
     assert not np.array_equal(a.work.z_integral, b.work.z_integral)
     assert (
         "z_integral"
-        in cw.export_work(a.work, hs.dtype_work, include_scratch=False).dtype.names
+        in export_work(a.work, dtype_work, include_scratch=False).dtype.names
     )
 
 
@@ -169,7 +173,7 @@ def test_adaptive_branch_repack_is_private_until_publication(fail):
     elements["coef"][4, 2:] = 0
     fractures["nelements"] = fractures.dtype["elements"].shape[0]
     fractures["elements"][:] = 2
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
     adaptive.adaptive_step(owner, fractures, 1e-12, 1, 0, -1.0, 4, 2, 0.5)
     old = owner.state
     old_branch = tuple(getattr(old.work, name) for name in cw.BRANCH_FIELDS)
@@ -194,8 +198,9 @@ def test_adaptive_branch_repack_is_private_until_publication(fail):
     else:
         adaptive.adaptive_step(owner, fractures, 1e-12, 2, 0, -1.0, 4, 2, 0.5)
         new = owner.state
-        assert new.work.len_discharge_element[4] == 1600
-        assert new.work.branch_capacity[4] >= 1600
+        expected_events = 2 * fractures["nelements"][0]
+        assert new.work.len_discharge_element[4] == expected_events
+        assert new.work.branch_capacity[4] >= expected_events
         for before, name in zip(old_branch, cw.BRANCH_FIELDS):
             assert getattr(new.work, name) is not before
         assert owner.batches[-1]["branch_repacks"] == 1

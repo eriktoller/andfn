@@ -68,10 +68,19 @@ It is all set to solve the DFN model., which we do using the following code. We 
 .. code-block:: python
 
     # Set solver parameters
-    dfn.set_kwargs(COEF_RATIO=0.001, MAX_ITERATIONS=30, MAX_NCOEF=200, MAX_ERROR=5e-4)
+    dfn.set_kwargs(COEF_RATIO=0.001, MAX_ITERATIONS=30, MAX_COEFFICIENT_ORDER=200, MAX_ERROR=5e-4)
 
     # Solve the DFN model
     dfn.solve()
+
+The solver uses compact storage automatically. Coefficients and integration
+caches grow from each element's logical requirements, fracture connectivity
+stores only actual relationships, and quadrature is allocated for the
+requested integration count. ``MAX_COEFFICIENT_ORDER`` controls adaptive
+numerical growth; it is not a storage size. Use ``dfn.solve_error()`` for the
+error solver and ``dfn.calc_error(z, fracture)`` to evaluate its results.
+Saved DFNs continue to contain logical element and fracture data; unused
+runtime allocation capacity is not persisted.
 
 The conefficients and discahrges are now save to the indivudual element and we can plot the results with the following code.
 

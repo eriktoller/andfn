@@ -3,20 +3,25 @@
 import numba as nb
 import numpy as np
 import pytest
+from legacy_hpc_reference import (
+    adaptive_from_hpc,
+    connectivity_from_hpc,
+    dtype_work,
+    fixed_order_from_hpc,
+    fixed_order_to_hpc,
+    fracture_metadata_from_hpc,
+)
 from test_hpc_connectivity import _network
 
 from andfn.constants import Constants
+from andfn.hpc import hpc_adaptive as adaptive
 from andfn.hpc import hpc_bounding_circle as bc
 from andfn.hpc import hpc_fracture as hf
 from andfn.hpc import hpc_math_functions as mf
 from andfn.hpc import hpc_solve as hs
 from andfn.hpc.hpc_coefficients import coefficient_view
-from andfn.storage import (
-    connectivity_from_hpc,
-    fixed_order_from_hpc,
-    fixed_order_to_hpc,
-    fracture_metadata_from_hpc,
-)
+from andfn.hpc.hpc_connectivity import FractureArrays
+from andfn.hpc.hpc_work import work_record
 
 RTOL = 1e-13
 ATOL = 1e-12
@@ -46,13 +51,23 @@ def network():
 
 
 def work_for(elements):
-    work = np.zeros(elements.size, dtype=hs.dtype_work)
+    work = np.zeros(elements.size, dtype=dtype_work)
     for i, e in enumerate(elements):
         mf.calc_thetas(e["nint"], e["_type"], e["thetas"][: e["nint"]])
         mf.fill_exp_array(e["nint"], e["thetas"], work[i]["exp_array_m"], -1)
         mf.fill_exp_array(e["nint"], e["thetas"], work[i]["exp_array_p"], 1)
         mf.fill_z_integral(e, work[i])
     return work
+
+
+def compact_work_for(elements, legacy_work):
+    owner = adaptive_from_hpc(elements)
+    for i, element in enumerate(elements):
+        record = work_record(owner.state.work, i)
+        nint = element["nint"]
+        for name in ("exp_array_m", "exp_array_p", "z_integral"):
+            record[name][:nint] = legacy_work[name][i, :nint]
+    return owner
 
 
 def logical(storage, data):
@@ -172,9 +187,9 @@ def test_scalar_vector_derivative_empty_one_and_slack(count):
 def test_candidates_are_separate_and_commit_preserves_operation_order(damping):
     f, e = network()
     work = work_for(e)
-    storage = fixed_order_from_hpc(e)
-    compact_work = work.copy()
-    compact_work["coef"][:] = 123456
+    owner = compact_work_for(e, work)
+    storage = owner.state.storage
+    compact_work = owner.state.work
     for i, n in enumerate(e["ncoef"]):
         start, cap = storage.coef_start[i], storage.coef_capacity[i]
         storage.candidate_coef_data[start + n : start + cap] = 1e99
@@ -195,7 +210,6 @@ def test_candidates_are_separate_and_commit_preserves_operation_order(damping):
         storage.candidate_coef_data,
     )
     np.testing.assert_array_equal(storage.coef_data, current)
-    np.testing.assert_array_equal(compact_work["coef"], 123456)
     assert_close(
         logical(storage, storage.candidate_coef_data),
         np.concatenate([w["coef"][:n] for w, n in zip(work, e["ncoef"])]),
@@ -216,55 +230,29 @@ def test_candidates_are_separate_and_commit_preserves_operation_order(damping):
     assert hs.commit_coefficients.nopython_signatures
 
 
-def test_fixed_step_matches_no_growth_adaptive_schedule():
-    f, e = network()
-    work = work_for(e)
-    storage = fixed_order_from_hpc(e)
-    compact_work = work.copy()
-    initial = e[["ncoef", "nint"]].copy()
-    # A huge ratio threshold disables growth without skipping the second commit.
-    for nit in range(1, 7):
-        hs.element_solver2(e.size, e, f, work, 1e-12, nit, 0, 1e100, 0, 0, 0.5)
-        hs.fixed_order_step(
-            storage.elements,
-            f,
-            compact_work,
-            1e-12,
-            nit,
-            0,
-            0.5,
-            storage.coef_data,
-            storage.coef_start,
-            storage.candidate_coef_data,
-        )
-        np.testing.assert_array_equal(e[["ncoef", "nint"]], initial)
-        assert_close(logical(storage, storage.coef_data), legacy_logical(e))
-        assert_close(storage.elements["error_coef"], e["error_coef"])
-
-
-def run_solver(compact, iterations=8, *, legacy_no_growth=False):
+def run_solver(_compact_reference, iterations=8, *, legacy_no_growth=False):
     fractures, elements = network()
-    storage = fixed_order_from_hpc(elements) if compact else None
+    owner = adaptive_from_hpc(elements)
+    storage = owner.state.storage
+    connectivity = connectivity_from_hpc(fractures, elements.size)
+    fractures = FractureArrays(
+        fracture_metadata_from_hpc(fractures),
+        connectivity.ids,
+        connectivity.indptr,
+    )
     constants = Constants().constants.copy()
     constants["MAX_ITERATIONS"] = iterations
     constants["MAX_ERROR"] = 1e-12
     constants["DAMPING"] = 0.5
-    if legacy_no_growth:
-        constants["MAX_NCOEF"] = 0
+    constants["MAX_COEFFICIENT_ORDER"] = 0
     history = []
 
     def observe(nit, e, f, work, q, error_q, cnt_error):
         np.testing.assert_array_equal(e["_id"], np.arange(elements.size))
         np.testing.assert_array_equal(e["ncoef"], [4, 5, 0, 6, 3, 7, 5, 0])
         np.testing.assert_array_equal(e["nint"], [8, 10, 2, 12, 6, 14, 10, 2])
-        coefficients = (
-            logical(storage, storage.coef_data) if compact else legacy_logical(e)
-        )
-        candidates = (
-            logical(storage, storage.candidate_coef_data)
-            if compact
-            else np.concatenate([w["coef"][:n] for w, n in zip(work, e["ncoef"])])
-        )
+        coefficients = logical(storage, storage.coef_data)
+        candidates = logical(storage, storage.candidate_coef_data)
         history.append(
             (
                 nit,
@@ -275,36 +263,34 @@ def run_solver(compact, iterations=8, *, legacy_no_growth=False):
                 e["error_coef"].copy(),
                 q.copy(),
                 error_q,
-                f["constant"].copy(),
+                f.metadata["constant"].copy(),
             )
         )
 
-    if compact:
-        hs.solve_fixed_order(
-            storage, fractures, 8, constants, iteration_callback=observe
-        )
-        result = storage.elements
-        kwargs = {"coef_data": storage.coef_data, "coef_start": storage.coef_start}
-    else:
-        hs.solve(
-            fractures,
-            elements,
-            8,
-            constants,
-            None,
-            fixed_order=not legacy_no_growth,
-            iteration_callback=observe,
-        )
-        result = elements
-        kwargs = {}
+    adaptive.solve_adaptive(owner, fractures, 8, constants, iteration_callback=observe)
+    result = storage.elements
+    kwargs = {"coef_data": storage.coef_data, "coef_start": storage.coef_start}
     boundary = hs.compute_bnd_error(fractures, result, 8, constants, **kwargs)
     heads = np.array(
         [
             [
-                hf.head_from_phi(f, hf.calc_omega(f, z, result, **kwargs).real)
+                hf.head_from_phi(
+                    f,
+                    hf.calc_omega(
+                        f,
+                        z,
+                        result,
+                        element_ids=connectivity.ids[
+                            connectivity.indptr[f["_id"]] : connectivity.indptr[
+                                f["_id"] + 1
+                            ]
+                        ],
+                        **kwargs,
+                    ).real,
+                )
                 for z in (1.3 + 0.7j, -1.2 + 0.8j)
             ]
-            for f in fractures
+            for f in fractures.metadata
         ]
     )
     # Match DFN.get_dfn_discharge: wells and head lines, excluding intersections.
@@ -312,17 +298,16 @@ def run_solver(compact, iterations=8, *, legacy_no_growth=False):
     return history, heads, boundary, discharge, storage
 
 
-def test_full_fixed_solve_iteration_equivalence_and_parallel_repeatability():
+def test_adaptive_solve_iteration_repeatability_across_threads():
     normal = nb.get_num_threads()
     configs = sorted({1, min(2, nb.config.NUMBA_NUM_THREADS), normal})
     try:
         reference = None
         for threads in configs:
             nb.set_num_threads(threads)
-            legacy = run_solver(False)
             compact = run_solver(True)
             repeat = run_solver(True)
-            for a, b in ((legacy, compact), (compact, repeat)):
+            for a, b in ((compact, repeat),):
                 assert len(a[0]) == len(b[0])
                 for left, right in zip(a[0], b[0]):
                     assert left[:2] == right[:2]
@@ -346,31 +331,14 @@ def test_full_fixed_solve_iteration_equivalence_and_parallel_repeatability():
         nb.set_num_threads(normal)
 
 
-def test_converged_compact_solve_matches_legacy_adaptive_with_growth_disabled():
-    normal = nb.get_num_threads()
-    try:
-        nb.set_num_threads(1)
-        legacy = run_solver(False, 100, legacy_no_growth=True)
-        compact = run_solver(True, 100)
-        assert len(legacy[0]) == len(compact[0]) < 100
-        assert legacy[0][-1][1] == compact[0][-1][1] == 2
-        for left, right in zip(legacy[0], compact[0]):
-            assert left[:2] == right[:2]
-            for x, y in zip(left[2:], right[2:]):
-                assert_close(x, y)
-        for x, y in zip(legacy[1:4], compact[1:4]):
-            assert_close(x, y)
-    finally:
-        nb.set_num_threads(normal)
-
-
 def test_payload_scales_with_capacity_and_rejects_aliasing():
     _, e = network()
     storage = fixed_order_from_hpc(e)
     assert "coef" not in storage.elements.dtype.names
     assert "old_coef" not in storage.elements.dtype.names
-    assert storage.elements.dtype["thetas"] == e.dtype["thetas"]
-    assert storage.elements.dtype["dpsi_corr"] == e.dtype["dpsi_corr"]
+    assert "thetas" not in storage.elements.dtype.names
+    assert "dpsi_corr" not in storage.elements.dtype.names
+    assert storage.coef_data.size == storage.coef_capacity.sum()
     for buffer in (
         storage.coef_data,
         storage.candidate_coef_data,
@@ -388,16 +356,27 @@ def test_empty_and_one_coefficient_candidates(count):
     f, e = network()
     e["ncoef"] = count
     work = work_for(e)
-    storage = fixed_order_from_hpc(e)
-    compact_work = work.copy()
-    hs.fixed_order_step(e, f, work, 1e-12, 2, 0, 0.5)
-    hs.fixed_order_step(
+    owner = compact_work_for(e, work)
+    storage = owner.state.storage
+    compact_work = owner.state.work
+    hs.calculate_candidates(e.size, e, f, work, 1e-12, 2, 0, 0.5)
+    hs.calculate_candidates(
+        e.size,
         storage.elements,
         f,
         compact_work,
         1e-12,
         2,
         0,
+        0.5,
+        storage.coef_data,
+        storage.coef_start,
+        storage.candidate_coef_data,
+    )
+    hs.commit_coefficients(e, work, 0.5)
+    hs.commit_coefficients(
+        storage.elements,
+        compact_work,
         0.5,
         storage.coef_data,
         storage.coef_start,
@@ -420,19 +399,3 @@ def test_explicit_export_is_independent_and_preserves_compatibility_fields():
             exported["old_coef"][i, :n], elements["old_coef"][i, :n]
         )
     assert not np.shares_memory(exported, storage.elements)
-
-
-def test_compact_buffers_cannot_enter_adaptive_solver():
-    fractures, elements = network()
-    storage = fixed_order_from_hpc(elements)
-    with pytest.raises(ValueError, match="fixed-order"):
-        hs.solve(
-            fractures,
-            storage.elements,
-            8,
-            Constants().constants,
-            None,
-            coef_data=storage.coef_data,
-            coef_start=storage.coef_start,
-            candidate_coef_data=storage.candidate_coef_data,
-        )

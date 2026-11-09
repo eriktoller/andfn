@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -198,45 +200,40 @@ def test_boundary_wrapper_methods_delegate_to_geometry(monkeypatch):
     assert imp_calls[0][0] == dfn.fractures
 
 
-def test_solve_calls_hpc_and_optional_unconsolidate(monkeypatch):
+def test_solve_uses_compact_adaptive_owner_and_optional_unconsolidate(monkeypatch):
     dfn = DFN("dfnH")
     calls = []
+    elements = np.zeros(2, dtype=np.int64)
+    storage = SimpleNamespace(
+        elements=elements,
+        coef_data=np.zeros(2, dtype=np.complex128),
+        coef_start=np.zeros(2, dtype=np.int64),
+    )
+    owner = SimpleNamespace(state=SimpleNamespace(storage=storage))
+    fractures = np.zeros(1, dtype=np.int64)
+    dfn.fractures = []
+    dfn.elements = []
+    dfn._ensure_compact_state = lambda: (
+        setattr(dfn, "_compact_owner", owner),
+        setattr(dfn, "_compact_fractures", fractures),
+    )
+    monkeypatch.setattr(DFN, "print_solver_constants", lambda self: None)
+    monkeypatch.setattr(DFN, "unconsolidate_dfn", lambda self: calls.append("un"))
+
+    from andfn.hpc import hpc_adaptive
 
     monkeypatch.setattr(
-        DFN,
-        "get_elements",
-        lambda self: (
-            setattr(self, "elements", [object()]),
-            setattr(self, "ntype_element", np.zeros(6, dtype=int)),
+        hpc_adaptive,
+        "solve_adaptive",
+        lambda actual_owner, actual_fractures, count, constants, **kwargs: calls.append(
+            ("solve", actual_owner, actual_fractures, count)
         ),
     )
 
-    def fake_consolidate(self, hpc=False):
-        self.fractures_struc_array_hpc = np.zeros(
-            1, dtype=np.dtype([("_id", np.int64)])
-        )
-        self.elements_struc_array_hpc = np.zeros(1, dtype=np.dtype([("_id", np.int64)]))
-
-    monkeypatch.setattr(DFN, "consolidate_dfn", fake_consolidate)
-    monkeypatch.setattr(DFN, "print_solver_constants", lambda self: None)
-    monkeypatch.setattr(
-        DFN, "unconsolidate_dfn", lambda self, hpc=False: calls.append(("un", hpc))
-    )
-
-    def fake_hpc_solve(fracs, elems, discharge_int, constants, ntype):
-        calls.append(("solve", discharge_int, len(elems)))
-        out = np.zeros(2, dtype=np.dtype([("x", np.float64)]))
-        out[0]["x"] = 1.0
-        out[1]["x"] = 2.0
-        return out, np.zeros(2, dtype=np.float64)
-
-    monkeypatch.setattr(dfn_mod, "hpc_solve", fake_hpc_solve)
-
     dfn.solve(unconsolidate=True)
 
-    assert calls[0][0] == "solve"
-    assert calls[1] == ("un", True)
-    assert dfn.elements_struc_array[0]["x"] == pytest.approx(1.0)
+    assert calls[0] == ("solve", owner, fractures, dfn.discharge_int)
+    assert calls[1] == "un"
 
 
 def test_check_boundary_conditions_paths(monkeypatch):
@@ -244,15 +241,24 @@ def test_check_boundary_conditions_paths(monkeypatch):
 
     assert dfn.check_boundary_conditions() is None
 
-    dfn.elements_struc_array = np.zeros(2, dtype=np.dtype([("dummy", np.int64)]))
-    dfn.fractures_struc_array_hpc = np.zeros(1, dtype=np.dtype([("dummy", np.int64)]))
+    elements = np.zeros(2, dtype=np.int64)
+    work = np.zeros(1, dtype=np.int64)
+    storage = SimpleNamespace(
+        elements=elements,
+        coef_data=np.zeros(2, dtype=np.complex128),
+        coef_start=np.zeros(2, dtype=np.int64),
+    )
+    dfn._compact_owner = SimpleNamespace(
+        state=SimpleNamespace(storage=storage, work=work)
+    )
+    dfn._compact_fractures = np.zeros(1, dtype=np.int64)
 
     bnd = np.zeros((2, 6), dtype=float)
     bnd[0, 0] = 0.1
     bnd[0, 1] = 1
     bnd[1, 0] = 0.3
     bnd[1, 1] = 2
-    monkeypatch.setattr(dfn_mod, "hpc_compute_bnd_error", lambda *args: bnd)
+    monkeypatch.setattr(dfn_mod, "hpc_compute_bnd_error", lambda *args, **kwargs: bnd)
 
     out, idx = dfn.check_boundary_conditions(n_points=8)
     assert np.array_equal(out, bnd)

@@ -8,8 +8,6 @@ import numba as nb
 import numpy as np
 from numba.extending import overload
 
-from andfn.storage import connectivity_from_hpc, fracture_metadata_from_hpc
-
 from . import (
     CACHE,
     hpc_bounding_circle,
@@ -499,29 +497,6 @@ def get_heads_csr(
             )
         gf.map_2d_to_3d(fractures[i], z, points[row])
     return heads, points
-
-
-def get_heads_from_hpc(fractures, elements, z_array, fracture_indices=None):
-    """Python compatibility boundary; build CSR/metadata once per evaluation."""
-    if fracture_indices is not None and (
-        not isinstance(fracture_indices, np.ndarray)
-        or fracture_indices.ndim != 1
-        or fracture_indices.dtype not in (np.dtype(np.int32), np.dtype(np.int64))
-        or not fracture_indices.flags.c_contiguous
-        or np.any(fracture_indices < 0)
-        or np.any(fracture_indices >= fractures.size)
-    ):
-        raise ValueError("Invalid fracture indices")
-    connectivity = connectivity_from_hpc(fractures, elements.size)
-    metadata = fracture_metadata_from_hpc(fractures)
-    return get_heads_csr(
-        metadata,
-        elements,
-        connectivity.ids,
-        connectivity.indptr,
-        z_array,
-        fracture_indices,
-    )
 
 
 @nb.njit(cache=CACHE)

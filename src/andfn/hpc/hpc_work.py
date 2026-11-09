@@ -1,4 +1,4 @@
-"""Sized compact main-solver work; legacy structured work is unchanged."""
+"""Capacity-sized solver work and worker-owned numerical scratch."""
 
 import operator
 from collections import namedtuple
@@ -496,66 +496,3 @@ def validate_work(work, ncoef, nint):
         work.sign_array.size,
         "branch events",
     )
-
-
-def import_work(work, legacy, elements):
-    """Explicit test/compatibility initialization, never used in iterations."""
-    for i, e in enumerate(elements):
-        target = work_record(work, i)
-        for name in FIELDS:
-            if name == "branch_valid":
-                target[name] = legacy["len_discharge_element"][i] != 0
-                continue
-            if name in scratch_fields(work):
-                if np.any(legacy[name][i] != 0):
-                    raise ValueError(
-                        "Nonzero scratch import requires element-owned diagnostic mode"
-                    )
-                continue
-            if name in ("thetas", "dpsi_corr"):
-                target[name][: e["nint"]] = e[name][: e["nint"]]
-            elif name in SCALAR_FIELDS:
-                target[name] = legacy[name][i]
-            else:
-                n = (
-                    e["ncoef"]
-                    if name in COEFFICIENT_FIELDS + ("integral",)
-                    else (
-                        legacy["len_discharge_element"][i]
-                        if name in BRANCH_FIELDS
-                        else e["nint"]
-                    )
-                )
-                if n > target[name].size:
-                    raise ValueError(
-                        "Imported live branch events exceed prepared capacity"
-                    )
-                target[name][:n] = legacy[name][i, :n]
-
-
-def export_work(work, dtype, *, include_scratch=True):
-    """Explicit padded diagnostic export; not a solver execution bridge."""
-    if include_scratch and scratch_fields(work):
-        raise ValueError(
-            "Worker scratch has no element history; use include_scratch=False or element-owned diagnostic mode"
-        )
-    result = np.zeros(work.set_zero.size, dtype=dtype)
-    for i in range(result.size):
-        record = work_record(work, i)
-        for name in dtype.names:
-            if name == "coef":
-                continue
-            if name in scratch_fields(work):
-                continue
-            if name in SCALAR_FIELDS:
-                result[name][i] = record[name]
-            else:
-                value = record[name]
-                if name in BRANCH_FIELDS:
-                    value = value[: record["len_discharge_element"]]
-                if value.size > result[name].shape[1]:
-                    raise ValueError(
-                        "Compact events exceed legacy diagnostic export capacity"
-                    )
-                result[name][i, : value.size] = value
-    return result

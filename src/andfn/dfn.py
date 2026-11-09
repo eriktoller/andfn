@@ -12,7 +12,6 @@ import os
 import time
 
 import h5py
-import numba as nb
 import numpy as np
 import pyvista as pv
 import scipy as sp
@@ -28,14 +27,10 @@ from .const_head import ConstantHeadLine
 from .constants import Constants, dtype_constants
 from .element import (
     ELEMENT_COLORS,
-    MAX_ELEMENTS,
-    MAX_NCOEF,
     element_dtype,
-    element_dtype_hpc,
     element_index_dtype,
     element_types,
     fracture_dtype,
-    fracture_dtype_hpc,
     fracture_index_dtype,
 )
 from .fracture import Fracture
@@ -55,11 +50,7 @@ from .hpc.hpc_fracture import (
 from .hpc.hpc_fracture import (
     get_flow_nets as hpc_get_flow_nets,
 )
-from .hpc.hpc_fracture import (
-    get_heads_from_hpc as hpc_get_heads,
-)
 from .hpc.hpc_solve import compute_bnd_error as hpc_compute_bnd_error
-from .hpc.hpc_solve import solve as hpc_solve
 from .impermeable_object import ImpermeableCircle, ImpermeableLine
 from .intersection import Intersection
 from .io import IO
@@ -234,107 +225,6 @@ def get_faces(pnts):
     return pv.PolyData(pnts).delaunay_2d().faces
 
 
-@nb.njit(parallel=True, cache=True)
-def consolidate_fractures_numba(
-    fracture_struc_array,
-    fracture_index_array,
-    ids,
-    tvals,
-    radii,
-    centers,
-    normals,
-    xvecs,
-    yvecs,
-    elements_ids,
-    nelements,
-    constants,
-):
-    nf = ids.shape[0]
-
-    for i in nb.prange(nf):
-        fracture_struc_array["_id"][i] = ids[i]
-        fracture_struc_array["t"][i] = tvals[i]
-        fracture_struc_array["radius"][i] = radii[i]
-        fracture_struc_array["center"][i] = centers[i]
-        fracture_struc_array["normal"][i] = normals[i]
-        fracture_struc_array["x_vector"][i] = xvecs[i]
-        fracture_struc_array["y_vector"][i] = yvecs[i]
-
-        n = nelements[i]
-        fracture_struc_array["elements"][i, :n] = elements_ids[i, :n]
-        fracture_struc_array["nelements"][i] = n
-        fracture_struc_array["constant"][i] = constants[i]
-
-        fracture_index_array["_id"][i] = ids[i]
-
-
-@nb.njit(parallel=True, cache=True)
-def consolidate_elements_numba(
-    elements_struc_array,
-    elements_index_array,
-    element_id,
-    element_type,
-    frac0,
-    frac1,
-    radius,
-    center,
-    head,
-    phi,
-    q,
-    ncoef,
-    nint,
-    error,
-    endpoints0,
-    endpoints1,
-    thetas,
-    coef,
-    old_coef,
-    dpsi_corr,
-):
-    """
-    Parallel consolidation of elements into structured arrays.
-    All inputs are Struct-of-Arrays (SoA).
-    """
-
-    ne = element_id.shape[0]
-
-    for i in nb.prange(ne):
-        # ---- scalar assignments ----
-        elements_struc_array["_id"][i] = element_id[i]
-        elements_struc_array["_type"][i] = element_type[i]
-        elements_struc_array["frac0"][i] = frac0[i]
-        elements_struc_array["frac1"][i] = frac1[i]
-        elements_struc_array["radius"][i] = radius[i]
-        elements_struc_array["center"][i] = center[i]
-        elements_struc_array["head"][i] = head[i]
-        elements_struc_array["phi"][i] = phi[i]
-        elements_struc_array["q"][i] = q[i]
-        elements_struc_array["ncoef"][i] = ncoef[i]
-        elements_struc_array["nint"][i] = nint[i]
-        elements_struc_array["error"][i] = error[i]
-
-        # ---- endpoints ----
-        elements_struc_array["endpoints0"][i, 0] = endpoints0[i, 0]
-        elements_struc_array["endpoints0"][i, 1] = endpoints0[i, 1]
-        elements_struc_array["endpoints1"][i, 0] = endpoints1[i, 0]
-        elements_struc_array["endpoints1"][i, 1] = endpoints1[i, 1]
-
-        # ---- coefficient arrays ----
-        nc = ncoef[i]
-
-        for k in range(nc):
-            elements_struc_array["coef"][i, k] = coef[i, k]
-            elements_struc_array["old_coef"][i, k] = old_coef[i, k]
-
-        for k in range(2 * nc):
-            elements_struc_array["thetas"][i, k] = thetas[i, k]
-            elements_struc_array["dpsi_corr"][i, k] = dpsi_corr[i, k]
-
-        # ---- index array (numeric only!) ----
-        elements_index_array["_id"][i] = element_id[i]  # element id
-        elements_index_array["_type"][i] = element_type[i]  # type
-
-
 class DFN(Constants, IO):
     def __init__(self, label, discharge_int=50, **kwargs):
         """
@@ -369,8 +259,6 @@ class DFN(Constants, IO):
         self.elements_index_array = None
         self.fractures_struc_array = None
         self.fractures_index_array = None
-        self.elements_struc_array_hpc = None
-        self.fractures_struc_array_hpc = None
         self._compact_owner = None
         self._compact_fractures = None
         self._compact_error = None
@@ -403,10 +291,9 @@ class DFN(Constants, IO):
             - SE_FACTOR: Shortening element length factor
             - MAX_ITERATIONS: Maximum number of iterations
             - MAX_ERROR: Maximum error
-            - MAX_NCOEF: Maximum number of coefficients
+            - MAX_COEFFICIENT_ORDER: Maximum coefficient order for adaptive growth
             - COEF_INCREASE: Coefficient increase factor
             - COEF_RATIO: Coefficient ratio
-            - MAX_ELEMENTS: Maximum number of elements
             - NCOEF: Number of coefficients
             - NINT: Number of integration points
             - NUM_THREADS: Number of threads to use for Numba (default -1 = use all available threads)
@@ -419,8 +306,16 @@ class DFN(Constants, IO):
         for key, value in kwargs.items():
             if key in dtype_constants.names:
                 self.change_constants(**{key: value})
+            elif key == "MAX_NCOEF":
+                self.change_constants(MAX_NCOEF=value)
+            elif key in ("MAX_ELEMENTS", "MAX_DISCHARGE_INT"):
+                logger.warning(
+                    "%s is obsolete; dynamic storage no longer uses this setting.",
+                    key,
+                )
                 continue
-            setattr(self, key, value)
+            else:
+                setattr(self, key, value)
 
     ####################################################################################################################
     #                      Load and save                                                                               #
@@ -450,9 +345,8 @@ class DFN(Constants, IO):
             )
             return
 
-        # Check if the elements and fractures have been consolidated
-        if self.elements_struc_array is None or self.fractures_struc_array is None:
-            self.consolidate_dfn()
+        self.unconsolidate_dfn()
+        self.consolidate_dfn()
 
         # Save the elements
         with h5py.File(f"{filename}", "w") as hf:
@@ -632,232 +526,33 @@ class DFN(Constants, IO):
             self.add_fracture(fracs)
             self.get_elements()
 
-    def consolidate_dfn2(self, hpc=False):
+    def consolidate_dfn(self):
+        """Build the logical object arrays used only by HDF5 persistence."""
         if self._compact_owner is not None:
-            self.unconsolidate_dfn(hpc=True)
-        # Check if the elements have been stored in the DFN
+            self.unconsolidate_dfn()
         if self.elements is None:
             self.get_elements()
-
-        # Consolidate elements
-        if hpc:
-            e_dtype = element_dtype_hpc
-            f_dtype = fracture_dtype_hpc
-        else:
-            e_dtype = element_dtype
-            f_dtype = fracture_dtype
-        elements_struc_array = np.empty(self.number_of_elements(), dtype=e_dtype)
-        elements_index_array = np.empty(
-            self.number_of_elements(), dtype=element_index_dtype
-        )
-
-        if hpc:
-            for i, e in enumerate(self.elements):
-                elements_struc_array[i], elements_index_array[i] = e.consolidate_hpc()
-        else:
-            for i, e in enumerate(self.elements):
-                elements_struc_array[i], elements_index_array[i] = e.consolidate()
-
-        # Consolidate fractures
-        fractures_struc_array = np.empty(self.number_of_fractures, dtype=f_dtype)
-        fractures_index_array = np.empty(
-            self.number_of_fractures, dtype=fracture_index_dtype
-        )
-
-        if hpc:
-            for i, f in enumerate(self.fractures):
-                fractures_struc_array[i], fractures_index_array[i] = f.consolidate_hpc()
-        else:
-            for i, f in enumerate(self.fractures):
-                fractures_struc_array[i], fractures_index_array[i] = f.consolidate()
-
-        # Save to self
-        if hpc:
-            self.elements_struc_array_hpc = elements_struc_array
-            self.fractures_struc_array_hpc = fractures_struc_array
-        else:
-            self.elements_struc_array = elements_struc_array
-            self.fractures_struc_array = fractures_struc_array
-        self.elements_index_array = elements_index_array
-        self.fractures_index_array = fractures_index_array
-
-    def consolidate_dfn(self, hpc=False):
-        if self._compact_owner is not None:
-            self.unconsolidate_dfn(hpc=True)
-        if self.elements is None:
-            self.get_elements()
-
-        elements = self.elements
-        fractures = self.fractures
-
-        ne = len(elements)
-        nf = self.number_of_fractures
-
-        if hpc:
-            e_dtype = element_dtype_hpc
-            f_dtype = fracture_dtype_hpc
-        else:
-            e_dtype = element_dtype
-            f_dtype = fracture_dtype
-
-        elements_struc_array = np.empty(ne, dtype=e_dtype)
-        elements_index_array = np.empty(ne, dtype=element_index_dtype)
-
-        for name in elements_struc_array.dtype.names:
-            if np.issubdtype(element_dtype_hpc[name], np.int_):
-                elements_struc_array[name][:] = -1
-            elif np.issubdtype(element_dtype_hpc[name], np.float64):
-                elements_struc_array[name][:] = np.nan
-            elif np.issubdtype(element_dtype_hpc[name], np.complex128):
-                elements_struc_array[name][:] = np.nan + 1j * np.nan
-            elif name == "thetas" or name == "dpsi_corr":
-                elements_struc_array[name][:] = np.zeros(
-                    MAX_NCOEF * 2, dtype=np.float64
-                )
-            elif name == "coef" or name == "old_coef":
-                elements_struc_array[name][:] = np.zeros(MAX_NCOEF, dtype=np.complex128)
-            elif name == "endpoints0" or name == "endpoints1":
-                elements_struc_array[name][:] = np.full(
-                    2, np.nan + 1j * np.nan, dtype=np.complex128
-                )
-
-        ne = len(elements)
-
-        element_id = np.empty(ne, dtype=np.int64)
-        element_type = np.empty(ne, dtype=np.int64)
-        element_frac0 = np.empty(ne, dtype=np.int64)
-        element_frac1 = np.empty(ne, dtype=np.int64)
-        element_radius = np.empty(ne, dtype=np.float64)
-        element_head = np.empty(ne, dtype=np.float64)
-        element_phi = np.empty(ne, dtype=np.float64)
-        element_q = np.empty(ne, dtype=np.float64)
-        element_ncoef = np.empty(ne, dtype=np.int64)
-        element_nint = np.empty(ne, dtype=np.int64)
-        element_error = np.empty(ne, dtype=np.float64)
-        element_center = np.empty(ne, dtype=np.complex128)
-        element_endpoints0 = np.empty((ne, 2), dtype=np.complex128)
-        element_endpoints1 = np.empty((ne, 2), dtype=np.complex128)
-        element_thetas = np.empty((ne, 2 * MAX_NCOEF), dtype=np.float64)
-        element_coef = np.empty((ne, MAX_NCOEF), dtype=np.complex128)
-        element_old_coef = np.empty((ne, MAX_NCOEF), dtype=np.complex128)
-        element_dpsi_corr = np.empty((ne, 2 * MAX_NCOEF), dtype=np.float64)
-
-        for i, e in enumerate(elements):
-            element_id[i] = e._id
-            element_type[i] = e._type
-            element_frac0[i] = e.frac0._id if e.frac0 is not None else -1
-            element_frac1[i] = (
-                e.frac1._id if hasattr(e, "frac1") and e.frac1 is not None else -1
-            )
-            element_radius[i] = e.radius if hasattr(e, "radius") else 0.0
-            element_head[i] = e.head if hasattr(e, "head") else 0.0
-            element_phi[i] = e.phi if hasattr(e, "phi") else 0.0
-            element_q[i] = e.q if hasattr(e, "q") else 0.0
-            element_ncoef[i] = e.ncoef if hasattr(e, "ncoef") else 0
-            element_nint[i] = e.nint if hasattr(e, "nint") else 0
-            element_error[i] = e.error if hasattr(e, "error") else 0.0
-            element_center[i] = e.center if hasattr(e, "center") else 0.0
-            element_endpoints0[i] = e.endpoints0 if hasattr(e, "endpoints0") else 0.0
-            element_endpoints1[i] = e.endpoints1 if hasattr(e, "endpoints1") else 0.0
-            element_coef[i, : len(e.coef)] = e.coef if hasattr(e, "coef") else 0.0
-
-        consolidate_elements_numba(
-            elements_struc_array,
-            elements_index_array,
-            element_id,
-            element_type,
-            element_frac0,
-            element_frac1,
-            element_radius,
-            element_center,
-            element_head,
-            element_phi,
-            element_q,
-            element_ncoef,
-            element_nint,
-            element_error,
-            element_endpoints0,
-            element_endpoints1,
-            element_thetas,
-            element_coef,
-            element_old_coef,
-            element_dpsi_corr,
-        )
-
-        fractures_struc_array = np.empty(nf, dtype=f_dtype)
-        fractures_index_array = np.empty(nf, dtype=fracture_index_dtype)
-
-        nf = len(fractures)
-
-        ids = np.empty(nf, dtype=np.int64)
-        tvals = np.empty(nf, dtype=np.float64)
-        radii = np.empty(nf, dtype=np.float64)
-        centers = np.empty((nf, 3), dtype=np.float64)
-        normals = np.empty((nf, 3), dtype=np.float64)
-        xvecs = np.empty((nf, 3), dtype=np.float64)
-        yvecs = np.empty((nf, 3), dtype=np.float64)
-        constants = np.empty(nf, dtype=np.float64)
-        labels = np.empty(nf, dtype=np.str_)
-
-        elements_ids = np.zeros((nf, MAX_ELEMENTS), dtype=np.int64)
-        nelements = np.zeros(nf, dtype=np.int64)
-
-        for i, f in enumerate(fractures):
-            ids[i] = f._id
-            tvals[i] = f.t
-            radii[i] = f.radius
-            centers[i] = f.center
-            normals[i] = f.normal
-            xvecs[i] = f.x_vector
-            yvecs[i] = f.y_vector
-            constants[i] = f.constant
-            labels[i] = f.label
-
-            ne = len(f.elements)
-            nelements[i] = ne
-            for k in range(ne):
-                elements_ids[i, k] = f.elements[k]._id
-
-        consolidate_fractures_numba(
-            fractures_struc_array,
-            fractures_index_array,
-            ids,
-            tvals,
-            radii,
-            centers,
-            normals,
-            xvecs,
-            yvecs,
-            elements_ids,
-            nelements,
-            constants,
-        )
-
-        if hpc:
-            self.elements_struc_array_hpc = elements_struc_array
-            self.fractures_struc_array_hpc = fractures_struc_array
-        else:
-            self.elements_struc_array = elements_struc_array
-            self.fractures_struc_array = fractures_struc_array
-
-        self.elements_index_array = elements_index_array
-        self.fractures_index_array = fractures_index_array
-
+        ne = len(self.elements)
+        nf = len(self.fractures)
+        elements = np.empty(ne, dtype=element_dtype)
+        elements_index = np.empty(ne, dtype=element_index_dtype)
+        fractures = np.empty(nf, dtype=fracture_dtype)
+        fractures_index = np.empty(nf, dtype=fracture_index_dtype)
+        for i, element in enumerate(self.elements):
+            elements[i], elements_index[i] = element.consolidate()
+        for i, fracture in enumerate(self.fractures):
+            fractures[i], fractures_index[i] = fracture.consolidate()
+        self.elements_struc_array = elements
+        self.elements_index_array = elements_index
+        self.fractures_struc_array = fractures
+        self.fractures_index_array = fractures_index
         logger.info(
-            f"Consolidated DFN with {nf} fractures and {len(elements_struc_array)} elements."
+            f"Consolidated DFN with {nf} fractures and {ne} elements for persistence."
         )
 
-    def unconsolidate_dfn(self, hpc=False):
-        """
-        Unconsolidates the DFN.
-
-        Parameters
-        ----------
-        hpc : bool
-            If True, the DFN is unconsolidated for the HPC.
-        """
-
-        if hpc and self._compact_owner is not None:
+    def unconsolidate_dfn(self):
+        """Publish compact solver results to the Python model objects."""
+        if self._compact_owner is not None:
             from .hpc.hpc_compact import update_objects
 
             update_objects(
@@ -867,50 +562,28 @@ class DFN(Constants, IO):
                 self.fractures,
             )
             return
-        # Unconsolidate fractures
-        if hpc:
-            # --- Phase 1: unconsolidate fractures - --
-            cnt = 1
-            for f, f_struc, f_idx in zip(
+        if self.elements_struc_array is None or self.fractures_struc_array is None:
+            return
+        for i, fracture in enumerate(self.fractures):
+            fracture.unconsolidate(
+                self.fractures_struc_array[i], self.fractures_index_array[i]
+            )
+        for i, element in enumerate(self.elements):
+            element.unconsolidate(
+                self.elements_struc_array[i],
+                self.elements_index_array[i],
                 self.fractures,
-                self.fractures_struc_array_hpc,
-                self.fractures_index_array,
-            ):
-                print(
-                    f"\rUnconsolidating fracture {cnt}/{self.number_of_fractures} ",
-                    end="",
-                )
-                cnt += 1
-                f.unconsolidate_hpc(f_struc, f_idx)
-            print()  # new line after unconsolidating fractures
-            # --- Phase 2: unconsolidate elements (depends on fractures) ---
-            fractures = self.fractures  # local ref (minor speedup)
-            cnt = 1
-            for e, e_struc, e_idx in zip(
-                self.elements,
-                self.elements_struc_array_hpc,
-                self.elements_index_array,
-            ):
-                if cnt % 5000 == 0 or cnt == self.number_of_elements():
-                    print(
-                        f"\rUnconsolidating element {cnt}/{self.number_of_elements()} ",
-                        end="",
-                    )
-                cnt += 1
-                e.unconsolidate_hpc(e_struc, e_idx, fractures)
-            print()  # new line after unconsolidating elements
+            )
 
-        else:
-            for i, f in enumerate(self.fractures):
-                f.unconsolidate(
-                    self.fractures_struc_array[i], self.fractures_index_array[i]
-                )
-            for i, e in enumerate(self.elements):
-                e.unconsolidate(
-                    self.elements_struc_array[i],
-                    self.elements_index_array[i],
-                    self.fractures,
-                )
+    def _ensure_compact_state(self):
+        if self._compact_owner is None:
+            from .hpc.hpc_compact import consolidate
+
+            if self.elements is None:
+                self.get_elements()
+            self._compact_owner, self._compact_fractures = consolidate(
+                self.elements, self.fractures
+            )
 
     ####################################################################################################################
     #                      DFN functions                                                                               #
@@ -1614,26 +1287,15 @@ class DFN(Constants, IO):
         # Update the elements in the DFN
         self.get_elements()
 
-    def check_connectivity(self, *, compact=False):
+    def check_connectivity(self):
         """
         Checks the connectivity of the DFN and removes isolated fractures.
         """
         logger.info("Checking connectivity of the DFN...")
-        # connectivity, remove_fracs = gf.check_connectivity(self.fractures)
-        if compact:
-            from .hpc.hpc_compact import consolidate
-
-            if self.elements is None:
-                self.get_elements()
-            owner, fractures = consolidate(self.elements, self.fractures)
-            connectivity, rf = gf.check_connectivity_hpc(
-                fractures, owner.state.storage.elements
-            )
-        else:
-            self.consolidate_dfn(hpc=True)
-            connectivity, rf = gf.check_connectivity_hpc(
-                self.fractures_struc_array_hpc, self.elements_struc_array_hpc
-            )
+        self._ensure_compact_state()
+        connectivity, rf = gf.check_connectivity_hpc(
+            self._compact_fractures, self._compact_owner.state.storage.elements
+        )
         logger.info(
             f"Connectivity check complete. DFN is {'connected' if connectivity else 'not connected'}."
         )
@@ -1757,9 +1419,9 @@ class DFN(Constants, IO):
 
         self.discharge_matrix = matrix
 
-    def solve(self, unconsolidate=False, *, compact=False):
+    def solve(self, unconsolidate=False):
         """
-        Solves the DFN on a HPC.
+        Solves the DFN using compact runtime storage.
 
         To change the solver constants, use the set_kwargs method.
 
@@ -1767,112 +1429,66 @@ class DFN(Constants, IO):
         ----------
         unconsolidate : bool
             If True, the DFN is unconsolidated after the solve. Default is False.
-        compact : bool
-            Opt into direct compact consolidation, adaptive solving and diagnostics.
         """
-        if compact:
-            from .hpc.hpc_adaptive import solve_adaptive
-            from .hpc.hpc_compact import consolidate
+        from .hpc.hpc_adaptive import solve_adaptive
 
-            if self.elements is None:
-                self.get_elements()
-            owner, fractures = consolidate(self.elements, self.fractures)
-            solve_adaptive(owner, fractures, self.discharge_int, self.constants)
-            self._compact_owner, self._compact_fractures = owner, fractures
-            self._compact_error = None
-            self.error_structured_array = None
-            if unconsolidate:
-                self.unconsolidate_dfn(hpc=True)
-            return
-        self._compact_owner = None
-        self._compact_fractures = None
-        if self._compact_error is not None:
-            self.error_structured_array = None
+        self._ensure_compact_state()
         self._compact_error = None
+        self.error_structured_array = None
         logger.info("\n")
         logger.info("---------------------------------------")
-        logger.info("Starting HPC solve...")
+        logger.info("Starting solve...")
         logger.info("---------------------------------------")
-        logger.info("Collecting elements and fractures...")
-        t0 = time.time()
-        if self.elements is None:
-            self.get_elements()
-        t1 = time.time()
-        logger.debug(f"Time to collect elements and fractures: {t1 - t0:.2f} seconds")
-        logger.info("Consolidating DFN...")
-        self.consolidate_dfn(hpc=True)
-        t2 = time.time()
-        logger.debug(f"Time to consolidate DFN: {t2 - t1:.2f} seconds")
-        # logger.info("Building discharge matrix...")
-        # self.build_discharge_matrix()
-        # t3 = time.time()
-        # logger.debug(f"Time to build discharge matrix: {t3 - t2:.2f} seconds")
         logger.info("DFN properties:")
         logger.info(f"Number of fractures: {len(self.fractures)}")
         logger.info(f" Number of elements: {len(self.elements)}")
         self.print_solver_constants()
-        self.elements_struc_array, self.work_array = hpc_solve(
-            self.fractures_struc_array_hpc,
-            self.elements_struc_array_hpc,
+        solve_adaptive(
+            self._compact_owner,
+            self._compact_fractures,
             self.discharge_int,
             self.constants,
-            self.ntype_element,
         )
+        self.error_structured_array = None
         if unconsolidate:
             logger.info("Unconsolidating DFN...")
-            self.unconsolidate_dfn(hpc=True)
+            self.unconsolidate_dfn()
 
     def solve_error(self, unconsolidate=False):
         """
-        Solve the separate error problem using the active normal storage.
+        Solve the separate error problem using compact state.
 
         To change the solver constants, use the set_kwargs method.
-        After ``solve(compact=True)``, error state is compact and isolated from
-        the normal solved coefficients, constants, caches and convergence state.
+        Error state is isolated from normal solved coefficients, constants,
+        caches and convergence state.
 
         Parameters
         ----------
         unconsolidate : bool
             If True, the DFN is unconsolidated after the solve. Default is False.
         """
-        if self._compact_owner is not None:
-            from .hpc.hpc_error import prepare
+        from .hpc.hpc_error import prepare
 
-            error = prepare(self._compact_owner, self._compact_fractures)
-            hpc_solve_error(
-                error.fractures,
-                error.normal,
-                error.elements,
-                self.discharge_int,
-                self.constants,
-                self.ntype_element,
-                compact_state=error,
-            )
-            self._compact_error = error
-            self.error_structured_array = error.elements
-            if unconsolidate:
-                self.unconsolidate_dfn(hpc=True)
-            return
+        self._ensure_compact_state()
         logger.info("\n")
         logger.info("---------------------------------------")
-        logger.info("Starting HPC error solve...")
+        logger.info("Starting error solve...")
         logger.info("---------------------------------------")
-        error_structured_array = self.elements_struc_array_hpc.copy()
-        error_structured_array["coef"][:] = 0
-        error_structured_array["ncoef"] = self.elements_struc_array_hpc["ncoef"]
-        error_structured_array["nint"] = self.elements_struc_array_hpc["nint"]
         self.print_solver_constants()
-        self.error_structured_array, self.work_array = hpc_solve_error(
-            self.fractures_struc_array_hpc,
-            self.elements_struc_array_hpc,
-            error_structured_array,
+        error = prepare(self._compact_owner, self._compact_fractures)
+        hpc_solve_error(
+            error.fractures,
+            error.normal,
+            error.elements,
             self.discharge_int,
             self.constants,
-            self.ntype_element,
+            compact_state=error,
         )
-        if unconsolidate or False:
+        self._compact_error = error
+        self.error_structured_array = error.elements
+        if unconsolidate:
             logger.info("Unconsolidating DFN...")
-            self.unconsolidate_dfn(hpc=True)
+            self.unconsolidate_dfn()
 
     def check_boundary_conditions(self, n_points=100):
         """
@@ -1891,29 +1507,19 @@ class DFN(Constants, IO):
             solved yet.
         """
         logger.info("Checking boundary conditions...")
-        if self._compact_owner is not None:
-            state = self._compact_owner.state
-            bnd_error = hpc_compute_bnd_error(
-                self._compact_fractures,
-                state.storage.elements,
-                n_points,
-                self.constants,
-                state.storage.coef_data,
-                state.storage.coef_start,
-                work=state.work,
-            )
-        elif (
-            self.elements_struc_array is None or self.fractures_struc_array_hpc is None
-        ):
+        if self._compact_owner is None:
             logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
             return None
-        else:
-            bnd_error = hpc_compute_bnd_error(
-                self.fractures_struc_array_hpc,
-                self.elements_struc_array,
-                n_points,
-                self.constants,
-            )
+        state = self._compact_owner.state
+        bnd_error = hpc_compute_bnd_error(
+            self._compact_fractures,
+            state.storage.elements,
+            n_points,
+            self.constants,
+            state.storage.coef_data,
+            state.storage.coef_start,
+            work=state.work,
+        )
 
         max_err = float(np.max(bnd_error[:, 0]))
         mean_err = float(np.mean(bnd_error[:, 0]))
@@ -1943,31 +1549,18 @@ class DFN(Constants, IO):
         head : float
             The head at the given point in the fracture.
         """
-        if self._compact_owner is not None:
-            state = self._compact_owner.state.storage
-            omega = hpc_calc_omega(
-                self._compact_fractures[fracture._id],
-                z,
-                state.elements,
-                coef_data=state.coef_data,
-                coef_start=state.coef_start,
-            )
-            return fracture.head_from_phi(np.real(omega))
-        if (
-            self.elements_struc_array_hpc is None
-            or self.fractures_struc_array_hpc is None
-        ):
+        if self._compact_owner is None:
             logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
             return None
-
+        state = self._compact_owner.state.storage
         omega = hpc_calc_omega(
-            self.fractures_struc_array_hpc[fracture._id],
+            self._compact_fractures[fracture._id],
             z,
-            self.elements_struc_array_hpc,
+            state.elements,
+            coef_data=state.coef_data,
+            coef_start=state.coef_start,
         )
-        head = fracture.head_from_phi(np.real(omega))
-
-        return head
+        return fracture.head_from_phi(np.real(omega))
 
     def calc_w(self, z, fracture):
         """
@@ -1985,29 +1578,17 @@ class DFN(Constants, IO):
         w : complex
             The w function at the given point in the fracture.
         """
-        if self._compact_owner is not None:
-            state = self._compact_owner.state.storage
-            return hpc_calc_w(
-                self._compact_fractures[fracture._id],
-                z,
-                state.elements,
-                coef_data=state.coef_data,
-                coef_start=state.coef_start,
-            )
-        if (
-            self.elements_struc_array_hpc is None
-            or self.fractures_struc_array_hpc is None
-        ):
+        if self._compact_owner is None:
             logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
             return None
-
-        w = hpc_calc_w(
-            self.fractures_struc_array_hpc[fracture._id],
+        state = self._compact_owner.state.storage
+        return hpc_calc_w(
+            self._compact_fractures[fracture._id],
             z,
-            self.elements_struc_array_hpc,
+            state.elements,
+            coef_data=state.coef_data,
+            coef_start=state.coef_start,
         )
-
-        return w
 
     def calc_velocity(self, z, fracture):
         """
@@ -2025,23 +1606,8 @@ class DFN(Constants, IO):
         velocity : np.ndarray
             The velocity at the given point in the fracture.
         """
-        if self._compact_owner is not None:
-            return np.abs(self.calc_w(z, fracture)) / fracture.aperture
-        if (
-            self.elements_struc_array_hpc is None
-            or self.fractures_struc_array_hpc is None
-        ):
-            logger.warning("DFN has not been solved yet.  Call dfn.solve() first.")
-            return None
-
-        w = hpc_calc_w(
-            self.fractures_struc_array_hpc[fracture._id],
-            z,
-            self.elements_struc_array_hpc,
-        )
-        velocity = np.abs(w) / fracture.aperture
-
-        return velocity
+        w = self.calc_w(z, fracture)
+        return None if w is None else np.abs(w) / fracture.aperture
 
     def calc_error(self, z, fracture):
         """
@@ -2059,55 +1625,32 @@ class DFN(Constants, IO):
         velocity : np.ndarray
             The velocity at the given point in the fracture.
         """
-        if self._compact_owner is not None and self._compact_error is None:
+        if self._compact_owner is None or self._compact_error is None:
             logger.warning(
                 "DFN error has not been solved yet. Call dfn.solve_error() first."
             )
             return None
-        if self._compact_owner is not None and self._compact_error is not None:
-            return hpc_calc_omega_error(
-                self._compact_error.fractures[fracture._id],
-                z,
-                self._compact_error.elements,
-            )
-        if (
-            self.error_structured_array is None
-            or self.fractures_struc_array_hpc is None
-        ):
-            logger.warning(
-                "DFN error has not been solved yet.  Call dfn.solve_error() first."
-            )
-            return None
-
-        error = hpc_calc_omega_error(
-            self.fractures_struc_array_hpc[fracture._id],
+        return hpc_calc_omega_error(
+            self._compact_error.fractures[fracture._id],
             z,
-            self.error_structured_array,
+            self._compact_error.elements,
         )
 
-        return error
-
     def _head_samples(self, z_array, fracture_indices=None):
-        if self._compact_owner is not None:
-            from .hpc.hpc_fracture import get_heads_csr
+        self._ensure_compact_state()
+        from .hpc.hpc_fracture import get_heads_csr
 
-            storage = self._compact_owner.state.storage
-            fractures = self._compact_fractures
-            return get_heads_csr(
-                fractures.metadata,
-                storage.elements,
-                fractures.ids,
-                fractures.indptr,
-                z_array,
-                fracture_indices,
-                storage.coef_data,
-                storage.coef_start,
-            )
-        return hpc_get_heads(
-            self.fractures_struc_array_hpc,
-            self.elements_struc_array_hpc,
+        storage = self._compact_owner.state.storage
+        fractures = self._compact_fractures
+        return get_heads_csr(
+            fractures.metadata,
+            storage.elements,
+            fractures.ids,
+            fractures.indptr,
             z_array,
             fracture_indices,
+            storage.coef_data,
+            storage.coef_start,
         )
 
     ####################################################################################################################
@@ -2402,28 +1945,16 @@ class DFN(Constants, IO):
             Whether to plot the streamlines (imaginary part).
         """
 
-        # Check if the fractures have been consolidated
-        if self._compact_owner is None and self.fractures_struc_array_hpc is None:
-            self.consolidate_dfn(hpc=True)
-
-        # Calculate the flow net for each fracture
-        if self._compact_owner is not None:
-            storage = self._compact_owner.state.storage
-            omegas, pnts_3d = hpc_get_flow_nets(
-                self._compact_fractures,
-                n_points,
-                n_boundary_points,
-                storage.elements,
-                storage.coef_data,
-                storage.coef_start,
-            )
-        else:
-            omegas, pnts_3d = hpc_get_flow_nets(
-                self.fractures_struc_array_hpc,
-                n_points,
-                n_boundary_points,
-                self.elements_struc_array_hpc,
-            )
+        self._ensure_compact_state()
+        storage = self._compact_owner.state.storage
+        omegas, pnts_3d = hpc_get_flow_nets(
+            self._compact_fractures,
+            n_points,
+            n_boundary_points,
+            storage.elements,
+            storage.coef_data,
+            storage.coef_start,
+        )
 
         # Calculate the levels for the contours
         lvs_re, lvs_im = get_lvs(lvs, omegas)
@@ -2516,9 +2047,7 @@ class DFN(Constants, IO):
             min_lim, max_lim = limits
             limits = None
 
-        # Check if the fractures have been consolidated
-        if self._compact_owner is None and self.fractures_struc_array_hpc is None:
-            self.consolidate_dfn(hpc=True)
+        self._ensure_compact_state()
 
         # Only compute fracture that are given in fracs
         fracture_indices = None
@@ -2623,11 +2152,7 @@ class DFN(Constants, IO):
             min_lim, max_lim = limits
             limits = None
 
-        # --- Ensure consolidation ---
-        if self._compact_owner is None and self.fractures_struc_array_hpc is None:
-            self.consolidate_dfn(hpc=True)
-
-        # --- Select fractures efficiently ---
+        self._ensure_compact_state()
         fracture_indices = None
         if fractures is not None:
             fracture_index = {f: i for i, f in enumerate(self.fractures)}
@@ -2744,18 +2269,10 @@ class DFN(Constants, IO):
             min_lim, max_lim = limits
             limits = None
 
-        # --- Ensure consolidation ---
-        if self._compact_owner is None and self.fractures_struc_array_hpc is None:
-            self.consolidate_dfn(hpc=True)
-
-        # --- Select fractures efficiently ---
-        if self._compact_owner is not None and self._compact_error is None:
-            raise ValueError("Call dfn.solve_error() before plotting compact errors")
-        fracs_arr = (
-            self._compact_error.fractures
-            if self._compact_owner is not None and self._compact_error is not None
-            else self.fractures_struc_array_hpc
-        )
+        self._ensure_compact_state()
+        if self._compact_error is None:
+            raise ValueError("Call dfn.solve_error() before plotting errors")
+        fracs_arr = self._compact_error.fractures
         error_indices = None
         if fractures is not None:
             fracture_index = {f: i for i, f in enumerate(self.fractures)}
@@ -2764,10 +2281,7 @@ class DFN(Constants, IO):
                 dtype=np.int64,
                 count=len(fractures),
             )
-            if self._compact_owner is not None and self._compact_error is not None:
-                error_indices = idx
-            else:
-                fracs_arr = fracs_arr[idx]
+            error_indices = idx
 
         # --- Compute heads & points ---
         time_heads = time.time()
@@ -2777,7 +2291,7 @@ class DFN(Constants, IO):
         if term == "head":
             heads, pnts_3d = hpc_get_errors(
                 fracs_arr,
-                self.error_structured_array,
+                self._compact_error.elements,
                 z_array,
                 heads=True,
                 fracture_indices=error_indices,
@@ -2785,7 +2299,7 @@ class DFN(Constants, IO):
         elif term == "complex":
             heads, pnts_3d = hpc_get_errors(
                 fracs_arr,
-                self.error_structured_array,
+                self._compact_error.elements,
                 z_array,
                 fracture_indices=error_indices,
             )
@@ -3012,7 +2526,7 @@ class DFN(Constants, IO):
                 "Matplotlib is required to plot the ncoef plot. Please install matplotlib."
             )
 
-        self.unconsolidate_dfn(hpc=True)
+        self.unconsolidate_dfn()
 
         ncoef = []
         for e in self.elements:

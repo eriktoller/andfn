@@ -964,7 +964,7 @@ def compute_boundary_fractures_from_elements(elements, n_fractures):
 
     Parameters
     ----------
-    elements : structured array (element_dtype_hpc)
+    elements : compact element metadata array
         All DFN elements.
     n_fractures : int
         Total number of fractures.

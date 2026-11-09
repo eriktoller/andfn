@@ -3,10 +3,10 @@
 import numba as nb
 import numpy as np
 import pytest
+from legacy_hpc_reference import adaptive_from_hpc, dtype_work, import_work
 from test_hpc_coefficients import network, work_for
 
 from andfn.hpc import hpc_adaptive as adaptive
-from andfn.hpc import hpc_solve as hs
 from andfn.hpc import hpc_work as cw
 from andfn.storage import _layout
 
@@ -16,7 +16,7 @@ def fixture(coef_repack=False, integration_repack=False):
     elements["ncoef"][elements["_type"] != 2] = 10
     elements["nint"][elements["_type"] != 2] = 20
     legacy = work_for(elements)
-    owner = adaptive.adaptive_from_hpc(elements)
+    owner = adaptive_from_hpc(elements)
     state = owner.state
     c = state.storage.coef_capacity.copy()
     c[elements["_type"] != 2] = 10 if coef_repack else 16
@@ -47,7 +47,7 @@ def fixture(coef_repack=False, integration_repack=False):
             integration_start=ip,
             integration_capacity=cap,
         )
-    cw.import_work(work, legacy, elements)
+    import_work(work, legacy, elements)
     owner.state = adaptive.AdaptiveState(
         adaptive.AdaptiveStorage(
             elements=state.storage.elements,
@@ -121,7 +121,7 @@ def test_compact_has_no_padded_candidate_and_explicit_sizes():
     for name in cw.INTEGRATION_FIELDS:
         assert getattr(work, name).size == work.integration_capacity.sum()
     assert cw.state_payload(owner.state) < 400_000
-    assert "coef" in hs.dtype_work.names
+    assert "coef" in dtype_work.names
 
 
 def test_within_capacity_failure_before_publication_preserves_all_buffers():

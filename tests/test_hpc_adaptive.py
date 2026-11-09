@@ -3,6 +3,16 @@
 import numba as nb
 import numpy as np
 import pytest
+from legacy_hpc_reference import (
+    adaptive_from_hpc,
+    connectivity_from_hpc,
+    dtype_work,
+    export_work,
+    fixed_order_from_hpc,
+    fracture_metadata_from_hpc,
+    import_work,
+    to_hpc,
+)
 from test_hpc_coefficients import (
     assert_close,
     legacy_logical,
@@ -16,6 +26,7 @@ from andfn.hpc import hpc_adaptive as adaptive
 from andfn.hpc import hpc_math_functions as mf
 from andfn.hpc import hpc_solve as hs
 from andfn.hpc import hpc_work as cw
+from andfn.hpc.hpc_connectivity import FractureArrays
 from andfn.storage import _layout
 
 
@@ -24,8 +35,8 @@ def prepared():
     # Independent integration lengths must survive until an element grows.
     e["nint"][[0, 3]] = [30, 17]
     w = work_for(e)
-    owner = adaptive.adaptive_from_hpc(e)
-    cw.import_work(owner.state.work, w, e)
+    owner = adaptive_from_hpc(e)
+    import_work(owner.state.work, w, e)
     return f, e, w, owner
 
 
@@ -247,8 +258,6 @@ def legacy_transition(elements, fractures, work, maximum, increase, ratio, nit):
         return history
     # Assess from an immutable committed snapshot; verify final results against
     # the actual interleaved legacy loop separately below.
-    from andfn.storage import fixed_order_from_hpc
-
     s = fixed_order_from_hpc(elements)
     request = adaptive.assess_growth(
         elements, s.coef_data, s.coef_start, nit, 1e-12, ratio, maximum, increase
@@ -286,34 +295,20 @@ def legacy_transition(elements, fractures, work, maximum, increase, ratio, nit):
 )
 def test_transition_snapshots_and_actual_legacy_loop(ratio, maximum, increase):
     f, e, w, owner = prepared()
-    actual_legacy, actual_work = e.copy(), w.copy()
     snapshots = {}
 
     def observe(label, state, requests):
         snapshots[label] = (
-            adaptive.to_hpc(state),
+            to_hpc(state),
             state.storage.candidate_coef_data.copy(),
             state.storage.coef_start.copy(),
             requests,
-            cw.export_work(state.work, hs.dtype_work, include_scratch=False),
+            export_work(state.work, dtype_work, include_scratch=False),
         )
 
     owner.transition_callback = observe
     for nit in range(1, 5):
         reference = legacy_transition(e, f, w, maximum, increase, ratio, nit)
-        hs.element_solver2(
-            actual_legacy.size,
-            actual_legacy,
-            f,
-            actual_work,
-            1e-12,
-            nit,
-            0,
-            ratio,
-            maximum,
-            increase,
-            0.5,
-        )
         adaptive.adaptive_step(owner, f, 1e-12, nit, 0, ratio, maximum, increase, 0.5)
         for label, (elements, candidates, reference_work) in reference.items():
             compact, flat, starts, _request, compact_work = snapshots[label]
@@ -369,12 +364,9 @@ def test_transition_snapshots_and_actual_legacy_loop(ratio, maximum, increase):
                         compact_work[name][i, :events],
                         reference_work[name][i, :events],
                     )
-        assert_close(legacy_logical(actual_legacy), legacy_logical(e))
-        assert_close(actual_legacy["error_coef"], e["error_coef"])
 
 
 def run_adaptive(
-    compact,
     *,
     ratio=0.05,
     maximum=12,
@@ -384,8 +376,8 @@ def run_adaptive(
 ):
     f, e = network()
     e["nint"][[0, 3]] = [30, 17]
-    owner = adaptive.adaptive_from_hpc(e) if compact else None
-    if compact and request_history is not None:
+    owner = adaptive_from_hpc(e)
+    if request_history is not None:
 
         def capture_requests(label, state, requests):
             if label == "after_assessment":
@@ -394,28 +386,34 @@ def run_adaptive(
         owner.transition_callback = capture_requests
     c = Constants().constants.copy()
     c["MAX_ITERATIONS"], c["MAX_ERROR"], c["DAMPING"] = iterations, 1e-12, 0.5
-    c["MAX_NCOEF"], c["COEF_INCREASE"], c["COEF_RATIO"] = maximum, increase, ratio
+    c["MAX_COEFFICIENT_ORDER"], c["COEF_INCREASE"], c["COEF_RATIO"] = (
+        maximum,
+        increase,
+        ratio,
+    )
     history = []
+    connectivity = connectivity_from_hpc(f, e.size)
+    fractures = FractureArrays(
+        fracture_metadata_from_hpc(f), connectivity.ids, connectivity.indptr
+    )
 
     def observe(nit, elements, fractures, work, discharge, error_q, counter):
-        if compact:
-            s = owner.state.storage
-            coef = logical(s, s.coef_data)
-            candidate = logical(s, s.candidate_coef_data)
-            old = logical(s, s.old_coef_data)
-            kwargs = {"coef_data": s.coef_data, "coef_start": s.coef_start}
-        else:
-            coef = legacy_logical(elements)
-            candidate = np.concatenate(
-                [w["coef"][:n] for w, n in zip(work, elements["ncoef"])]
-            )
-            old = legacy_logical(elements, "old_coef")
-            kwargs = {}
+        s = owner.state.storage
+        coef = logical(s, s.coef_data)
+        candidate = logical(s, s.candidate_coef_data)
+        old = logical(s, s.old_coef_data)
+        kwargs = {"coef_data": s.coef_data, "coef_start": s.coef_start}
         heads = np.array(
             [
-                hs.hpc_fracture.calc_omega(frac, 1.3 + 0.7j, elements, **kwargs).real
+                hs.hpc_fracture.calc_omega(
+                    frac,
+                    1.3 + 0.7j,
+                    elements,
+                    element_ids=connectivity.element_ids(frac["_id"]),
+                    **kwargs,
+                ).real
                 / frac["t"]
-                for frac in fractures
+                for frac in fractures.metadata
             ]
         )
         boundary = hs.compute_bnd_error(fractures, elements, 8, c, **kwargs)
@@ -431,7 +429,7 @@ def run_adaptive(
                 old.copy(),
                 elements["error"].copy(),
                 elements["error_coef"].copy(),
-                fractures["constant"].copy(),
+                fractures.metadata["constant"].copy(),
                 discharge.copy(),
                 dfn_q,
                 heads,
@@ -440,10 +438,7 @@ def run_adaptive(
             )
         )
 
-    if compact:
-        adaptive.solve_adaptive(owner, f, 8, c, iteration_callback=observe)
-    else:
-        hs.solve(f, e, 8, c, None, iteration_callback=observe)
+    adaptive.solve_adaptive(owner, fractures, 8, c, iteration_callback=observe)
     return history, owner
 
 
@@ -451,40 +446,23 @@ def run_adaptive(
 def test_adaptive_iteration_trajectory_thread_equivalence_and_repeatability(ratio):
     normal = nb.get_num_threads()
     reference = None
-    reference_legacy = None
     reference_requests = None
     try:
         for threads in sorted({1, 2, normal}):
             nb.set_num_threads(threads)
-            legacy, _ = run_adaptive(False, ratio=ratio)
             for _ in range(2):
                 growth_requests = []
-                compact, owner = run_adaptive(
-                    True, ratio=ratio, request_history=growth_requests
+                history, owner = run_adaptive(
+                    ratio=ratio, request_history=growth_requests
                 )
-                assert len(compact) == len(legacy)
-                for a, b in zip(legacy, compact):
-                    assert a[:2] == b[:2]
-                    for x, y in zip(a[2:4], b[2:4]):
-                        np.testing.assert_array_equal(x, y)
-                    for x, y in zip(a[4:], b[4:]):
-                        assert_close(x, y)
-                        np.testing.assert_array_equal(x, y)
                 if reference is not None:
-                    for a, b, baseline_a, baseline_b in zip(
-                        reference, compact, reference_legacy, legacy
-                    ):
-                        for x, y in zip(a[2:4], b[2:4]):
-                            np.testing.assert_array_equal(x, y)
-                        for x, y, old_x, old_y in zip(
-                            a[4:], b[4:], baseline_a[4:], baseline_b[4:]
-                        ):
+                    assert len(history) == len(reference)
+                    for expected, actual in zip(reference, history):
+                        assert expected[:2] == actual[:2]
+                        for index, (x, y) in enumerate(zip(expected[2:], actual[2:])):
                             assert_close(x, y)
-                            # Cross-thread reductions may have baseline rounding
-                            # differences; require exactly the same legacy delta.
-                            np.testing.assert_array_equal(
-                                np.asarray(x) - y, np.asarray(old_x) - old_y
-                            )
+                            if index < 2:
+                                np.testing.assert_array_equal(x, y)
                 owner.state.storage.validate()
                 s = owner.state.storage
                 assert np.all(
@@ -496,11 +474,10 @@ def test_adaptive_iteration_trajectory_thread_equivalence_and_repeatability(rati
                         for x, y in zip(a, b):
                             np.testing.assert_array_equal(x, y)
                 for i, (nc, ni, mask) in enumerate(growth_requests, start=1):
-                    np.testing.assert_array_equal(nc, legacy[i][2])
-                    np.testing.assert_array_equal(ni, legacy[i][3])
-                    np.testing.assert_array_equal(mask, nc != legacy[i - 1][2])
-                reference = compact
-                reference_legacy = legacy
+                    np.testing.assert_array_equal(nc, history[i][2])
+                    np.testing.assert_array_equal(ni, history[i][3])
+                    np.testing.assert_array_equal(mask, nc != history[i - 1][2])
+                reference = history
                 reference_requests = growth_requests
     finally:
         nb.set_num_threads(normal)
@@ -509,13 +486,6 @@ def test_adaptive_iteration_trajectory_thread_equivalence_and_repeatability(rati
 def test_offset_prefix_overflow_checked_without_allocation():
     with pytest.raises(ValueError, match="offset"):
         _layout(np.array([np.iinfo(np.int64).max, 1], dtype=np.int64))
-
-
-def test_initialized_unused_coefficients_rejected_not_silently_zeroed():
-    _, e = network()
-    e["coef"][0, e["ncoef"][0]] = 5
-    with pytest.raises(ValueError, match="unused"):
-        adaptive.adaptive_from_hpc(e)
 
 
 def test_single_growing_element_and_unaffected_cache_state():
@@ -534,12 +504,8 @@ def test_single_growing_element_and_unaffected_cache_state():
                 cw.work_record(owner.state.work, i)[name],
             )
     np.testing.assert_array_equal(
-        cw.export_work(replacement.work, hs.dtype_work, include_scratch=False)[
-            unchanged
-        ],
-        cw.export_work(owner.state.work, hs.dtype_work, include_scratch=False)[
-            unchanged
-        ],
+        export_work(replacement.work, dtype_work, include_scratch=False)[unchanged],
+        export_work(owner.state.work, dtype_work, include_scratch=False)[unchanged],
     )
 
 

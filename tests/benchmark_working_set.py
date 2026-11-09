@@ -211,11 +211,10 @@ def memory_probe():
     from benchmark_adaptive import prepare
 
     from andfn.hpc import hpc_adaptive as adaptive
-    from andfn.hpc import hpc_solve as hs
     from andfn.hpc import hpc_work as cw
     from andfn.storage import _layout, growth_capacities
 
-    f, e, _legacy, owner = prepare(1)
+    f, _e, _legacy, owner = prepare(1)
     adaptive.adaptive_step(owner, f, 1e-12, 1, 0, 1e100, 0, 2, 0.5)
     base = owner.state
     distribution = base.work.len_discharge_element
@@ -317,13 +316,6 @@ def memory_probe():
         report["cases"][count] = {
             "categories": cases,
             "compact_payload": cw.state_payload(state),
-            "phase4b_payload_formula": 23041 * count,
-            "legacy_element_and_work_bytes": count
-            * (e.dtype.itemsize + hs.dtype_work.itemsize),
-            "legacy_work_bytes": count * hs.dtype_work.itemsize,
-            "driver_two_retained_padded_quadratures_bytes": 2
-            * count
-            * hs.dtype_z_arrays.itemsize,
             "temporary_bytes_during_kernel_timing": 0,
             "owned_numpy_peak_during_kernel_timing": cw.state_payload(state),
             "storage_only": count == 100000,
