@@ -158,37 +158,40 @@ def assess_growth(
     requested = elements["ncoef"].copy()
     integrations = elements["nint"].copy()
     required = np.zeros(elements.size, dtype=np.bool_)
+    overflow = np.zeros(elements.size, dtype=np.bool_)
     for i in nb.prange(elements.size):
         e = elements[i]
-        if nit < 2 or e["_type"] == 2:
-            continue
-        coefs = coefficient_view(e, coef_data, coef_start)
-        coef0 = np.mean(np.abs(coefs[1:3])) + 1e-30
-        coef1 = np.max(np.abs(coefs[-3:]))
-        if coef0 == 0.0:
-            ratio = 0.0
-        else:
-            ratio = coef1 / coef0 * 0
-        if np.max(np.abs(coefs[1:2])) < max_error / 1e10:
-            ratio = 0.0
-        if (
-            e["error"] > e["error_old"]
-            and e["error"] > e["error_old2"]
-            and e["error"] > max_error
-            and nit > 5
-        ):
-            ratio = ratio_limit + 1.0
-        if (
-            np.abs(np.sum(coefs[-3:]) / (np.sum(coefs[:-3]) + 1e-30)) > ratio_limit
-            and e["error"] > max_error
-        ):
-            ratio = ratio_limit + 1.0
-        if ratio > ratio_limit and e["ncoef"] < maximum and nit > 1:
-            if e["ncoef"] > np.iinfo(np.int64).max // 2 - increase:
-                raise ValueError("Adaptive request arithmetic would overflow int64")
-            requested[i] = e["ncoef"] + increase
-            integrations[i] = requested[i] * 2
-            required[i] = True
+        if nit >= 2 and e["_type"] != 2:
+            coefs = coefficient_view(e, coef_data, coef_start)
+            coef0 = np.mean(np.abs(coefs[1:3])) + 1e-30
+            coef1 = np.max(np.abs(coefs[-3:]))
+            if coef0 == 0.0:
+                ratio = 0.0
+            else:
+                ratio = coef1 / coef0 * 0
+            if np.max(np.abs(coefs[1:2])) < max_error / 1e10:
+                ratio = 0.0
+            if (
+                e["error"] > e["error_old"]
+                and e["error"] > e["error_old2"]
+                and e["error"] > max_error
+                and nit > 5
+            ):
+                ratio = ratio_limit + 1.0
+            if (
+                np.abs(np.sum(coefs[-3:]) / (np.sum(coefs[:-3]) + 1e-30)) > ratio_limit
+                and e["error"] > max_error
+            ):
+                ratio = ratio_limit + 1.0
+            if ratio > ratio_limit and e["ncoef"] < maximum and nit > 1:
+                if e["ncoef"] > np.iinfo(np.int64).max // 2 - increase:
+                    overflow[i] = True
+                else:
+                    requested[i] = e["ncoef"] + increase
+                    integrations[i] = requested[i] * 2
+                    required[i] = True
+    if np.any(overflow):
+        raise ValueError("Adaptive request arithmetic would overflow int64")
     return requested, integrations, required
 
 
