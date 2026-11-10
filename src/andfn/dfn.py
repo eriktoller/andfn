@@ -2281,150 +2281,6 @@ class DFN(Constants, IO):
 
         logger.debug("")
 
-    def plot_fractures_head_org(
-        self,
-        pl,
-        lvs=20,
-        n_layers=10,
-        line_width=2,
-        opacity=1.0,
-        color_map="viridis",
-        limits=None,
-        contour=True,
-        colorbar=True,
-        debug=False,
-        fractures=None,
-    ):
-        """
-        Plots the flow net for the fractures in the DFN.
-
-        Parameters
-        ----------
-        pl : pyvista.Plotter
-            The plotter object.
-        lvs : int | bool
-            The number of levels to contour for the flow net.
-        n_layers : int
-            The number of layers to use for the flow net. This determines how many points are used
-        line_width : float
-            The line width of the flow net.
-        opacity : float
-            The opacity of the fractures in the flownet.
-        color_map : str
-            The color map to use for the flow net. For a constant color, use a string with the same value for the color.
-        limits : list | tuple
-            Custom limits for the flow net, overwrites the calculated limits.
-        contour : bool
-            Whether to plot the contour lines.
-        colorbar : bool
-            Whether to plot the color bar.
-        debug : bool
-            This will only plot fractures with a head outside the limits.
-        fractures : list
-            The list of fractures to plot. If None, all fractures are plotted.
-        """
-
-        # Start timer
-        start = time.time()
-
-        # Asset debug and limits
-        if debug:
-            assert limits is not None, "For debug mode, limits must be provided."
-            min_lim, max_lim = limits
-            limits = None
-
-        # Check if the fractures have been consolidated
-        if self.fractures_struc_array_hpc is None:
-            self.consolidate_dfn(hpc=True)
-
-        # Only compute fracture that are given in fracs
-        if fractures is not None:
-            fracture_dtype_hpc = self.fractures_struc_array_hpc.dtype
-            self.fractures_struc_array_hpc_fracs = np.empty(
-                len(fractures), dtype=fracture_dtype_hpc
-            )
-            for i, f in enumerate(fractures):
-                idx = self.fractures.index(f)
-                self.fractures_struc_array_hpc_fracs[i] = (
-                    self.fractures_struc_array_hpc[idx]
-                )
-        else:
-            self.fractures_struc_array_hpc_fracs = self.fractures_struc_array_hpc
-
-        # Calculate the hydraulic head for each fracture and get the mapped 3d points
-        h = 1 / (n_layers + 1)
-        partitions = int(2 * np.pi / h / n_layers)
-        z_array, _ = generate_disk(partitions, n_layers)
-        heads, pnts_3d = hpc_get_heads(
-            self.fractures_struc_array_hpc_fracs,
-            self.elements_struc_array_hpc,
-            z_array,
-        )
-
-        # Get the limits for the color map
-        if limits is None:
-            limits = [np.nanmin(heads), np.nanmax(heads)]
-            logger.debug(f"Calculated limits for the color map: {limits}")
-
-        # Calculate the levels for the contours
-        if lvs is not False:
-            lvs = np.linspace(limits[0], limits[1], lvs)
-
-        # Create the PyVista meshes and plot for all fractures
-        # Get the faces for the Delaunay triangulation (since we use the same triangulation for all fractures)
-        s0 = time.time()
-        faces = get_faces(pnts_3d[0])
-        s1 = time.time()
-        print(f"Creating faces took {s1 - s0:.2f} seconds.")
-
-        meshes = []
-        if debug:
-            logger.debug(
-                "Debug mode: Only plotting fractures with head outside limits."
-            )
-            for i, pnts in enumerate(pnts_3d):
-                if np.nanmin(heads[i]) < min_lim or np.nanmax(heads[i]) > max_lim:
-                    logger.debug(f"Fracture id={i} has head outside limits, plotting.")
-                    poly = pv.PolyData(pnts, faces)
-                    poly.point_data["head"] = heads[i]
-                    meshes.append(poly)
-        else:
-            for i, pnts in enumerate(pnts_3d):
-                poly = pv.PolyData(pnts, faces)
-                poly.point_data["head"] = heads[i]
-                meshes.append(poly)
-        mesh = pv.merge(meshes)
-        pl.add_mesh(
-            mesh,
-            scalars="head",
-            cmap=color_map,
-            opacity=opacity,
-            show_edges=False,
-            line_width=line_width,
-            scalar_bar_args={"title": "Hydraulic Head", "shadow": True},
-            name=f"head_{i}",
-            clim=limits,
-        )
-        # Add contour lines, i.e. equipotential lines
-        if contour:
-            contours = mesh.contour(isosurfaces=lvs, scalars="head")
-            if contours.n_points > 0:
-                pl.add_mesh(
-                    contours,
-                    color="black",
-                    line_width=line_width,
-                    opacity=opacity,
-                    clim=limits,
-                )
-
-        # Remove the color bar if not needed
-        if not colorbar:
-            pl.remove_scalar_bar()
-        # Print the time it took to plot the flow net
-        end = time.time()
-        logger.info(f"Plotting hydraulic head took {end - start:.2f} seconds.")
-        logger.debug("")
-
     def plot_fractures_head(
         self,
         pl,
@@ -2439,7 +2295,53 @@ class DFN(Constants, IO):
         debug=False,
         fractures=None,
         unit="m",
+        name="head_plot",
     ):
+        """
+        Plot hydraulic head on the selected fractures.
+
+        The head is calculated at a number of layers along the fracture radius and then plotted as a surface. Contour lines can be optionally added to the surface.
+
+        Parameters
+        ----------
+        pl : pyvista.Plotter
+            Plotter to which the head mesh and optional contours are added.
+        lvs : int or bool, default=20
+            Number of evenly spaced contour levels. Set to ``False`` to avoid
+            generating explicit levels.
+        n_layers : int, default=10
+            Mesh resolution parameter controlling the number of layers used
+            to discretize each fracture.
+        line_width : float, default=2
+            Width of the contour lines.
+        opacity : float, default=1.0
+            Opacity of the plotted surface and contours.
+        color_map : str, default="viridis"
+            Matplotlib/PyVista colormap used to color the head values.
+        limits : sequence of float or None, default=None
+            Scalar range ``(minimum, maximum)`` for coloring and contouring.
+            If ``None``, the range is calculated from the computed head values.
+        contour : bool, default=True
+            Whether to draw contour lines on the surface.
+        colorbar : bool, default=True
+            Whether to retain the plotter's scalar bar after adding the mesh.
+        debug : bool, default=False
+            If enabled, require ``limits`` and plot only fractures whose head
+            values extend outside that range. Color limits are then computed
+            from the retained values.
+        fractures : iterable or None, default=None
+            Fractures to plot. If ``None``, all fractures are used.
+        unit : str, default="m"
+            Unit displayed in the hydraulic-head scalar bar title.
+        name : str, default="head_plot"
+            Name assigned to the mesh in the plotter.
+
+        Returns
+        -------
+        None
+            The mesh is added directly to ``pl``. If no values remain after
+            filtering, the method returns without adding a mesh.
+        """
 
         start = time.time()
 
@@ -2524,9 +2426,9 @@ class DFN(Constants, IO):
             opacity=opacity,
             show_edges=False,
             line_width=line_width,
-            scalar_bar_args={"title": "Hydraulic Head", "shadow": True},
+            scalar_bar_args={"title": f"Hydraulic Head ({unit})", "shadow": True},
             clim=limits,
-            name="head",
+            name=name,
         )
 
         # --- Contours ---
@@ -2563,7 +2465,66 @@ class DFN(Constants, IO):
         fractures=None,
         unit="m",
         log_scale=False,
+        name="error_plot",
     ):
+        """
+        Plot the function of the error on the selected fractures.
+
+        The error is calculated at a number of layers along the fracture radius and then plotted as a surface. Contour lines can be optionally added to the surface.
+
+        Parameters
+        ----------
+        pl : pyvista.Plotter
+            Plotter to which the error mesh and optional contours are added.
+        component : {"abs", "real", "imag", "real abs", "imag abs"}, default="abs"
+            Component of the computed error to plot: absolute value, real part,
+            imaginary part, or the absolute value of either part.
+        term : {"complex", "head"}, default="complex"
+            Error quantity to calculate. ``"complex"`` plots the complex error;
+            ``"head"`` plots the head error.
+        lvs : int or bool, default=20
+            Number of evenly spaced contour levels. Set to ``False`` to avoid
+            generating explicit levels.
+        n_layers : int, default=10
+            Mesh resolution parameter controlling the number of layers used
+            to discretize each fracture.
+        line_width : float, default=2
+            Width of the contour lines.
+        opacity : float, default=1.0
+            Opacity of the plotted surface and contours.
+        color_map : str, default="viridis"
+            Matplotlib/PyVista colormap used to color the error values.
+        limits : sequence of float or None, default=None
+            Scalar range ``(minimum, maximum)`` for coloring and contouring.
+            If ``None``, the range is calculated from the computed values.
+        contour : bool, default=True
+            Whether to draw contour lines on the surface.
+        colorbar : bool, default=True
+            Whether to retain the plotter's scalar bar after adding the mesh.
+        debug : bool, default=False
+            If enabled, require ``limits`` and plot only fractures whose values
+            extend outside that range. Color limits are then calculated from
+            the retained values.
+        fractures : iterable or None, default=None
+            Fractures to plot. If ``None``, all fractures are used.
+        unit : str, default="m"
+            Unit included in the scalar bar title when ``term="head"``.
+        log_scale : bool, default=False
+            Whether to use logarithmic scalar coloring.
+        name : str, default="error_plot"
+            Name assigned to the mesh in the plotter.
+
+        Returns
+        -------
+        None
+            The mesh is added directly to ``pl``. If no values remain after
+            filtering, the method returns without adding a mesh.
+
+        Raises
+        ------
+        ValueError
+            If ``term`` or ``component`` is not one of the supported values.
+        """
 
         start = time.time()
 
@@ -2662,6 +2623,11 @@ class DFN(Constants, IO):
         mesh.point_data["head"] = head_vals
 
         # --- Plot mesh ---
+        titel = (
+            f"Error {term} ({component})"
+            if term == "complex"
+            else f"Error {term} ({unit}, {component})"
+        )
         pl.add_mesh(
             mesh,
             scalars="head",
@@ -2669,10 +2635,10 @@ class DFN(Constants, IO):
             opacity=opacity,
             show_edges=False,
             line_width=line_width,
-            scalar_bar_args={"title": f"Error {term} ({component})", "shadow": True},
+            scalar_bar_args={"title": f"{titel}", "shadow": True},
             clim=limits,
-            name="head",
             log_scale=log_scale,
+            name=name,
         )
 
         # --- Contours ---
