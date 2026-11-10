@@ -895,6 +895,13 @@ class DFN(Constants, IO):
                     self.fractures,
                 )
 
+    def unconsolidate_error(self):
+        """
+        Unconsolidates the DFN and checks for errors.
+        """
+        for i, row in enumerate(self.fractures_struc_array_hpc):
+            self.fractures[i].error_constant = row["error_constant"]
+
     ####################################################################################################################
     #                      DFN functions                                                                               #
     ####################################################################################################################
@@ -1778,7 +1785,7 @@ class DFN(Constants, IO):
         )
         if unconsolidate or False:
             logger.info("Unconsolidating DFN...")
-            self.unconsolidate_dfn(hpc=True)
+            self.unconsolidate_error()
 
     def check_boundary_conditions(self, n_points=100):
         """
