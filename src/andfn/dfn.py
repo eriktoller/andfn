@@ -2148,8 +2148,6 @@ class DFN(Constants, IO):
             fracs = self.fractures
             print_prog = True
         if color_by_label:
-            import pyvista as pv
-
             meshes = []
 
             for f in fracs:
