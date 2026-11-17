@@ -73,6 +73,7 @@ class Fracture:
             self.elements = []
             BoundingCircle(label, radius, self, ncoef, nint)
         self.constant = 0.0
+        self.error_constant = 0.0
 
         # Set the kwargs
         for key, value in kwargs.items():
@@ -347,11 +348,19 @@ class Fracture:
         """
         Deletes all elements from the fracture.
         """
-        elements = self.elements.copy()
-        for e in elements:
-            if isinstance(e, Intersection):
-                e.frac0.elements.remove(e)
-                e.frac1.elements.remove(e)
+        intersections = [e for e in self.elements if isinstance(e, Intersection)]
+
+        for e in intersections:
+            if e.frac0 is self:
+                other = e.frac1
+            elif e.frac1 is self:
+                other = e.frac0
+            else:
+                raise ValueError("Intersection does not belong to this fracture.")
+
+            if other is not None:
+                other.elements = [x for x in other.elements if x is not e]
+
         self.elements.clear()
 
     def reset(self):
