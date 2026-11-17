@@ -73,6 +73,7 @@ class Fracture:
             self.elements = []
             BoundingCircle(label, radius, self, ncoef, nint)
         self.constant = 0.0
+        self.error_constant = 0.0
 
         # Set the kwargs
         for key, value in kwargs.items():
