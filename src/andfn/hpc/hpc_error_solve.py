@@ -89,7 +89,7 @@ def solve_error(
     """
     # Get the constants, this is necessary for Numba parallelization to work
     max_error = constants["MAX_ERROR"]
-    max_iterations = constants["MAX_ITERATIONS"] * 0 + 20
+    max_iterations = constants["MAX_ITERATIONS"]
     damping = float(constants["DAMPING"])
 
     # get the discharge elements

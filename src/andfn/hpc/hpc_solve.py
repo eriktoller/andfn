@@ -368,7 +368,7 @@ def element_solver(
                 e, fracture_struc_array, element_struc_array, work_array[i]
             )
         elif e["_type"] == 2:  # Well
-            e["error"] = 0.0
+            e["error_coef"] = 0.0
             cnt += 1
         elif e["_type"] == 3:  # Constant head line
             hpc_const_head_line.solve(

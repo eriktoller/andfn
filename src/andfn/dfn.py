@@ -1755,7 +1755,7 @@ class DFN(Constants, IO):
             logger.info("Unconsolidating DFN...")
             self.unconsolidate_dfn(hpc=True)
 
-    def solve_error(self, unconsolidate=False):
+    def solve_error(self, unconsolidate=False, ncoef=None, nint=None):
         """
         Solves the DFN on a HPC.
 
@@ -1774,6 +1774,26 @@ class DFN(Constants, IO):
         error_structured_array["coef"][:] = 0
         error_structured_array["ncoef"] = self.elements_struc_array_hpc["ncoef"]
         error_structured_array["nint"] = self.elements_struc_array_hpc["nint"]
+        if ncoef is not None:
+            if isinstance(ncoef, int):
+                error_structured_array["ncoef"] = ncoef
+            elif isinstance(ncoef, (list, np.ndarray)):
+                if len(ncoef) == len(self.elements):
+                    error_structured_array["ncoef"] = ncoef
+                else:
+                    logger.warning(
+                        f"Length of ncoef list ({len(ncoef)}) does not match number of elements ({len(self.elements)}). Using default ncoef."
+                    )
+        if nint is not None:
+            if isinstance(nint, int):
+                error_structured_array["nint"] = nint
+            elif isinstance(nint, (list, np.ndarray)):
+                if len(nint) == len(self.elements):
+                    error_structured_array["nint"] = nint
+                else:
+                    logger.warning(
+                        f"Length of nint list ({len(nint)}) does not match number of elements ({len(self.elements)}). Using default nint."
+                    )
         self.print_solver_constants()
         self.error_structured_array, self.work_array = hpc_solve_error(
             self.fractures_struc_array_hpc,
